@@ -88,3 +88,42 @@
 .back-btn:hover {
   color: #374151;
 }
+
+/* ── Dark Theme Overrides ─────────────────────────────────────── */
+[data-theme="dark"] .login-container {
+  background-color: #0f1117;
+}
+
+[data-theme="dark"] .login-card {
+  background: #1a1d28;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
+  border: 1px solid #2a2e3d;
+}
+
+[data-theme="dark"] .login-card h2 {
+  color: #e2e8f0;
+}
+
+[data-theme="dark"] .form-group label {
+  color: #8b95a8;
+}
+
+[data-theme="dark"] .form-group input {
+  background-color: #1e2130;
+  border-color: #2a2e3d;
+  color: #e2e8f0;
+}
+
+[data-theme="dark"] .form-group input:focus {
+  border-color: #FF8C00;
+  box-shadow: 0 0 0 3px rgba(255, 140, 0, 0.1);
+}
+
+[data-theme="dark"] .back-btn {
+  color: #8b95a8;
+}
+
+[data-theme="dark"] .back-btn:hover {
+  color: #e2e8f0;
+}
+

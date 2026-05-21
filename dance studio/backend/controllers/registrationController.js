@@ -43,11 +43,12 @@ exports.createPendingRegistration = async (req, res) => {
       data: { id: registration._id, studentName: registration.studentName }
     });
   } catch (err) {
-    console.error('createPendingRegistration error:', err);
     if (err.name === 'ValidationError') {
+      console.warn('⚠️ createPendingRegistration validation failed:', err.message);
       const messages = Object.values(err.errors).map((e) => e.message);
       return res.status(400).json({ success: false, message: messages.join('. '), errors: messages });
     }
+    console.error('createPendingRegistration error:', err);
     if (err.code === 11000)
       return res.status(409).json({ success: false, message: 'This registration already exists.' });
     res.status(500).json({ success: false, message: 'Server error. Please try again later.' });
@@ -109,6 +110,7 @@ exports.approveRegistration = async (req, res) => {
       emergencyContactPhone: registration.emergencyContactPhone,
       location:       registration.location,
       address:        registration.address,
+      batchTiming:    registration.batchTiming,
       email:          registration.email,
       phone:          registration.phone,
       notes:          registration.notes,
@@ -122,7 +124,7 @@ exports.approveRegistration = async (req, res) => {
     // Send a WhatsApp utility message confirming approval (non-blocking)
     const whatsappNum = registration.whatsappNumber || registration.phone;
     if (whatsappNum) {
-      whatsapp.sendWelcomeMessage(whatsappNum, registration.studentName, registration.classType)
+      whatsapp.sendWelcomeMessage(whatsappNum, registration.studentName, registration.classType, registration.batchTiming)
         .catch((e) => console.error('WhatsApp approval error:', e));
     }
 
@@ -134,6 +136,12 @@ exports.approveRegistration = async (req, res) => {
 
     res.json({ message: 'Registration approved.', student });
   } catch (err) {
+    if (err.name === 'CastError')
+      return res.status(400).json({ message: 'Invalid registration ID format.' });
+    if (err.name === 'ValidationError') {
+      const messages = Object.values(err.errors).map((e) => e.message);
+      return res.status(400).json({ message: messages.join('. ') });
+    }
     console.error('approveRegistration error:', err);
     res.status(500).json({ message: err.message });
   }
@@ -150,6 +158,8 @@ exports.rejectRegistration = async (req, res) => {
 
     res.json({ message: 'Registration rejected.' });
   } catch (err) {
+    if (err.name === 'CastError')
+      return res.status(400).json({ message: 'Invalid registration ID format.' });
     console.error('rejectRegistration error:', err);
     res.status(500).json({ message: err.message });
   }

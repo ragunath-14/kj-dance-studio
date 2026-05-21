@@ -2,7 +2,7 @@ import React, { useMemo, useState } from 'react';
 import { Edit2, Trash2, CheckCircle, AlertCircle, ToggleLeft, ToggleRight } from 'lucide-react';
 import Button from '../ui/Button';
 
-const StudentRow = ({ student, payments, onEdit, onDelete, onToggleStatus }) => {
+const StudentRow = ({ student, onEdit, onDelete, onToggleStatus }) => {
   const [toggling, setToggling] = useState(false);
   const isActive = student.isActive !== false; // default true for existing students
 

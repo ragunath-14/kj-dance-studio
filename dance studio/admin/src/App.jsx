@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { DataProvider } from './context/DataContext';
 import Layout from './components/Layout';
@@ -6,6 +6,7 @@ import Dashboard from './components/Dashboard';
 import StudentList from './components/StudentList';
 import PaymentList from './components/PaymentList';
 import RegistrationList from './components/students/RegistrationList';
+import ActivityLog from './components/ActivityLog';
 import Login from './pages/Login';
 import './App.css';
 
@@ -45,6 +46,7 @@ function App() {
                   <Route path="/students" element={<StudentList />} />
                   <Route path="/payments" element={<PaymentList />} />
                   <Route path="/registrations" element={<RegistrationList />} />
+                  <Route path="/activity" element={<ActivityLog />} />
                 </Routes>
               </Layout>
             </ProtectedRoute>

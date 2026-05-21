@@ -36,7 +36,7 @@ const Login = ({ onLogin }) => {
           {error && <p className="error-message">{error}</p>}
           <button type="submit" className="btn btn-primary btn-full">Login</button>
         </form>
-        <button className="back-btn" onClick={() => window.location.href = 'http://localhost:5173'}>
+        <button className="back-btn" onClick={() => window.location.href = '/'}>
           Back to Site
         </button>
       </div>

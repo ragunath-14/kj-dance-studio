@@ -126,3 +126,24 @@
     box-shadow: 0 0 40px rgba(0,0,0,0.2);
   }
 }
+
+/* ── Dark Theme Overrides ─────────────────────────────────────── */
+[data-theme="dark"] .sidebar {
+  background-color: var(--bg-sidebar);
+  border-color: var(--border-color);
+  box-shadow: 4px 0 24px rgba(0,0,0,0.2);
+}
+
+[data-theme="dark"] .logo-container {
+  background: linear-gradient(180deg, rgba(255, 140, 0, 0.05) 0%, rgba(0, 0, 0, 0) 100%);
+  border-bottom-color: var(--border-color);
+}
+
+[data-theme="dark"] .nav-item:hover:not(.active) {
+  background-color: var(--surface-subtle);
+}
+
+[data-theme="dark"] .nav-item.logout:hover {
+  background-color: rgba(248, 113, 113, 0.1);
+}
+

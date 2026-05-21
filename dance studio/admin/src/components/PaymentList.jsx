@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState } from 'react';
 import axios from 'axios';
 import { Plus, Search, Check, Bell, History, X, CreditCard, Calendar, TrendingDown } from 'lucide-react';
 import API_URL from '../config';
@@ -25,17 +25,28 @@ const PaymentList = () => {
   const [currentDebt, setCurrentDebt] = useState(0);
   const [isEditing, setIsEditing] = useState(false);
   const [editingId, setEditingId] = useState(null);
+  const [editingOriginalAmount, setEditingOriginalAmount] = useState(0);
   const [alertState, setAlertState] = useState({ loading: false, message: '', type: '', results: [] });
   const [confirmDelete, setConfirmDelete] = useState({ open: false, paymentId: null });
   const [confirmAlerts, setConfirmAlerts] = useState(false);
   const [historyStudent, setHistoryStudent] = useState(null);
+  const [limit, setLimit] = useState(50);
 
   // Server-side fetching when page or tab changes
   const onPageChange = (page) => {
     if (activeTab === 'paid') {
-      fetchPayments(page, 50);
+      fetchPayments(page, limit);
     } else {
-      fetchUnpaidStudents(page, 50);
+      fetchUnpaidStudents(page, limit);
+    }
+  };
+
+  const onLimitChange = (newLimit) => {
+    setLimit(newLimit);
+    if (activeTab === 'paid') {
+      fetchPayments(1, newLimit);
+    } else {
+      fetchUnpaidStudents(1, newLimit);
     }
   };
 
@@ -48,9 +59,9 @@ const PaymentList = () => {
     
   const currentPage = activeTab === 'paid' ? (payments.page || 1) : (serverUnpaid.page || 1);
 
-  // Effect to reset page when filtering changes
   React.useEffect(() => {
     onPageChange(1);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchTerm, activeTab]);
 
   // Clear alert banner when switching tabs
@@ -121,6 +132,7 @@ const PaymentList = () => {
       await axios.delete(`${API_URL}/payments/${id}`);
       await refreshData();
     } catch (err) {
+      console.error(err);
       alert('Failed to delete payment.');
     }
   };
@@ -132,6 +144,7 @@ const PaymentList = () => {
       date: payment.date ? payment.date.split('T')[0] : '', remainingFees: payment.remainingFees || 0
     });
     setEditingId(payment._id);
+    setEditingOriginalAmount(payment.amount || 0);
     setIsEditing(true);
     setShowModal(true);
   };
@@ -140,6 +153,7 @@ const PaymentList = () => {
     setShowModal(false);
     setIsEditing(false);
     setEditingId(null);
+    setEditingOriginalAmount(0);
     setCurrentDebt(0);
     setFormData({ studentId: '', amount: '', method: 'Cash', purpose: 'Monthly Fee', date: '', remainingFees: 0 });
   };
@@ -254,7 +268,7 @@ const PaymentList = () => {
             )}
           </thead>
           <tbody>
-            {loading && (payments.data.length === 0 || allStudents.length === 0) ? (
+            {loading && (payments.data?.length === 0 || allStudents.length === 0) ? (
               <>
                 <SkeletonRow columns={activeTab === 'paid' ? 6 : 5} />
                 <SkeletonRow columns={activeTab === 'paid' ? 6 : 5} />
@@ -268,7 +282,7 @@ const PaymentList = () => {
                     payment={payment} 
                     onDelete={handleDelete} 
                     onEdit={handleEdit}
-                    onViewHistory={(studentId) => {
+                    onViewHistory={() => {
                       const s = allStudents.find(st => st._id === (payment.studentId?._id || payment.studentId));
                       if (s) setHistoryStudent(s);
                     }}
@@ -345,7 +359,9 @@ const PaymentList = () => {
       <Pagination 
         currentPage={currentPage} 
         totalPages={totalPages} 
-        onPageChange={onPageChange} 
+        onPageChange={onPageChange}
+        limit={limit}
+        onLimitChange={onLimitChange}
       />
 
       <Modal 
@@ -360,6 +376,7 @@ const PaymentList = () => {
           payments={payments.data || []}
           currentDebt={currentDebt}
           isEditing={isEditing}
+          editingPaymentAmount={editingOriginalAmount}
           onSubmit={handleSubmit} 
           onCancel={closeModals} 
         />

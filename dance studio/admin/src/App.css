@@ -13,6 +13,77 @@
   --info: #3b82f6;
   --sidebar-width: 260px;
   --topbar-height: 70px;
+  /* Surface tokens (blueprint spec) */
+  --surface-overlay: rgba(255, 255, 255, 0.9);
+  --surface-subtle: #f1f5f9;
+}
+
+/* ── Premium Dark Theme ─────────────────────────────────────────── */
+[data-theme="dark"] {
+  --primary-color: #FF8C00;
+  --primary-hover: #ff9e2c;
+  --bg-dark: #0f1117;
+  --bg-card: #1a1d28;
+  --bg-sidebar: #141620;
+  --text-main: #e2e8f0;
+  --text-muted: #8b95a8;
+  --border-color: #2a2e3d;
+  --success: #34d399;
+  --error: #f87171;
+  --warning: #fbbf24;
+  --info: #60a5fa;
+  --surface-overlay: rgba(26, 29, 40, 0.95);
+  --surface-subtle: #1e2130;
+}
+
+[data-theme="dark"] body {
+  background-color: var(--bg-dark);
+  color: var(--text-main);
+}
+
+[data-theme="dark"] input,
+[data-theme="dark"] select,
+[data-theme="dark"] textarea {
+  background-color: var(--surface-subtle);
+  border-color: var(--border-color);
+  color: var(--text-main);
+}
+
+[data-theme="dark"] input::placeholder,
+[data-theme="dark"] select::placeholder {
+  color: var(--text-muted);
+}
+
+[data-theme="dark"] .skeleton-pulse {
+  background: linear-gradient(-90deg, #1e2130 0%, #2a2e3d 50%, #1e2130 100%);
+  background-size: 400% 400%;
+}
+
+[data-theme="dark"] .method-badge {
+  background-color: var(--surface-subtle);
+  color: var(--text-main);
+}
+
+[data-theme="dark"] .suggestion-item:hover {
+  background-color: var(--surface-subtle);
+}
+
+[data-theme="dark"] .suggestion-item.selected {
+  background-color: rgba(255, 140, 0, 0.1);
+}
+
+[data-theme="dark"] .selected-student-card {
+  background-color: var(--surface-subtle);
+  border-color: var(--border-color);
+}
+
+[data-theme="dark"] .selected-student-card .clear-selection {
+  border-color: var(--border-color);
+  color: var(--text-muted);
+}
+
+[data-theme="dark"] .selected-student-card .clear-selection:hover {
+  background-color: rgba(239, 68, 68, 0.1);
 }
 
 body {

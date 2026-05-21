@@ -39,8 +39,28 @@ exports.getAllStudents = async (req, res) => {
       Student.countDocuments(query)
     ]);
 
+    // Aggregate monthly fee payments for the returned subset of students
+    const studentIds = students.map(s => s._id);
+    const payments = await Payment.find({
+      studentId: { $in: studentIds },
+      purpose: 'Monthly Fee'
+    }).lean();
+
+    const paymentsByStudent = {};
+    payments.forEach(p => {
+      if (p.studentId) {
+        const sid = p.studentId.toString();
+        paymentsByStudent[sid] = (paymentsByStudent[sid] || 0) + (p.amount || 0);
+      }
+    });
+
+    const studentsWithTotalPaid = students.map(s => ({
+      ...s,
+      totalPaid: paymentsByStudent[s._id.toString()] || 0
+    }));
+
     res.json({
-      data: students,
+      data: studentsWithTotalPaid,
       total,
       page,
       limit,
@@ -79,7 +99,7 @@ exports.getDashboardStats = async (req, res) => {
     const lifetimeRevenue = payments.reduce((sum, p) => sum + (p.amount || 0), 0);
 
     const overdueCount = activeStudents.filter(student => {
-      const joinDate = new Date(student.createdAt);
+      const joinDate = new Date(student.createdAt || student.joinDate);
       let totalCycles = (today.getFullYear() - joinDate.getFullYear()) * 12 + (today.getMonth() - joinDate.getMonth()) + 1;
       if (today.getDate() < joinDate.getDate()) totalCycles--;
       if (totalCycles <= 0) return false;
@@ -101,8 +121,8 @@ exports.getDashboardStats = async (req, res) => {
         overdue: overdueCount,
         pending: registrations.length,
         classTypes: {
+          dance: activeStudents.filter(s => s.classType === 'Dance Class').length,
           regular: activeStudents.filter(s => s.classType === 'Regular Class').length,
-          summer: activeStudents.filter(s => s.classType === 'Summer Class').length,
           fitness: activeStudents.filter(s => s.classType === 'Fitness Class').length,
         }
       },
@@ -136,7 +156,7 @@ exports.getUnpaidStudents = async (req, res) => {
     });
 
     const unpaid = students.map(student => {
-      const joinDate = new Date(student.createdAt);
+      const joinDate = new Date(student.createdAt || student.joinDate);
       let totalCycles = (today.getFullYear() - joinDate.getFullYear()) * 12 + (today.getMonth() - joinDate.getMonth()) + 1;
       if (today.getDate() < joinDate.getDate()) totalCycles--;
       
@@ -174,7 +194,7 @@ exports.getStudentDues = async (req, res) => {
     if (!student) return res.status(404).json({ message: 'Student not found.' });
 
     const today = new Date();
-    const joinDate = new Date(student.createdAt);
+    const joinDate = new Date(student.createdAt || student.joinDate);
     
     let totalCycles = (today.getFullYear() - joinDate.getFullYear()) * 12 + (today.getMonth() - joinDate.getMonth()) + 1;
     if (today.getDate() < joinDate.getDate()) totalCycles--;
@@ -238,16 +258,30 @@ exports.createStudent = async (req, res) => {
     const io = req.app.get('socketio');
     if (io) io.emit('dataChanged', { type: 'student', action: 'create' });
 
+    // Send WhatsApp welcome message (non-blocking, same as registration approval)
+    const whatsappNum = newStudent.whatsappNumber || newStudent.phone;
+    if (whatsappNum) {
+      whatsapp.sendWelcomeMessage(
+        whatsappNum,
+        newStudent.studentName,
+        newStudent.classType,
+        newStudent.batchTiming
+      ).catch((e) => console.error('WhatsApp welcome error (createStudent):', e));
+    }
+
     res.status(201).json(newStudent);
   } catch (err) {
-    console.error('createStudent error:', err);
-    if (err.name === 'ValidationError')
+    if (err.name === 'ValidationError') {
+      console.warn('⚠️ createStudent validation failed:', err.message);
       return res.status(400).json({ message: formatValidationErrors(err).join('. ') });
+    }
+    console.error('createStudent error:', err);
     if (err.code === 11000)
       return res.status(409).json({ message: 'A student with this information already exists.' });
     res.status(500).json({ message: 'Server error. Could not add student.' });
   }
 };
+
 
 // ─── PUT /api/students/:id ───────────────────────────────────────────────────
 exports.updateStudent = async (req, res) => {
@@ -281,11 +315,13 @@ exports.updateStudent = async (req, res) => {
 
     res.json(updated);
   } catch (err) {
+    if (err.name === 'ValidationError') {
+      console.warn('⚠️ updateStudent validation failed:', err.message);
+      return res.status(400).json({ message: formatValidationErrors(err).join('. ') });
+    }
     console.error('updateStudent error:', err);
     if (err.name === 'CastError')
       return res.status(400).json({ message: 'Invalid student ID format.' });
-    if (err.name === 'ValidationError')
-      return res.status(400).json({ message: formatValidationErrors(err).join('. ') });
     res.status(500).json({ message: 'Server error. Could not update student.' });
   }
 };
@@ -302,18 +338,10 @@ exports.toggleStatus = async (req, res) => {
     // When reactivating (Inactive -> Active), reset joining date to today
     if (student.isActive && wasInactive) {
       student.createdAt = new Date();
+      student.markModified('createdAt'); // Explicitly tell Mongoose this field changed
     }
 
     await student.save();
-
-    // Send rejoin WhatsApp when student is marked inactive
-    if (!student.isActive) {
-      const num = student.whatsappNumber || student.phone;
-      if (num) {
-        whatsapp.sendRejoinMessage(num, student.studentName, student.classType)
-          .catch((e) => console.error('WhatsApp rejoin error:', e));
-      }
-    }
 
     const io = req.app.get('socketio');
     if (io) io.emit('dataChanged', { type: 'student', action: 'statusToggle' });

@@ -284,3 +284,45 @@
     gap: 10px;
   }
 }
+
+/* ── Dark Theme Overrides ─────────────────────────────────────── */
+[data-theme="dark"] .date-display {
+  background: var(--bg-card);
+  border-color: var(--border-color);
+}
+
+[data-theme="dark"] .stat-card {
+  background: var(--bg-card);
+  border-color: var(--border-color);
+}
+
+[data-theme="dark"] .stat-card:hover {
+  border-color: var(--primary-color);
+}
+
+[data-theme="dark"] .stat-value {
+  color: var(--text-main);
+}
+
+[data-theme="dark"] .stat-trend {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+[data-theme="dark"] .card {
+  background: var(--bg-card);
+  border-color: var(--border-color);
+}
+
+[data-theme="dark"] .pill-bar-wrap {
+  background: #2a2e3d;
+}
+
+[data-theme="dark"] .activity-entry:hover {
+  background: var(--surface-subtle);
+  border-color: var(--border-color);
+}
+
+[data-theme="dark"] .activity-icon {
+  box-shadow: 0 4px 6px rgba(0,0,0,0.2);
+}
+

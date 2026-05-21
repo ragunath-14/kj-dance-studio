@@ -1,15 +1,22 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import { Users, CreditCard, TrendingUp, AlertCircle, CheckCircle, Calendar, Music, UserPlus } from 'lucide-react';
 import { useData } from '../context/DataContext';
 import './Dashboard.css';
 
 const Dashboard = () => {
   const { stats, loading } = useData();
+  // eslint-disable-next-line react-hooks/purity
+  const [now, setNow] = useState(Date.now());
+
+  useEffect(() => {
+    const interval = setInterval(() => setNow(Date.now()), 60000);
+    return () => clearInterval(interval);
+  }, []);
 
   const metrics = useMemo(() => {
     if (!stats || !stats.metrics) return {
       total: 0, revenue: 0, lifetime: 0, overdue: 0, pending: 0,
-      classTypes: { regular: 0, summer: 0, fitness: 0 }
+      classTypes: { dance: 0, regular: 0, fitness: 0 }
     };
     return stats.metrics;
   }, [stats]);
@@ -71,14 +78,6 @@ const Dashboard = () => {
           loading={loading}
         />
         <StatCard 
-          label="Lifetime Revenue" 
-          value={`₹${(metrics.lifetime || 0).toLocaleString()}`} 
-          icon={<CreditCard />} 
-          color="#9C27B0" 
-          trend="Total Collections"
-          loading={loading}
-        />
-        <StatCard 
           label="Pending Approvals" 
           value={metrics.pending} 
           icon={<UserPlus />} 
@@ -104,19 +103,19 @@ const Dashboard = () => {
               <Music size={20} className="text-muted" />
             </div>
             <div className="class-pills">
+              <div className="pill dance">
+                <span>Dance</span>
+                <div className="pill-bar-wrap">
+                  <div className="pill-bar" style={{ width: `${(metrics.classTypes.dance / (metrics.total || 1)) * 100}%` }}></div>
+                </div>
+                <strong>{metrics.classTypes.dance}</strong>
+              </div>
               <div className="pill regular">
                 <span>Regular</span>
                 <div className="pill-bar-wrap">
                   <div className="pill-bar" style={{ width: `${(metrics.classTypes.regular / (metrics.total || 1)) * 100}%` }}></div>
                 </div>
                 <strong>{metrics.classTypes.regular}</strong>
-              </div>
-              <div className="pill summer">
-                <span>Summer</span>
-                <div className="pill-bar-wrap">
-                  <div className="pill-bar" style={{ width: `${(metrics.classTypes.summer / (metrics.total || 1)) * 100}%` }}></div>
-                </div>
-                <strong>{metrics.classTypes.summer}</strong>
               </div>
               <div className="pill fitness">
                 <span>Fitness</span>
@@ -145,7 +144,7 @@ const Dashboard = () => {
                     <div className="activity-details">
                       <h4>{act.title}</h4>
                       <p>{act.desc}</p>
-                      <span className="activity-time">{new Intl.RelativeTimeFormat('en', { numeric: 'auto' }).format(-Math.round((Date.now() - act.date) / (1000 * 60 * 60)), 'hour')}</span>
+                      <span className="activity-time">{new Intl.RelativeTimeFormat('en', { numeric: 'auto' }).format(-Math.round((now - act.date) / (1000 * 60 * 60)), 'hour')}</span>
                     </div>
                   </div>
                 ))

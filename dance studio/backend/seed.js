@@ -17,7 +17,7 @@ const seedData = async () => {
         // await Payment.deleteMany({});
 
         const danceStyles = ['Hip Hop', 'Ballet', 'Contemporary', 'Bollywood', 'Salsa', 'Jazz'];
-        const classTypes = ['Regular Class', 'Summer Class'];
+        const classTypes = ['Regular Class', 'Dance Class', 'Fitness Class'];
 
         const studentsToAdd = [];
         for (let i = 1; i <= 20; i++) {

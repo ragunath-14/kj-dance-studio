@@ -14,9 +14,12 @@
  */
 
 const axios = require('axios');
+require('dotenv').config();
 
 const ADMIN_API = 'http://localhost:5001/api';
 const STUDIO_API = 'http://localhost:5001/api';
+
+let adminToken = '';
 
 let passed = 0;
 let failed = 0;
@@ -66,9 +69,8 @@ function runBillingTests() {
   console.log('══════════════════════════════════════════════════');
 
   // Test 1: Regular class fee
-  assert(getMonthlyFee('Regular Class') === 3500, 'Regular Class fee = ₹3500');
-  assert(getMonthlyFee('Summer Class') === 3500, 'Summer Class fee = ₹3500');
   assert(getMonthlyFee('Fitness Class') === 2500, 'Fitness Class fee = ₹2500');
+  assert(getMonthlyFee('Unknown') === 3500, 'Unknown fee defaults to ₹3500');
   assert(getMonthlyFee(undefined) === 3500, 'Default/undefined class fee = ₹3500');
 
   // Test 2: Simple 1-month gap — joined Jan 10, checked Feb 15
@@ -140,7 +142,7 @@ function runValidationTests() {
   assert(''.trim().length === 0, 'Invalid name: empty/whitespace only');
 
   // Class type validation
-  const validTypes = ['Regular Class', 'Summer Class', 'Fitness Class'];
+  const validTypes = ['Regular Class', 'Fitness Class'];
   assert(validTypes.includes('Regular Class'), 'Valid classType: Regular Class');
   assert(!validTypes.includes('Advanced Class'), 'Invalid classType: Advanced Class');
   assert(!validTypes.includes(''), 'Invalid classType: empty string');
@@ -169,6 +171,21 @@ async function runAPITests() {
     return;
   }
 
+  // Login to get token
+  try {
+    const loginRes = await axios.post(`${ADMIN_API}/admin/login`, {
+      password: process.env.ADMIN_PASSWORD
+    });
+    adminToken = loginRes.data.token;
+  } catch (err) {
+    skip('All API tests', 'Failed to login as admin');
+    return;
+  }
+
+  const authHeaders = {
+    headers: { Authorization: `Bearer ${adminToken}` }
+  };
+
   // Test 3.1: Health check
   try {
     const res = await axios.get('http://localhost:5001/health');
@@ -181,25 +198,28 @@ async function runAPITests() {
 
   // Test 3.2: GET students
   try {
-    const res = await axios.get(`${ADMIN_API}/students`);
+    const res = await axios.get(`${ADMIN_API}/students`, authHeaders);
     assert(res.status === 200, 'GET /students returns 200');
-    assert(Array.isArray(res.data), 'GET /students returns array');
+    assert(Array.isArray(res.data.data), 'GET /students returns paginated data array');
+    assert(typeof res.data.total === 'number', 'GET /students returns total count');
+    assert(typeof res.data.totalPages === 'number', 'GET /students returns totalPages');
   } catch (err) {
     assert(false, 'GET /students', err.message);
   }
 
   // Test 3.3: GET payments
   try {
-    const res = await axios.get(`${ADMIN_API}/payments`);
+    const res = await axios.get(`${ADMIN_API}/payments`, authHeaders);
     assert(res.status === 200, 'GET /payments returns 200');
-    assert(Array.isArray(res.data), 'GET /payments returns array');
+    assert(Array.isArray(res.data.data), 'GET /payments returns paginated data array');
+    assert(typeof res.data.total === 'number', 'GET /payments returns total count');
   } catch (err) {
     assert(false, 'GET /payments', err.message);
   }
 
   // Test 3.4: GET pending registrations
   try {
-    const res = await axios.get(`${ADMIN_API}/registrations/pending`);
+    const res = await axios.get(`${ADMIN_API}/registrations/pending`, authHeaders);
     assert(res.status === 200, 'GET /registrations/pending returns 200');
     assert(Array.isArray(res.data), 'GET /registrations/pending returns array');
   } catch (err) {
@@ -233,7 +253,7 @@ async function runAPITests() {
     await axios.post(`${ADMIN_API}/payments`, {
       studentId: 'invalid-id',
       amount: 3500
-    });
+    }, authHeaders);
     assert(false, 'POST /payments with invalid studentId should fail');
   } catch (err) {
     const status = err.response?.status;
@@ -245,7 +265,7 @@ async function runAPITests() {
   try {
     await axios.post(`${ADMIN_API}/payments`, {
       amount: 3500
-    });
+    }, authHeaders);
     assert(false, 'POST /payments without studentId should fail');
   } catch (err) {
     assert(err.response?.status === 400, 'POST /payments without studentId returns 400', `Got ${err.response?.status}`);
@@ -256,7 +276,7 @@ async function runAPITests() {
     await axios.post(`${ADMIN_API}/payments`, {
       studentId: '507f1f77bcf86cd799439011',
       amount: 0
-    });
+    }, authHeaders);
     assert(false, 'POST /payments with 0 amount should fail');
   } catch (err) {
     assert(err.response?.status === 400, 'POST /payments with 0 amount returns 400', `Got ${err.response?.status}`);
@@ -264,7 +284,7 @@ async function runAPITests() {
 
   // Test 3.10: GET non-existent student by ID
   try {
-    await axios.get(`${ADMIN_API}/students/507f1f77bcf86cd799439011/public-dues`);
+    await axios.get(`${ADMIN_API}/students/507f1f77bcf86cd799439011/public-dues`, authHeaders);
     assert(false, 'GET non-existent student public-dues should fail');
   } catch (err) {
     assert(err.response?.status === 404, 'GET non-existent student returns 404', `Got ${err.response?.status}`);
@@ -272,7 +292,7 @@ async function runAPITests() {
 
   // Test 3.11: DELETE non-existent student
   try {
-    await axios.delete(`${ADMIN_API}/students/507f1f77bcf86cd799439011`);
+    await axios.delete(`${ADMIN_API}/students/507f1f77bcf86cd799439011`, authHeaders);
     assert(false, 'DELETE non-existent student should fail');
   } catch (err) {
     assert(err.response?.status === 404, 'DELETE non-existent student returns 404', `Got ${err.response?.status}`);
@@ -280,7 +300,7 @@ async function runAPITests() {
 
   // Test 3.12: Invalid ObjectId format
   try {
-    await axios.get(`${ADMIN_API}/students/INVALID/public-dues`);
+    await axios.get(`${ADMIN_API}/students/INVALID/public-dues`, authHeaders);
     assert(false, 'GET invalid ObjectId should fail');
   } catch (err) {
     assert(err.response?.status === 500 || err.response?.status === 400, 
@@ -289,7 +309,7 @@ async function runAPITests() {
 
   // Test 3.13: Approve non-existent registration
   try {
-    await axios.post(`${ADMIN_API}/registrations/507f1f77bcf86cd799439011/approve`);
+    await axios.post(`${ADMIN_API}/registrations/507f1f77bcf86cd799439011/approve`, {}, authHeaders);
     assert(false, 'Approve non-existent registration should fail');
   } catch (err) {
     assert(err.response?.status === 404, 'Approve non-existent returns 404', `Got ${err.response?.status}`);

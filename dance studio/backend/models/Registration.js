@@ -13,10 +13,10 @@ const RegistrationSchema = new mongoose.Schema({
   classType: {
     type: String,
     enum: {
-      values: ['Regular Class', 'Summer Class', 'Fitness Class'],
+      values: ['Dance Class', 'Fitness Class', 'Regular Class'],
       message: '{VALUE} is not a valid class type'
     },
-    default: 'Regular Class'
+    default: 'Dance Class'
   },
   danceStyle:     { type: String, trim: true },
   danceForFitness: { type: String, trim: true },
@@ -50,6 +50,7 @@ const RegistrationSchema = new mongoose.Schema({
     },
     index: true
   },
+  batchTiming:    { type: String, trim: true },
   notes:  { type: String, trim: true },
   status: {
     type: String,

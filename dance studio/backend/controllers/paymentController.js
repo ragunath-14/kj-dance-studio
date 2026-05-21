@@ -75,6 +75,18 @@ exports.createPayment = async (req, res) => {
     const payment    = new Payment(req.body);
     const newPayment = await payment.save();
 
+    // Send WhatsApp Confirmation
+    const whatsappNum = student.whatsappNumber || student.phone;
+    if (whatsappNum) {
+      whatsapp.sendPaymentConfirmation(
+        whatsappNum,
+        student.studentName,
+        amount,
+        req.body.purpose,
+        new Date(payment.date || Date.now()).toLocaleDateString('en-IN')
+      ).catch(err => console.error('Failed to send payment WhatsApp:', err.message));
+    }
+
     // Return with student name populated
     await newPayment.populate('studentId', 'studentName');
     const io = req.app.get('socketio');
@@ -82,11 +94,14 @@ exports.createPayment = async (req, res) => {
 
     res.status(201).json(newPayment);
   } catch (err) {
-    console.error('createPayment error:', err);
     if (err.name === 'ValidationError') {
+      console.warn('⚠️ createPayment validation failed:', err.message);
       const messages = Object.values(err.errors).map((e) => e.message);
       return res.status(400).json({ message: messages.join('. ') });
     }
+    if (err.name === 'CastError')
+      return res.status(400).json({ message: 'Invalid student ID format.' });
+    console.error('createPayment error:', err);
     res.status(500).json({ message: 'Server error. Could not record payment.' });
   }
 };
@@ -107,11 +122,12 @@ exports.updatePayment = async (req, res) => {
 
     res.json(updated);
   } catch (err) {
-    console.error('updatePayment error:', err);
     if (err.name === 'ValidationError') {
+      console.warn('⚠️ updatePayment validation failed:', err.message);
       const messages = Object.values(err.errors).map((e) => e.message);
       return res.status(400).json({ message: messages.join('. ') });
     }
+    console.error('updatePayment error:', err);
     if (err.name === 'CastError')
       return res.status(400).json({ message: 'Invalid payment ID format.' });
     res.status(500).json({ message: 'Server error. Could not update payment.' });
@@ -157,7 +173,7 @@ exports.sendPendingAlerts = async (req, res) => {
     const results = [];
 
     for (const student of students) {
-      const joinDate = new Date(student.createdAt);
+      const joinDate = new Date(student.createdAt || student.joinDate);
       let totalCycles =
         (today.getFullYear() - joinDate.getFullYear()) * 12 +
         (today.getMonth()    - joinDate.getMonth()) + 1;
@@ -183,6 +199,9 @@ exports.sendPendingAlerts = async (req, res) => {
             pendingMonths,
             totalDue
           );
+          if (alertResult.success) {
+            await Student.updateOne({ _id: student._id }, { lastAlertSent: today });
+          }
         } catch (e) {
           alertResult = { success: false, reason: e.message };
         }

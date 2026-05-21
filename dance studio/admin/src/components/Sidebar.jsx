@@ -1,6 +1,6 @@
 import React from 'react';
 import { NavLink } from 'react-router-dom';
-import { LayoutDashboard, Users, CreditCard, UserPlus } from 'lucide-react';
+import { LayoutDashboard, Users, CreditCard, UserPlus, Activity } from 'lucide-react';
 import { useData } from '../context/DataContext';
 import './Sidebar.css';
 
@@ -11,6 +11,7 @@ const Sidebar = ({ isOpen, onClose }) => {
     { to: '/registrations', icon: UserPlus, label: 'New Joiners', badge: registrations.length },
     { to: '/students', icon: Users, label: 'Students' },
     { to: '/payments', icon: CreditCard, label: 'Payments' },
+    { to: '/activity', icon: Activity, label: 'Activity Log' },
   ];
 
   return (

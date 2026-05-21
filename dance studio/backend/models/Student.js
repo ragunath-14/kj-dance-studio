@@ -37,10 +37,10 @@ const StudentSchema = new mongoose.Schema({
   classType: {
     type: String,
     enum: {
-      values: ['Regular Class', 'Summer Class', 'Fitness Class'],
+      values: ['Dance Class', 'Fitness Class', 'Regular Class'],
       message: '{VALUE} is not a valid class type'
     },
-    default: 'Regular Class'
+    default: 'Dance Class'
   },
   studentAge: { type: String, trim: true },
   gender: { type: String, enum: ['Male', 'Female', 'Other'], trim: true },
@@ -50,6 +50,7 @@ const StudentSchema = new mongoose.Schema({
   emergencyContactPhone: { type: String, trim: true },
   location: { type: String, trim: true },
   address: { type: String, trim: true },
+  batchTiming: { type: String, trim: true },
   notes: { type: String, trim: true },
   isActive: { type: Boolean, default: true, index: true },
   lastAlertSent: { type: Date },

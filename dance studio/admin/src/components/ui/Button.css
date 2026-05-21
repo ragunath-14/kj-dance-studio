@@ -77,3 +77,37 @@
     justify-content: center;
   }
 }
+
+/* ── Dark Theme Overrides ─────────────────────────────────────── */
+[data-theme="dark"] .btn-primary {
+  box-shadow: 0 4px 14px 0 rgba(255, 140, 0, 0.2);
+}
+
+[data-theme="dark"] .btn-primary:hover:not(:disabled) {
+  box-shadow: 0 6px 20px rgba(255, 140, 0, 0.3);
+}
+
+[data-theme="dark"] .btn-secondary {
+  background-color: #1a1d28;
+  color: #e2e8f0;
+  border-color: #2a2e3d;
+}
+
+[data-theme="dark"] .btn-secondary:hover:not(:disabled) {
+  background-color: #1e2130;
+  border-color: #475569;
+  color: #ffffff;
+}
+
+[data-theme="dark"] .btn-icon {
+  background: #1e2130;
+  border-color: #2a2e3d;
+  color: #8b95a8;
+}
+
+[data-theme="dark"] .btn-icon:hover {
+  background-color: #1a1d28;
+  color: #e2e8f0;
+  border-color: var(--primary-color);
+}
+

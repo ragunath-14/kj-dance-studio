@@ -20,7 +20,7 @@ async function runPendingFeeAlerts() {
   const today    = new Date();
   const todayDay = today.getDate(); // 1–31
 
-  console.log(`\n🕘 [Scheduler] Running daily checks (Fees & Rejoin Alerts) — ${today.toDateString()}`);
+  console.log(`\n🕘 [Scheduler] Running daily checks (Fees Alerts) — ${today.toDateString()}`);
 
   try {
     const students = await Student.find().lean(); // Fetch ALL students
@@ -40,7 +40,6 @@ async function runPendingFeeAlerts() {
     let alertsSent    = 0;
     let alertsSkipped = 0;
     let alertsFailed  = 0;
-    let rejoinSent    = 0;
 
     for (const student of students) {
       const joinDate    = new Date(student.createdAt || student.joinDate);
@@ -48,20 +47,9 @@ async function runPendingFeeAlerts() {
       const isAnniversary = todayDay === joinDay;
       const whatsappNum   = student.whatsappNumber || student.phone;
 
-      // ── Inactive Student Logic: Monthly Rejoin Message ──────────────────
+      // Skip fee logic for inactive students
       if (student.isActive === false) {
-        if (isAnniversary && whatsappNum) {
-          try {
-            const result = await whatsapp.sendRejoinMessage(whatsappNum, student.studentName, student.classType);
-            if (result.success) {
-              console.log(`  📲 Rejoin message sent → ${student.studentName} (+${whatsappNum})`);
-              rejoinSent++;
-            }
-          } catch (err) {
-            console.error(`  ❌ Failed Rejoin for ${student.studentName}:`, err.message);
-          }
-        }
-        continue; // Skip fee logic for inactive students
+        continue;
       }
 
       // ── Active Student Logic: Calculate how many months of fees are owed ──
@@ -133,7 +121,7 @@ async function runPendingFeeAlerts() {
     }
 
     console.log(
-      `🔔 [Scheduler] Done — Fee Alerts Sent: ${alertsSent} | Rejoin Sent: ${rejoinSent} | Skipped: ${alertsSkipped} | Failed: ${alertsFailed}\n`
+      `🔔 [Scheduler] Done — Fee Alerts Sent: ${alertsSent} | Skipped: ${alertsSkipped} | Failed: ${alertsFailed}\n`
     );
   } catch (err) {
     console.error('❌ [Scheduler] Error during daily checks:', err.message);
@@ -146,15 +134,16 @@ async function runPendingFeeAlerts() {
  * Cron syntax: second(opt) minute hour day month weekday
  */
 function startScheduler() {
-  // Run every day at 6:00 AM
-  cron.schedule('0 6 * * *', () => {
+  // Run every day at configured time (default 09:00 AM IST)
+  const scheduleTime = process.env.WHATSAPP_SCHEDULE_TIME || '0 9 * * *';
+  cron.schedule(scheduleTime, () => {
     runPendingFeeAlerts();
   }, {
     scheduled: true,
     timezone: process.env.TZ || 'Asia/Kolkata'  // IST by default
   });
 
-  console.log('⏰ [Scheduler] Pending-fee alert job scheduled — runs daily at 06:00 AM IST');
+  console.log(`⏰ [Scheduler] Pending-fee alert job scheduled — runs daily at ${scheduleTime} (Timezone: ${process.env.TZ || 'Asia/Kolkata'})`);
 }
 
 module.exports = { startScheduler, runPendingFeeAlerts };

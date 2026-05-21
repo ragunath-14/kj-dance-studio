@@ -282,3 +282,70 @@
     white-space: nowrap;
   }
 }
+
+/* ── Dark Theme Overrides ─────────────────────────────────────── */
+[data-theme="dark"] .tabs {
+  background-color: #0f1117;
+}
+
+[data-theme="dark"] .tab-btn.active {
+  background-color: #1a1d28;
+}
+
+[data-theme="dark"] .tab-btn:hover:not(.active) {
+  background-color: rgba(255, 255, 255, 0.05);
+}
+
+[data-theme="dark"] .search-box {
+  background-color: #1a1d28;
+}
+
+[data-theme="dark"] .table-container {
+  background-color: #1a1d28;
+}
+
+[data-theme="dark"] .data-table th {
+  background-color: rgba(255, 255, 255, 0.02);
+}
+
+[data-theme="dark"] .data-table tr:hover td {
+  background-color: rgba(255, 140, 0, 0.03);
+}
+
+[data-theme="dark"] .status-toggle-btn {
+  background: #1a1d28;
+}
+
+[data-theme="dark"] .status-toggle-btn.inactive {
+  background: #1a1d28;
+}
+
+[data-theme="dark"] .mini-badge.paid {
+  background-color: rgba(52, 211, 153, 0.1);
+}
+
+[data-theme="dark"] .mini-badge.unpaid {
+  background-color: rgba(248, 113, 113, 0.1);
+}
+
+/* ── Toggle Spinner Styles ─────────────────────────────────── */
+.toggle-spinner {
+  width: 14px;
+  height: 14px;
+  border: 2px solid currentColor;
+  border-bottom-color: transparent;
+  border-radius: 50%;
+  display: inline-block;
+  box-sizing: border-box;
+  animation: rotation 1s linear infinite;
+}
+
+@keyframes rotation {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+

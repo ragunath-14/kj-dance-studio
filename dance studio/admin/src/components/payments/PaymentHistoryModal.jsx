@@ -9,7 +9,7 @@ const PaymentHistoryModal = ({ student, payments, onClose, onRecordPayment }) =>
   const today = new Date();
   const studentIdStr = student._id?.toString();
 
-  const studentPayments = payments
+  const studentPayments = (payments.data || [])
     .filter(p => {
       const pid = p.studentId?._id?.toString() || p.studentId?.toString();
       return pid === studentIdStr;

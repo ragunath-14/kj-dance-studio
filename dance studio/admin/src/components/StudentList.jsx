@@ -13,29 +13,35 @@ import Pagination from './ui/Pagination';
 import './List.css';
 
 const StudentList = () => {
-  const { students, payments, stats: dashboardStats, loading, refreshData, fetchStudents, toggleStudentStatus } = useData();
-  const [activeTab, setActiveTab] = useState('Regular Class');
+  const { students, stats: dashboardStats, loading, refreshData, fetchStudents, toggleStudentStatus } = useData();
+  const [activeTab, setActiveTab] = useState('Dance Class');
   const [showModal, setShowModal] = useState(false);
   const [editingStudent, setEditingStudent] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
+  const [limit, setLimit] = useState(50);
   const [confirmState, setConfirmState] = useState({ open: false, studentId: null });
 
   // Server-side fetching when page, tab, or search changes
   React.useEffect(() => {
     const timer = setTimeout(() => {
-      fetchStudents(1, 50, searchTerm, activeTab);
+      fetchStudents(1, limit, searchTerm, activeTab);
     }, 300);
     return () => clearTimeout(timer);
-  }, [searchTerm, activeTab]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchTerm, activeTab, limit]);
 
   const onPageChange = (page) => {
-    fetchStudents(page, 50, searchTerm, activeTab);
+    fetchStudents(page, limit, searchTerm, activeTab);
+  };
+
+  const onLimitChange = (newLimit) => {
+    setLimit(newLimit);
+    fetchStudents(1, newLimit, searchTerm, activeTab);
   };
 
   const [formData, setFormData] = useState({
-    studentName: '', email: '', phone: '', whatsappNumber: '', 
     danceStyle: '', danceForFitness: '', studentAge: '', 
-    parentName: '', location: '', notes: '', classType: 'Regular Class', 
+    parentName: '', location: '', batchTiming: '', notes: '', classType: 'Dance Class', 
     createdAt: new Date().toISOString().split('T')[0]
   });
 
@@ -45,7 +51,7 @@ const StudentList = () => {
   const currentPage = students.page || 1;
 
   const metrics = useMemo(() => {
-    if (!dashboardStats || !dashboardStats.metrics) return { regular: 0, summer: 0, fitness: 0 };
+    if (!dashboardStats || !dashboardStats.metrics) return { dance: 0, regular: 0, fitness: 0 };
     return dashboardStats.metrics.classTypes;
   }, [dashboardStats]);
 
@@ -69,11 +75,12 @@ const StudentList = () => {
         danceStyle: '', danceForFitness: '', 
         studentAge: '', gender: '', bloodGroup: '', parentName: '', 
         emergencyContactName: '', emergencyContactPhone: '', 
-        location: '', address: '', notes: '',
-        classType: 'Regular Class', 
+        location: '', address: '', batchTiming: '', notes: '',
+        classType: 'Dance Class', 
         createdAt: new Date().toISOString().split('T')[0] 
       });
     } catch (err) {
+      console.error(err);
       const errorMsg = err.response?.data?.message || 'Failed to save to database. Please check console and try again.';
       alert(errorMsg);
     }
@@ -90,6 +97,7 @@ const StudentList = () => {
       await axios.delete(`${API_URL}/students/${id}`);
       await refreshData();
     } catch (err) {
+      console.error(err);
       alert('Failed to delete student. Check server connection.');
     }
   };
@@ -111,8 +119,9 @@ const StudentList = () => {
       emergencyContactPhone: student.emergencyContactPhone || '',
       location: student.location || '',
       address: student.address || '',
+      batchTiming: student.batchTiming || '',
       notes: student.notes || '',
-      classType: student.classType || 'Regular Class',
+      classType: student.classType || 'Dance Class',
       createdAt: student.createdAt || student.joinDate || new Date().toISOString().split('T')[0]
     });
     setShowModal(true);
@@ -126,8 +135,8 @@ const StudentList = () => {
       danceStyle: '', danceForFitness: '', 
       studentAge: '', gender: '', bloodGroup: '', parentName: '', 
       emergencyContactName: '', emergencyContactPhone: '', 
-      location: '', address: '', notes: '',
-      classType: 'Regular Class', 
+      location: '', address: '', batchTiming: '', notes: '',
+      classType: 'Dance Class', 
       createdAt: new Date().toISOString().split('T')[0] 
     });
   };
@@ -149,16 +158,16 @@ const StudentList = () => {
           </div>
           <div className="tabs">
             <button 
+              className={`tab-btn ${activeTab === 'Dance Class' ? 'active' : ''}`}
+              onClick={() => setActiveTab('Dance Class')}
+            >
+              Dance ({metrics.dance})
+            </button>
+            <button 
               className={`tab-btn ${activeTab === 'Regular Class' ? 'active' : ''}`}
               onClick={() => setActiveTab('Regular Class')}
             >
               Regular ({metrics.regular})
-            </button>
-            <button 
-              className={`tab-btn ${activeTab === 'Summer Class' ? 'active' : ''}`}
-              onClick={() => setActiveTab('Summer Class')}
-            >
-              Summer ({metrics.summer})
             </button>
             <button 
               className={`tab-btn ${activeTab === 'Fitness Class' ? 'active' : ''}`}
@@ -200,7 +209,6 @@ const StudentList = () => {
                 <StudentRow 
                   key={student._id} 
                   student={student} 
-                  payments={payments.data || []}
                   onEdit={openEditModal} 
                   onDelete={handleDelete} 
                   onToggleStatus={toggleStudentStatus}
@@ -220,7 +228,9 @@ const StudentList = () => {
       <Pagination 
         currentPage={currentPage} 
         totalPages={totalPages} 
-        onPageChange={onPageChange} 
+        onPageChange={onPageChange}
+        limit={limit}
+        onLimitChange={onLimitChange}
       />
 
       <Modal 
@@ -229,11 +239,12 @@ const StudentList = () => {
         title={editingStudent ? 'Edit Student' : 'Add New Student'}
       >
         <StudentForm 
+          key={editingStudent?._id || 'new'}
           formData={formData} 
           setFormData={setFormData} 
-          onSubmit={handleSubmit} 
           onCancel={closeModals}
           isEditing={!!editingStudent}
+          editingStudentId={editingStudent?._id}
         />
       </Modal>
 

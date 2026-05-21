@@ -186,3 +186,50 @@
     grid-template-columns: 1fr;
   }
 }
+
+/* ── Dark Theme Overrides ─────────────────────────────────────── */
+[data-theme="dark"] .registration-card {
+  background: #1a1d28;
+  border-color: #2a2e3d;
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3);
+}
+
+[data-theme="dark"] .registration-card:hover {
+  border-color: var(--primary-color);
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.4);
+}
+
+[data-theme="dark"] .reg-date {
+  background: #0f1117;
+  color: #8b95a8;
+}
+
+[data-theme="dark"] .detail-item {
+  background: #0f1117;
+  border-color: #2a2e3d;
+  color: #e2e8f0;
+}
+
+[data-theme="dark"] .detail-tag {
+  background: rgba(255, 140, 0, 0.15);
+}
+
+[data-theme="dark"] .detail-tag.style {
+  background: rgba(96, 165, 250, 0.15);
+}
+
+[data-theme="dark"] .reg-notes {
+  background: rgba(251, 191, 36, 0.1);
+  border-left-color: #fbbf24;
+  color: #e2e8f0;
+}
+
+[data-theme="dark"] .btn-approve {
+  box-shadow: 0 4px 12px rgba(52, 211, 153, 0.2);
+}
+
+[data-theme="dark"] .btn-reject {
+  background: #0f1117;
+  border-color: #2a2e3d;
+}
+

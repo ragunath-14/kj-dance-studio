@@ -1,10 +1,11 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
 import axios from 'axios';
 import { io } from 'socket.io-client';
 import API_URL from '../config';
 
 const DataContext = createContext();
 
+// eslint-disable-next-line react-refresh/only-export-components
 export const useData = () => {
   const context = useContext(DataContext);
   if (!context) throw new Error('useData must be used within a DataProvider');
@@ -19,6 +20,10 @@ export const DataProvider = ({ children }) => {
   const [registrations, setRegistrations] = useState([]);
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(false);
+
+  const studentParamsRef = useRef({ page: 1, limit: 50, search: '', classType: '' });
+  const paymentParamsRef = useRef({ page: 1, limit: 50 });
+  const unpaidParamsRef = useRef({ page: 1, limit: 50 });
 
   const fetchStats = async () => {
     try {
@@ -40,6 +45,7 @@ export const DataProvider = ({ children }) => {
 
   const fetchStudents = async (page = 1, limit = 50, search = '', classType = '') => {
     try {
+      studentParamsRef.current = { page, limit, search, classType };
       const res = await axios.get(`${API_URL}/students`, { params: { page, limit, search, classType } });
       setStudents(res.data);
     } catch (err) {
@@ -49,6 +55,7 @@ export const DataProvider = ({ children }) => {
 
   const fetchPayments = async (page = 1, limit = 50) => {
     try {
+      paymentParamsRef.current = { page, limit };
       const res = await axios.get(`${API_URL}/payments`, { params: { page, limit } });
       setPayments(res.data);
     } catch (err) {
@@ -58,6 +65,7 @@ export const DataProvider = ({ children }) => {
 
   const fetchUnpaidStudents = async (page = 1, limit = 50) => {
     try {
+      unpaidParamsRef.current = { page, limit };
       const res = await axios.get(`${API_URL}/students/unpaid`, { params: { page, limit } });
       setUnpaidStudents(res.data);
     } catch (err) {
@@ -65,15 +73,28 @@ export const DataProvider = ({ children }) => {
     }
   };
 
+  const fetchRegistrations = async () => {
+    try {
+      const res = await axios.get(`${API_URL}/registrations/pending`);
+      setRegistrations(res.data);
+    } catch (err) {
+      console.error('Registrations fetch failed:', err);
+    }
+  };
+
   const fetchAllData = async (silent = false) => {
     try {
       if (!silent) setLoading(true);
+      const studentParams = studentParamsRef.current;
+      const paymentParams = paymentParamsRef.current;
+      const unpaidParams = unpaidParamsRef.current;
       await Promise.all([
         fetchStats(),
         fetchAllStudents(),
-        fetchStudents(1, 50),
-        fetchPayments(1, 50),
-        fetchUnpaidStudents(1, 50)
+        fetchStudents(studentParams.page, studentParams.limit, studentParams.search, studentParams.classType),
+        fetchPayments(paymentParams.page, paymentParams.limit),
+        fetchUnpaidStudents(unpaidParams.page, unpaidParams.limit),
+        fetchRegistrations()
       ]);
     } finally {
       if (!silent) setLoading(false);
@@ -90,6 +111,7 @@ export const DataProvider = ({ children }) => {
     socket.on('registrationApproved', () => fetchAllData(true));
 
     return () => socket.disconnect();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const refreshData = () => fetchAllData();

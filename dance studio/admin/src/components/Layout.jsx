@@ -3,6 +3,7 @@ import { Menu, X, Bell } from 'lucide-react';
 import { NavLink } from 'react-router-dom';
 import { useData } from '../context/DataContext';
 import Sidebar from './Sidebar';
+import ThemeToggle from './ui/ThemeToggle';
 import './Layout.css';
 
 const Layout = ({ children, onLogout }) => {
@@ -28,6 +29,7 @@ const Layout = ({ children, onLogout }) => {
         <header className="topbar">
           <h1>Admin Management</h1>
           <div className="topbar-actions" style={{display: 'flex', alignItems: 'center', gap: '20px'}}>
+            <ThemeToggle />
             <NavLink to="/registrations" className="topbar-notification">
               <Bell size={24} />
               {registrations.length > 0 && <span className="notification-badge">{registrations.length}</span>}

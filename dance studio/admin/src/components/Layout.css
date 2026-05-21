@@ -120,3 +120,23 @@
     padding: 15px;
   }
 }
+
+/* ── Dark Theme Overrides ─────────────────────────────────────── */
+[data-theme="dark"] .topbar {
+  background-color: var(--bg-sidebar);
+  border-bottom-color: var(--border-color);
+}
+
+[data-theme="dark"] .mobile-header {
+  background-color: var(--bg-sidebar);
+  border-bottom-color: var(--border-color);
+}
+
+[data-theme="dark"] .topbar-notification:hover {
+  background-color: rgba(255, 255, 255, 0.05);
+}
+
+[data-theme="dark"] .notification-badge {
+  border-color: var(--bg-sidebar);
+}
+
