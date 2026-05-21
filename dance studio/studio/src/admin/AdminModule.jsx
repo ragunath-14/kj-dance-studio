@@ -6,6 +6,7 @@ import Dashboard from './components/Dashboard';
 import StudentList from './components/StudentList';
 import PaymentList from './components/PaymentList';
 import RegistrationList from './components/students/RegistrationList';
+import ActivityLog from './components/ActivityLog';
 
 import Login from './pages/Login';
 import './App.css';
@@ -48,6 +49,7 @@ const AdminModule = () => {
                   <Route path="/students" element={<StudentList />} />
                   <Route path="/payments" element={<PaymentList />} />
                   <Route path="/registrations" element={<RegistrationList />} />
+                  <Route path="/activity" element={<ActivityLog />} />
 
                   {/* Fallback to dashboard */}
                   <Route path="*" element={<Navigate to="/admin" replace />} />

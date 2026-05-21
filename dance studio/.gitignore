@@ -2,5 +2,12 @@ node_modules/
 .env
 .wwebjs_auth/
 .wwebjs_cache/
-node/
 .DS_Store
+dist/
+studio/dist/
+admin/dist/
+*.log
+npm-debug.log*
+.env.local
+.env.production.local
+backend/scratch_*.js

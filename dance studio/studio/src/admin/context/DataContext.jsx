@@ -35,7 +35,7 @@ export const DataProvider = ({ children }) => {
 
   const fetchStats = async () => {
     try {
-      const res = await axios.get(`${API_URL}/dashboard/stats`);
+      const res = await axios.get(`${API_URL}/students/dashboard/stats`);
       setStats(res.data);
     } catch (err) {
       console.error('Stats fetch failed:', err);

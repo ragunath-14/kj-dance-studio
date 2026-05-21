@@ -58,7 +58,6 @@ const ActivityLog = () => {
     }));
 
     let merged = [...paymentEntries, ...regEntries];
-    
     if (filter === 'payment') merged = paymentEntries;
     if (filter === 'registration') merged = regEntries;
 

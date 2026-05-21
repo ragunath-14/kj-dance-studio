@@ -10,7 +10,8 @@ const Sidebar = ({ isOpen, onClose }) => {
     { to: '/admin', icon: LayoutDashboard, label: 'Dashboard' },
     { to: '/admin/registrations', icon: UserPlus, label: 'New Joiners', badge: registrations.length },
     { to: '/admin/students', icon: Users, label: 'Students' },
-    { to: '/admin/payments', icon: CreditCard, label: 'Payments' }
+    { to: '/admin/payments', icon: CreditCard, label: 'Payments' },
+    { to: '/admin/activity', icon: Activity, label: 'Activity Log' },
   ];
 
   return (
