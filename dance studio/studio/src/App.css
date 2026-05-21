@@ -1,0 +1,11 @@
+/* App.css - Global App Layout Only */
+.app {
+  position: relative;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+main {
+  flex: 1;
+}

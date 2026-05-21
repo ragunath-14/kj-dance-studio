@@ -1,0 +1,351 @@
+/* ── Unified List & Table Styles ─────────────────────────────────── */
+.admin-root .list-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 28px;
+  gap: 20px;
+}
+
+.admin-root .header-left-group {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  flex-wrap: wrap;
+}
+
+.admin-root .tabs {
+  display: flex;
+  background-color: var(--bg-dark);
+  padding: 5px;
+  border-radius: 12px;
+  border: 1px solid var(--border-color);
+}
+
+.admin-root .tab-btn {
+  padding: 8px 20px;
+  border-radius: 8px;
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  font-weight: 700;
+  font-size: 13px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.admin-root .tab-btn.active {
+  background-color: var(--bg-card);
+  color: var(--primary-color);
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
+}
+
+.admin-root .tab-btn:hover:not(.active) {
+  color: var(--text-main);
+  background-color: rgba(0, 0, 0, 0.03);
+}
+
+.admin-root .search-box {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background-color: var(--bg-card);
+  padding: 10px 18px;
+  border-radius: 12px;
+  border: 1px solid var(--border-color);
+  width: 320px;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+}
+
+.admin-root .search-box:focus-within {
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 4px rgba(255, 140, 0, 0.1);
+}
+
+.admin-root .search-box input {
+  background: transparent;
+  border: none;
+  color: var(--text-main);
+  outline: none;
+  width: 100%;
+  font-weight: 500;
+  font-size: 14px;
+}
+
+.admin-root .search-box input::placeholder {
+  color: var(--text-muted);
+  opacity: 0.6;
+}
+
+.admin-root .table-container {
+  background-color: var(--bg-card);
+  border-radius: 20px;
+  border: 1px solid var(--border-color);
+  overflow: hidden;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+}
+
+.admin-root .data-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+  min-width: 800px;
+}
+
+.admin-root .data-table th {
+  background-color: rgba(0, 0, 0, 0.015);
+  padding: 18px 24px;
+  font-size: 12px;
+  font-weight: 800;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.admin-root .data-table td {
+  padding: 18px 24px;
+  border-bottom: 1px solid var(--border-color);
+  font-size: 14px;
+  color: var(--text-main);
+  transition: background-color 0.2s;
+}
+
+.admin-root .data-table tr:last-child td {
+  border-bottom: none;
+}
+
+.admin-root .data-table tr:hover td {
+  background-color: rgba(255, 140, 0, 0.01);
+}
+
+/* ── Specific Cell Components ─────────────────────────────────────────── */
+.admin-root .student-name-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.admin-root .student-name-cell strong {
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.admin-root .mini-badge {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 10px;
+  font-weight: 800;
+  text-transform: uppercase;
+  padding: 3px 8px;
+  border-radius: 6px;
+  width: fit-content;
+  letter-spacing: 0.5px;
+}
+
+.admin-root .mini-badge.paid {
+  background-color: rgba(16, 185, 129, 0.1);
+  color: var(--success);
+}
+
+.admin-root .mini-badge.unpaid {
+  background-color: rgba(239, 68, 68, 0.1);
+  color: var(--error);
+}
+
+.admin-root .status-badge {
+  padding: 6px 12px;
+  border-radius: 10px;
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: capitalize;
+}
+
+.admin-root .contact-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.admin-root .contact-info .email {
+  color: var(--text-muted);
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.admin-root .contact-info .phone {
+  font-weight: 700;
+  font-size: 13px;
+}
+
+.admin-root .amount {
+  font-family: var(--mono);
+  font-weight: 800;
+  font-size: 15px;
+}
+
+.admin-root .amount.due {
+  color: var(--error);
+}
+
+.admin-root .amount.collected {
+  color: var(--success);
+}
+
+.admin-root .action-buttons {
+  display: flex;
+  gap: 8px;
+}
+
+/* ── Status Toggle Button ────────────────────────────────────────────── */
+.admin-root .status-toggle-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 14px;
+  border-radius: 10px;
+  border: 1px solid var(--border-color);
+  background: var(--bg-card);
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  min-width: 95px;
+  justify-content: center;
+}
+
+.admin-root .status-toggle-btn.active {
+  color: var(--success);
+  border-color: var(--success);
+  background: rgba(16, 185, 129, 0.05);
+}
+
+.admin-root .status-toggle-btn.inactive {
+  color: var(--text-muted);
+  border-color: var(--border-color);
+  background: var(--bg-dark);
+}
+
+.admin-root .status-toggle-btn:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+}
+
+.admin-root .status-toggle-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.admin-root .inactive-row {
+  opacity: 0.6;
+  filter: grayscale(0.5);
+}
+
+/* ── Responsive ───────────────────────────────────────────────────────── */
+@media (max-width: 1024px) {
+  .admin-root .search-box {
+    width: 240px;
+  }
+}
+
+@media (max-width: 768px) {
+  .admin-root .list-header {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .admin-root .header-left-group {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  
+  .admin-root .search-box {
+    width: 100%;
+  }
+  
+  .admin-root .tabs {
+    width: 100%;
+    overflow-x: auto;
+    padding: 4px;
+  }
+
+  .admin-root .tab-btn {
+    flex: 1;
+    min-width: 100px;
+    padding: 10px;
+    white-space: nowrap;
+  }
+}
+
+/* ── Dark Theme Overrides ─────────────────────────────────────── */
+[data-theme="dark"] .admin-root .tabs {
+  background-color: #0f1117;
+}
+
+[data-theme="dark"] .admin-root .tab-btn.active {
+  background-color: #1a1d28;
+}
+
+[data-theme="dark"] .admin-root .tab-btn:hover:not(.active) {
+  background-color: rgba(255, 255, 255, 0.05);
+}
+
+[data-theme="dark"] .admin-root .search-box {
+  background-color: #1a1d28;
+}
+
+[data-theme="dark"] .admin-root .table-container {
+  background-color: #1a1d28;
+}
+
+[data-theme="dark"] .admin-root .data-table th {
+  background-color: rgba(255, 255, 255, 0.02);
+}
+
+[data-theme="dark"] .admin-root .data-table tr:hover td {
+  background-color: rgba(255, 140, 0, 0.03);
+}
+
+[data-theme="dark"] .admin-root .status-toggle-btn {
+  background: #1a1d28;
+}
+
+[data-theme="dark"] .admin-root .status-toggle-btn.inactive {
+  background: #1a1d28;
+}
+
+[data-theme="dark"] .admin-root .mini-badge.paid {
+  background-color: rgba(52, 211, 153, 0.1);
+}
+
+[data-theme="dark"] .admin-root .mini-badge.unpaid {
+  background-color: rgba(248, 113, 113, 0.1);
+}
+
+/* ── Toggle Spinner Styles ─────────────────────────────────── */
+.toggle-spinner {
+  width: 14px;
+  height: 14px;
+  border: 2px solid currentColor;
+  border-bottom-color: transparent;
+  border-radius: 50%;
+  display: inline-block;
+  box-sizing: border-box;
+  animation: rotation 1s linear infinite;
+}
+
+@keyframes rotation {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+

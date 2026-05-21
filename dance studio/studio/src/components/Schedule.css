@@ -1,0 +1,145 @@
+.schedule-section {
+  background-color: #000;
+  padding: 6rem 0;
+  position: relative;
+  overflow: hidden;
+}
+
+.schedule-subtitle {
+  text-align: center;
+  color: #fb923c;
+  font-weight: 700;
+  font-size: 1.2rem;
+  margin-top: -2rem;
+  margin-bottom: 3rem;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+}
+
+.schedule-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 2rem;
+  max-width: 1000px;
+  margin: 0 auto;
+}
+
+.schedule-box {
+  background: #1a1a1a;
+  border-radius: 20px;
+  padding: 2rem;
+  border: 2px solid #f97316;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+  transition: transform 0.3s ease;
+}
+
+.schedule-box:hover {
+  transform: translateY(-10px);
+  box-shadow: 0 20px 40px rgba(0,0,0,0.6), 0 0 10px rgba(249, 115, 22, 0.2);
+}
+
+.schedule-box.weekend {
+  border-color: #ea580c;
+  background: linear-gradient(135deg, #1a1a1a 0%, #0a0a0a 100%);
+}
+
+.target-group {
+  color: #fb923c;
+  font-weight: 800;
+  font-size: 0.9rem;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin-bottom: 1rem;
+  background: rgba(251, 146, 60, 0.1);
+  display: inline-block;
+  padding: 0.2rem 0.6rem;
+  border-radius: 4px;
+}
+
+.box-header {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 2rem;
+  border-bottom: 1px solid rgba(249, 115, 22, 0.3);
+  padding-bottom: 1rem;
+}
+
+.box-header .emoji {
+  font-size: 2rem;
+}
+
+.box-header h3 {
+  font-size: 1.5rem;
+  color: #fff;
+  font-weight: 800;
+}
+
+.timing-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1.2rem;
+}
+
+.timing-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.8rem;
+  background: rgba(249, 115, 22, 0.05);
+  border-radius: 10px;
+  border-left: 4px solid #f97316;
+  transition: all 0.3s ease;
+}
+
+.timing-item:hover {
+  background: rgba(249, 115, 22, 0.1);
+  padding-left: 1.2rem;
+}
+
+.timing-item .time {
+  font-weight: 700;
+  color: #fb923c;
+  font-size: 0.95rem;
+}
+
+.timing-item .type {
+  font-weight: 600;
+  color: #fff;
+  font-size: 0.95rem;
+  text-align: right;
+}
+
+.weekend-item {
+  border-left-color: #ea580c;
+}
+
+.day-info {
+  display: flex;
+  flex-direction: column;
+}
+
+.day-info .day {
+  font-size: 0.75rem;
+  color: #9ca3af;
+  text-transform: uppercase;
+  font-weight: 800;
+  margin-bottom: 2px;
+}
+
+@media (max-width: 768px) {
+  .schedule-grid {
+    grid-template-columns: 1fr;
+    padding: 0 1rem;
+  }
+  
+  .timing-item {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.3rem;
+  }
+  
+  .timing-item .type {
+    text-align: left;
+  }
+}

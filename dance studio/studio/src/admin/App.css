@@ -1,0 +1,383 @@
+:root {
+  --primary-color: #FF8C00;
+  --primary-hover: #e67e00;
+  --bg-dark: #f8fafc;
+  --bg-card: #ffffff;
+  --bg-sidebar: #ffffff;
+  --text-main: #1e293b;
+  --text-muted: #64748b;
+  --border-color: #e2e8f0;
+  --success: #10b981;
+  --error: #ef4444;
+  --warning: #f59e0b;
+  --info: #3b82f6;
+  --sidebar-width: 260px;
+  --topbar-height: 70px;
+  /* Surface tokens (blueprint spec) */
+  --surface-overlay: rgba(255, 255, 255, 0.9);
+  --surface-subtle: #f1f5f9;
+}
+
+/* ── Premium Dark Theme ─────────────────────────────────────────── */
+[data-theme="dark"] .admin-root {
+  --primary-color: #FF8C00;
+  --primary-hover: #ff9e2c;
+  --bg-dark: #0f1117;
+  --bg-card: #1a1d28;
+  --bg-sidebar: #141620;
+  --text-main: #e2e8f0;
+  --text-muted: #8b95a8;
+  --border-color: #2a2e3d;
+  --success: #34d399;
+  --error: #f87171;
+  --warning: #fbbf24;
+  --info: #60a5fa;
+  --surface-overlay: rgba(26, 29, 40, 0.95);
+  --surface-subtle: #1e2130;
+}
+
+[data-theme="dark"] .admin-root {
+  background-color: var(--bg-dark);
+  color: var(--text-main);
+}
+
+[data-theme="dark"] .admin-root input,
+[data-theme="dark"] .admin-root select,
+[data-theme="dark"] .admin-root textarea {
+  background-color: rgba(255, 255, 255, 0.04);
+  border-color: #334155;
+  color: #f1f5f9;
+  transition: all 0.2s ease;
+}
+
+[data-theme="dark"] .admin-root input:focus,
+[data-theme="dark"] .admin-root select:focus,
+[data-theme="dark"] .admin-root textarea:focus {
+  background-color: rgba(255, 255, 255, 0.08);
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 3px rgba(255, 140, 0, 0.15);
+}
+
+[data-theme="dark"] .admin-root .skeleton-pulse {
+  background: linear-gradient(-90deg, #1e2130 0%, #2a2e3d 50%, #1e2130 100%);
+  background-size: 400% 400%;
+}
+
+[data-theme="dark"] .admin-root .method-badge {
+  background-color: var(--surface-subtle);
+  color: var(--text-main);
+}
+
+[data-theme="dark"] .admin-root .suggestion-item:hover {
+  background-color: var(--surface-subtle);
+}
+
+[data-theme="dark"] .admin-root .suggestion-item.selected {
+  background-color: rgba(255, 140, 0, 0.1);
+}
+
+[data-theme="dark"] .admin-root .selected-student-card {
+  background-color: var(--surface-subtle);
+  border-color: var(--border-color);
+}
+
+[data-theme="dark"] .admin-root .selected-student-card .clear-selection {
+  border-color: var(--border-color);
+  color: var(--text-muted);
+}
+
+[data-theme="dark"] .admin-root .selected-student-card .clear-selection:hover {
+  background-color: rgba(239, 68, 68, 0.1);
+}
+
+.admin-root {
+  margin: 0;
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  background-color: var(--bg-dark);
+  color: var(--text-main);
+  -webkit-font-smoothing: antialiased;
+  min-height: 100vh;
+}
+
+/* Base Global Styles */
+.admin-root .loading-state {
+  padding: 40px;
+  text-align: center;
+  color: var(--text-muted);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 15px;
+}
+
+.admin-root .loading-state::after {
+  content: "";
+  width: 30px;
+  height: 30px;
+  border: 3px solid rgba(255, 140, 0, 0.1);
+  border-top-color: var(--primary-color);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.admin-root .text-center {
+  text-align: center;
+}
+
+/* Form Basics shared globally */
+.admin-root label {
+  display: block;
+  margin-bottom: 8px;
+  font-size: 14px;
+  color: var(--text-muted);
+}
+
+.admin-root input, .admin-root select, .admin-root textarea {
+  width: 100%;
+  background-color: #ffffff;
+  border: 1px solid var(--border-color);
+  padding: 12px;
+  border-radius: 8px;
+  color: var(--text-main);
+  outline: none;
+  box-sizing: border-box;
+}
+
+.admin-root input:focus, .admin-root select:focus {
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 3px rgba(255, 140, 0, 0.1);
+}
+
+/* Skeleton Loading */
+.admin-root .skeleton-row td {
+  padding: 20px !important;
+}
+
+.admin-root .skeleton-pulse {
+  height: 16px;
+  width: 100%;
+  background: linear-gradient(-90deg, #f1f5f9 0%, #ffffff 50%, #f1f5f9 100%);
+  background-size: 400% 400%;
+  animation: pulse 1.5s ease-in-out infinite;
+  border-radius: 4px;
+}
+
+@keyframes pulse {
+  0% { background-position: 0% 0%; }
+  100% { background-position: -135% 0%; }
+}
+
+/* Badges for different modules */
+.admin-root .method-badge {
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 600;
+  background-color: #f1f5f9;
+  color: var(--text-main);
+}
+
+.admin-root .status-badge.regular-class {
+  background-color: rgba(33, 150, 243, 0.15);
+  color: var(--info);
+}
+
+.admin-root .status-badge.summer-class {
+  background-color: rgba(233, 30, 99, 0.15);
+  color: #e91e63;
+}
+
+.admin-root .contact-info {
+  display: flex;
+  flex-direction: column;
+}
+
+.admin-root .contact-info .email {
+  font-weight: 500;
+}
+
+.admin-root .contact-info .phone {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.admin-root .amount {
+  font-weight: 700;
+  color: var(--primary-color);
+}
+
+/* Animations */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.admin-root .animate-fade-in {
+  animation: fadeIn 0.4s ease-out forwards;
+}
+
+/* Searchable Input & Autocomplete */
+.admin-root .search-input-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.admin-root .search-input-wrapper .search-icon {
+  position: absolute;
+  left: 12px;
+  color: var(--text-muted);
+}
+
+.admin-root .search-input-wrapper input {
+  padding-left: 38px;
+}
+
+.admin-root .suggestions-dropdown {
+  position: absolute;
+  background-color: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  width: 35%;
+  max-height: 240px;
+  overflow-y: auto;
+  z-index: 1000;
+  margin-top: 5px;
+  box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+}
+
+.admin-root .suggestion-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 15px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border-bottom: 1px solid var(--bg-dark);
+}
+
+.admin-root .suggestion-item:last-child {
+  border-bottom: none;
+}
+
+.admin-root .suggestion-item:hover {
+  background-color: #f1f5f9;
+}
+
+.admin-root .suggestion-item.selected {
+  background-color: rgba(255, 140, 0, 0.05);
+  border-left: 3px solid var(--primary-color);
+}
+
+.admin-root .suggestion-icon {
+  width: 28px;
+  height: 28px;
+  background-color: #f1f5f9;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-muted);
+}
+
+.admin-root .suggestion-details {
+  display: flex;
+  flex-direction: column;
+}
+
+.admin-root .suggestion-details .name {
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.admin-root .suggestion-details .meta {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.admin-root .selected-indicator {
+  margin-top: 8px;
+  font-size: 13px;
+  color: var(--success);
+  display: flex;
+  gap: 5px;
+}
+
+.admin-root .selected-student-card {
+  margin-top: 12px;
+  background-color: #f8fafc;
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  padding: 15px;
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  animation: fadeIn 0.3s ease-out;
+}
+
+.admin-root .selected-student-card .card-icon {
+  width: 42px;
+  height: 42px;
+  background-color: var(--primary-color);
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  flex-shrink: 0;
+}
+
+.admin-root .selected-student-card .card-info {
+  flex: 1;
+}
+
+.admin-root .selected-student-card .name-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 4px;
+}
+
+.admin-root .selected-student-card .name-row strong {
+  font-size: 15px;
+}
+
+.admin-root .selected-student-card .name-row .badge {
+  font-size: 10px;
+  text-transform: uppercase;
+  background-color: rgba(255, 140, 0, 0.1);
+  color: var(--primary-color);
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+}
+
+.admin-root .selected-student-card .meta-row {
+  display: flex;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.admin-root .selected-student-card .clear-selection {
+  background: none;
+  border: 1px solid var(--border-color);
+  color: var(--text-muted);
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.admin-root .selected-student-card .clear-selection:hover {
+  background-color: #ffffff;
+  color: var(--error);
+  border-color: var(--error);
+}

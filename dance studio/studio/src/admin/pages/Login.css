@@ -1,0 +1,129 @@
+.admin-root .login-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+  background-color: #f5f7fa;
+  font-family: 'Inter', sans-serif;
+}
+
+.admin-root .login-card {
+  background: white;
+  padding: 40px;
+  border-radius: 12px;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.05);
+  width: 100%;
+  max-width: 400px;
+  text-align: center;
+}
+
+.admin-root .login-card h2 {
+  margin-bottom: 24px;
+  color: #1f2937;
+  font-size: 24px;
+}
+
+.admin-root .form-group {
+  margin-bottom: 20px;
+  text-align: left;
+}
+
+.admin-root .form-group label {
+  display: block;
+  margin-bottom: 8px;
+  font-weight: 500;
+  color: #4b5563;
+}
+
+.admin-root .form-group input {
+  width: 100%;
+  padding: 12px;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  font-size: 16px;
+  transition: border-color 0.2s;
+  box-sizing: border-box;
+}
+
+.admin-root .form-group input:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.admin-root .error-message {
+  color: #ef4444;
+  font-size: 14px;
+  margin-bottom: 16px;
+  text-align: left;
+}
+
+.admin-root .btn-full {
+  width: 100%;
+  padding: 12px;
+  background: #3b82f6;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.admin-root .btn-full:hover {
+  background: #2563eb;
+}
+
+.admin-root .back-btn {
+  margin-top: 16px;
+  background: transparent;
+  border: none;
+  color: #6b7280;
+  cursor: pointer;
+  font-size: 14px;
+  text-decoration: underline;
+}
+
+.admin-root .back-btn:hover {
+  color: #374151;
+}
+
+/* ── Dark Theme Overrides ─────────────────────────────────────── */
+[data-theme="dark"] .admin-root .login-container {
+  background-color: #0f1117;
+}
+
+[data-theme="dark"] .admin-root .login-card {
+  background: #1a1d28;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
+  border: 1px solid #2a2e3d;
+}
+
+[data-theme="dark"] .admin-root .login-card h2 {
+  color: #e2e8f0;
+}
+
+[data-theme="dark"] .admin-root .form-group label {
+  color: #8b95a8;
+}
+
+[data-theme="dark"] .admin-root .form-group input {
+  background-color: #1e2130;
+  border-color: #2a2e3d;
+  color: #e2e8f0;
+}
+
+[data-theme="dark"] .admin-root .form-group input:focus {
+  border-color: #FF8C00;
+  box-shadow: 0 0 0 3px rgba(255, 140, 0, 0.1);
+}
+
+[data-theme="dark"] .admin-root .back-btn {
+  color: #8b95a8;
+}
+
+[data-theme="dark"] .admin-root .back-btn:hover {
+  color: #e2e8f0;
+}
+

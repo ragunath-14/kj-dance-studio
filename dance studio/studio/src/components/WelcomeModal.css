@@ -1,0 +1,349 @@
+/* Modal Overlay */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.85);
+  backdrop-filter: blur(6px);
+  z-index: 2000;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  padding: 2rem 1rem;
+  overflow-y: auto;
+  scrollbar-gutter: stable;
+}
+
+.modal-overlay::-webkit-scrollbar {
+  width: 8px;
+}
+
+.modal-overlay::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.2);
+}
+
+.modal-overlay::-webkit-scrollbar-thumb {
+  background: var(--primary);
+  border-radius: 10px;
+}
+
+.modal-overlay::-webkit-scrollbar-thumb:hover {
+  background: white;
+}
+
+/* Flyer Modal Styles - Rebranded */
+.camp-flyer-modal {
+  background: #000;
+  width: 90%;
+  max-width: 680px;
+  border-radius: 16px;
+  overflow: hidden;
+  position: relative;
+  color: white;
+  box-shadow: 0 40px 80px rgba(0,0,0,0.9);
+  font-family: 'Poppins', sans-serif;
+  border: 3px solid #f97316;
+}
+
+.modal-close-btn {
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+  color: white !important;
+  background: rgba(0,0,0,0.8);
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 110;
+  border: 2px solid white;
+  transition: all 0.3s ease;
+}
+
+.modal-close-btn:hover {
+  transform: rotate(90deg);
+  background: #ef4444;
+}
+
+.flyer-header {
+  padding: 1.5rem 2rem 0.5rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  position: relative;
+}
+
+.header-content {
+  flex: 1;
+}
+
+.flyer-header h1 {
+  font-size: 1.6rem;
+  font-weight: 800;
+  color: #fb923c;
+  line-height: 1.1;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.flyer-header .sub-title {
+  font-size: 1.3rem;
+  color: #f97316;
+  font-weight: 700;
+  margin-top: 0.2rem;
+  text-transform: uppercase;
+}
+
+.eds-logo-box-gold {
+  background: #000;
+  border: 3px solid #f97316;
+  padding: 0.5rem;
+  text-align: center;
+  width: 90px;
+  position: relative;
+}
+
+.eds-logo-box-gold::before {
+  content: '';
+  position: absolute;
+  inset: -10px;
+  border: 1px solid #fb923c;
+  pointer-events: none;
+}
+
+.eds-logo {
+  font-weight: 900;
+  font-size: 1.6rem;
+  color: #fb923c;
+  line-height: 1;
+}
+
+.logo-tagline {
+  font-size: 0.35rem;
+  color: #fff;
+  margin-top: 4px;
+  font-weight: 700;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.flyer-main-title {
+  text-align: right;
+  padding: 0 3rem 1.5rem;
+}
+
+.flyer-main-title h2 {
+  font-size: 1.4rem;
+  font-weight: 700;
+  color: white;
+  margin-bottom: 0.3rem;
+}
+
+.flyer-styles-pill {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.8rem;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #fb923c;
+}
+
+.flyer-body {
+  padding: 0.5rem 2rem;
+  position: relative;
+}
+
+.flyer-grid {
+  display: flex;
+  justify-content: space-between;
+  gap: 1.5rem;
+  align-items: stretch;
+}
+
+.grid-col {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.parchment-card {
+  background: #1a1a1a;
+  padding: 0.8rem;
+  border-radius: 4px;
+  position: relative;
+  box-shadow: 4px 4px 15px rgba(0,0,0,0.4);
+  color: white;
+  text-align: center;
+  border: 1px solid #f97316;
+}
+
+.parchment-card::after {
+  content: '';
+  position: absolute;
+  inset: 5px;
+  border: 1px solid rgba(0,0,0,0.05);
+}
+
+.parchment-card h3 {
+  font-family: 'Poppins', sans-serif;
+  font-size: 1.1rem;
+  font-weight: 900;
+  color: #fb923c;
+  margin-bottom: 0.4rem;
+}
+
+.parchment-card p {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #e5e7eb;
+  margin-bottom: 0.3rem;
+  line-height: 1.2;
+}
+
+.center-box {
+  flex: 1.2;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+}
+
+.diamond-frame {
+  width: 100%;
+  aspect-ratio: 1;
+  padding: 6px;
+  background: #f97316;
+  clip-path: polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.diamond-inner {
+  width: 100%;
+  height: 100%;
+  clip-path: polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%);
+  overflow: hidden;
+}
+
+.diamond-inner img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transform: scale(1.1);
+}
+
+.batch-info-overlay {
+  text-align: center;
+  color: white;
+  font-weight: 700;
+  margin-top: 1.5rem;
+  font-size: 1.1rem;
+  text-transform: uppercase;
+  color: #fb923c;
+}
+
+.flyer-footer {
+  padding: 0.5rem 2rem 1.5rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+}
+
+.btn-register-flyer {
+  background: linear-gradient(to right, #ea580c, #f97316);
+  color: white;
+  padding: 1rem 2rem;
+  border-radius: 100px;
+  font-weight: 900;
+  font-size: 1.4rem;
+  border: none;
+  cursor: pointer;
+  width: 100%;
+  max-width: 320px;
+  box-shadow: 0 10px 30px rgba(234, 88, 12, 0.4);
+  transition: all 0.3s ease;
+  animation: pulse-blink 1.5s infinite;
+}
+
+.btn-register-flyer:hover {
+  transform: scale(1.05) translateY(-5px);
+  box-shadow: 0 15px 40px rgba(234, 88, 12, 0.6);
+}
+
+.footer-address-bar {
+  text-align: center;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: white;
+  text-transform: uppercase;
+}
+
+.insta-handle {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: white;
+}
+
+@media (max-width: 768px) {
+  .camp-flyer-modal {
+    max-height: 85vh;
+    overflow-y: auto;
+    width: 92%;
+    border-width: 2px;
+  }
+  
+  .flyer-header { flex-direction: column; align-items: center; text-align: center; padding: 1rem; }
+  .flyer-header h1 { font-size: 1.4rem; }
+  .flyer-header .sub-title { font-size: 1.1rem; }
+  .flyer-main-title { text-align: center; padding: 0.5rem; }
+  .flyer-main-title h2 { font-size: 1.2rem; }
+  .flyer-styles-pill { justify-content: center; font-size: 0.8rem; }
+  .flyer-grid { flex-direction: column; gap: 1rem; }
+  .center-box { order: -1; }
+  .diamond-frame { max-width: 200px; margin: 0 auto; }
+}
+
+.view-schedule-btn {
+  background: #000;
+  color: #dfba5c;
+  padding: 0.8rem 2rem;
+  border-radius: 12px;
+  font-weight: 800;
+  font-size: 1.2rem;
+  border: 4px double #dfba5c;
+  cursor: pointer;
+  width: 100%;
+  max-width: 400px;
+  line-height: 1.2;
+}
+
+.view-schedule-btn span {
+  display: block;
+  font-size: 1.1rem;
+}
+
+@keyframes pulse-blink {
+  0% {
+    transform: scale(1);
+    box-shadow: 0 10px 30px rgba(234, 88, 12, 0.4);
+  }
+  50% {
+    transform: scale(1.05);
+    box-shadow: 0 15px 45px rgba(234, 88, 12, 0.7), 0 0 10px rgba(255, 255, 255, 0.3);
+  }
+  100% {
+    transform: scale(1);
+    box-shadow: 0 10px 30px rgba(234, 88, 12, 0.4);
+  }
+}

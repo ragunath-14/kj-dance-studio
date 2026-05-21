@@ -1,0 +1,142 @@
+.admin-root .layout {
+  display: flex;
+  min-height: 100vh;
+}
+
+.admin-root .content {
+  margin-left: var(--sidebar-width);
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  width: calc(100% - var(--sidebar-width));
+}
+
+.admin-root .topbar {
+  height: var(--topbar-height);
+  background-color: var(--bg-sidebar);
+  border-bottom: 1px solid var(--border-color);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 30px;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.admin-root .topbar h1 {
+  font-size: 20px;
+  font-weight: 600;
+  margin: 0;
+}
+
+.admin-root .topbar-notification {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px;
+  border-radius: 50%;
+  color: var(--text-muted);
+  transition: all 0.2s;
+  cursor: pointer;
+  text-decoration: none;
+}
+
+.admin-root .topbar-notification:hover {
+  background-color: rgba(0,0,0,0.05);
+  color: var(--primary-color);
+}
+
+.admin-root .notification-badge {
+  position: absolute;
+  top: 0;
+  right: 0;
+  background-color: #f44336;
+  color: white;
+  font-size: 10px;
+  font-weight: 700;
+  width: 18px;
+  height: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  border: 2px solid white;
+}
+
+.admin-root .page-container {
+  padding: 30px;
+  flex: 1;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.admin-root .mobile-header {
+  display: none;
+  background-color: var(--bg-sidebar);
+  padding: 15px 20px;
+  align-items: center;
+  gap: 15px;
+  position: sticky;
+  top: 0;
+  z-index: 90;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.admin-root .sidebar-overlay {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background-color: rgba(0, 0, 0, 0.5);
+  z-index: 95;
+  backdrop-filter: blur(2px);
+}
+
+@media (max-width: 768px) {
+  .admin-root .mobile-header {
+    display: flex;
+  }
+  
+  .admin-root .content {
+    margin-left: 0;
+    width: 100%;
+  }
+  
+  .admin-root .topbar {
+    display: none;
+  }
+  
+  .admin-root .sidebar-overlay.show {
+    display: block;
+  }
+  
+  .admin-root .page-container {
+    padding: 15px;
+  }
+}
+
+/* ── Dark Theme Overrides ─────────────────────────────────────── */
+[data-theme="dark"] .admin-root .topbar {
+  background-color: var(--bg-sidebar);
+  border-bottom-color: var(--border-color);
+}
+
+[data-theme="dark"] .admin-root .mobile-header {
+  background-color: var(--bg-sidebar);
+  border-bottom-color: var(--border-color);
+}
+
+[data-theme="dark"] .admin-root .topbar-notification:hover {
+  background-color: rgba(255, 255, 255, 0.05);
+}
+
+[data-theme="dark"] .admin-root .notification-badge {
+  border-color: var(--bg-sidebar);
+}
+
