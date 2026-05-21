@@ -1,0 +1,21 @@
+{
+  "watch": [
+    "index.js",
+    "controllers/",
+    "models/",
+    "routes/",
+    "services/",
+    "middleware/",
+    "scheduler.js"
+  ],
+  "ext": "js,json",
+  "ignore": [
+    "node_modules/",
+    "scratch_*.js",
+    "__tests__/",
+    "*.log",
+    ".wwebjs_auth/",
+    ".wwebjs_cache/"
+  ],
+  "delay": 500
+}
