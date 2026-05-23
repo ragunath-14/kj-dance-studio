@@ -1,15 +1,17 @@
-import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
+import React, { createContext, useContext, useState, useEffect, useRef, useCallback } from 'react';
 import axios from 'axios';
-import { io } from "socket.io-client";
+import { io } from 'socket.io-client';
 import API_URL from '../config';
 
-axios.interceptors.request.use((config) => {
-  const token = localStorage.getItem('adminToken');
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
-  }
-  return config;
-});
+// ── Axios: attach admin token to every request (module-level, runs once) ────
+let interceptorId = null;
+if (interceptorId === null) {
+  interceptorId = axios.interceptors.request.use((config) => {
+    const token = localStorage.getItem('adminToken');
+    if (token) config.headers.Authorization = `Bearer ${token}`;
+    return config;
+  });
+}
 
 const DataContext = createContext();
 
@@ -21,57 +23,75 @@ export const useData = () => {
 };
 
 export const DataProvider = ({ children }) => {
-  const [students, setStudents] = useState({ data: [], total: 0, page: 1, limit: 50 });
-  const [unpaidStudents, setUnpaidStudents] = useState({ data: [], total: 0, page: 1, limit: 50 });
-  const [allStudents, setAllStudents] = useState([]); // For dropdowns
-  const [payments, setPayments] = useState({ data: [], total: 0, page: 1, limit: 50 });
+  const [students,      setStudents]      = useState({ data: [], total: 0, page: 1, limit: 50, totalPages: 1 });
+  const [unpaidStudents,setUnpaidStudents]= useState({ data: [], total: 0, page: 1, limit: 50, totalPages: 1 });
+  const [allStudents,   setAllStudents]   = useState([]);   // for dropdowns / payment form
+  const [payments,      setPayments]      = useState({ data: [], total: 0, page: 1, limit: 50, totalPages: 1 });
   const [registrations, setRegistrations] = useState([]);
-  const [stats, setStats] = useState(null);
-  const [loading, setLoading] = useState(false);
+  const [stats,         setStats]         = useState(null);
+
+  // Granular loading flags
+  const [loading,         setLoading]         = useState(true);   // global loading
+  const [statsLoading,    setStatsLoading]     = useState(true);
+  const [studentsLoading, setStudentsLoading]  = useState(false);
+  const [paymentsLoading, setPaymentsLoading]  = useState(false);
 
   const studentParamsRef = useRef({ page: 1, limit: 50, search: '', classType: '' });
   const paymentParamsRef = useRef({ page: 1, limit: 50 });
-  const unpaidParamsRef = useRef({ page: 1, limit: 50 });
+  const unpaidParamsRef  = useRef({ page: 1, limit: 50 });
 
-  const fetchStats = async () => {
+  const debounceTimerRef = useRef(null);
+
+  // ── Individual fetchers ────────────────────────────────────────────────────
+
+  const fetchStats = useCallback(async () => {
+    setStatsLoading(true);
     try {
       const res = await axios.get(`${API_URL}/students/dashboard/stats`);
       setStats(res.data);
     } catch (err) {
       console.error('Stats fetch failed:', err);
+    } finally {
+      setStatsLoading(false);
     }
-  };
+  }, []);
 
-  const fetchAllStudents = async () => {
+  const fetchAllStudents = useCallback(async () => {
     try {
       const res = await axios.get(`${API_URL}/students`, { params: { limit: 1000 } });
-      setAllStudents(res.data.data);
+      setAllStudents(res.data.data || []);
     } catch (err) {
       console.error('All students fetch failed:', err);
     }
-  };
+  }, []);
 
-  const fetchStudents = async (page = 1, limit = 50, search = '', classType = '') => {
+  const fetchStudents = useCallback(async (page = 1, limit = 50, search = '', classType = '') => {
+    setStudentsLoading(true);
     try {
       studentParamsRef.current = { page, limit, search, classType };
       const res = await axios.get(`${API_URL}/students`, { params: { page, limit, search, classType } });
       setStudents(res.data);
     } catch (err) {
       console.error('Students fetch failed:', err);
+    } finally {
+      setStudentsLoading(false);
     }
-  };
+  }, []);
 
-  const fetchPayments = async (page = 1, limit = 50) => {
+  const fetchPayments = useCallback(async (page = 1, limit = 50) => {
+    setPaymentsLoading(true);
     try {
       paymentParamsRef.current = { page, limit };
       const res = await axios.get(`${API_URL}/payments`, { params: { page, limit } });
       setPayments(res.data);
     } catch (err) {
       console.error('Payments fetch failed:', err);
+    } finally {
+      setPaymentsLoading(false);
     }
-  };
+  }, []);
 
-  const fetchUnpaidStudents = async (page = 1, limit = 50) => {
+  const fetchUnpaidStudents = useCallback(async (page = 1, limit = 50) => {
     try {
       unpaidParamsRef.current = { page, limit };
       const res = await axios.get(`${API_URL}/students/unpaid`, { params: { page, limit } });
@@ -79,55 +99,72 @@ export const DataProvider = ({ children }) => {
     } catch (err) {
       console.error('Unpaid fetch failed:', err);
     }
-  };
+  }, []);
 
-  const fetchRegistrations = async () => {
+  const fetchRegistrations = useCallback(async () => {
     try {
       const res = await axios.get(`${API_URL}/registrations/pending`);
       setRegistrations(res.data);
     } catch (err) {
       console.error('Registrations fetch failed:', err);
     }
-  };
+  }, []);
 
-  const fetchAllData = async (silent = false) => {
+  // ── Full data refresh (initial or after mutations) ─────────────────────────
+  const fetchAllData = useCallback(async (silent = false) => {
+    if (!silent) setLoading(true);
     try {
-      if (!silent) setLoading(true);
-      const studentParams = studentParamsRef.current;
-      const paymentParams = paymentParamsRef.current;
-      const unpaidParams = unpaidParamsRef.current;
+      const sp = studentParamsRef.current;
+      const pp = paymentParamsRef.current;
+      const up = unpaidParamsRef.current;
       await Promise.all([
         fetchStats(),
         fetchAllStudents(),
-        fetchStudents(studentParams.page, studentParams.limit, studentParams.search, studentParams.classType),
-        fetchPayments(paymentParams.page, paymentParams.limit),
-        fetchUnpaidStudents(unpaidParams.page, unpaidParams.limit),
-        fetchRegistrations()
+        fetchStudents(sp.page, sp.limit, sp.search, sp.classType),
+        fetchPayments(pp.page, pp.limit),
+        fetchUnpaidStudents(up.page, up.limit),
+        fetchRegistrations(),
       ]);
     } finally {
       if (!silent) setLoading(false);
     }
-  };
+  }, [fetchStats, fetchAllStudents, fetchStudents, fetchPayments, fetchUnpaidStudents, fetchRegistrations]);
 
+  // ── Debounced refresh: coalesces rapid consecutive mutations / socket events ──
+  const debouncedRefresh = useCallback((silent = true) => {
+    if (debounceTimerRef.current) {
+      clearTimeout(debounceTimerRef.current);
+    }
+    debounceTimerRef.current = setTimeout(() => {
+      fetchAllData(silent);
+    }, 250);
+  }, [fetchAllData]);
+
+  // ── Initial load + Socket.io real-time updates ─────────────────────────────
   useEffect(() => {
     fetchAllData();
 
-    const socketUrl = API_URL.endsWith('/api') ? API_URL.slice(0, -4) : API_URL.replace(/\/api$/, '');
-    const socket = io(socketUrl);
+    const socketUrl = API_URL.replace(/\/api$/, '');
+    const socket = io(socketUrl, { transports: ['websocket', 'polling'] });
 
-    socket.on('dataChanged', () => fetchAllData(true));
-    socket.on('registrationApproved', () => fetchAllData(true));
+    // Handle incoming real-time socket events with debouncing to prevent twinkling/flickering
+    socket.on('dataChanged',          () => debouncedRefresh(true));
+    socket.on('registrationApproved', () => debouncedRefresh(true));
 
-    return () => socket.disconnect();
+    return () => {
+      if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
+      socket.disconnect();
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const refreshData = () => fetchAllData();
+  // ── Action helpers ─────────────────────────────────────────────────────────
+  const refreshData = useCallback(() => debouncedRefresh(false), [debouncedRefresh]);
 
   const approveRegistration = async (id) => {
     try {
       await axios.post(`${API_URL}/registrations/${id}/approve`);
-      fetchAllData(true);
+      debouncedRefresh(true);
       return { success: true };
     } catch (err) {
       return { success: false, message: err.response?.data?.message || err.message };
@@ -137,7 +174,7 @@ export const DataProvider = ({ children }) => {
   const rejectRegistration = async (id) => {
     try {
       await axios.post(`${API_URL}/registrations/${id}/reject`);
-      fetchAllData(true);
+      debouncedRefresh(true);
       return { success: true };
     } catch (err) {
       return { success: false, message: err.message };
@@ -147,7 +184,7 @@ export const DataProvider = ({ children }) => {
   const toggleStudentStatus = async (id) => {
     try {
       const res = await axios.patch(`${API_URL}/students/${id}/toggle-status`);
-      fetchAllData(true);
+      debouncedRefresh(true);
       return { success: true, message: res.data.message };
     } catch (err) {
       return { success: false, message: err.response?.data?.message || err.message };
@@ -155,21 +192,24 @@ export const DataProvider = ({ children }) => {
   };
 
   return (
-    <DataContext.Provider value={{ 
-      students, 
+    <DataContext.Provider value={{
+      students,
       unpaidStudents,
       allStudents,
-      payments, 
+      payments,
       registrations,
       stats,
-      loading, 
+      loading,
+      statsLoading,
+      studentsLoading,
+      paymentsLoading,
       refreshData,
       fetchStudents,
       fetchPayments,
       fetchUnpaidStudents,
       approveRegistration,
       rejectRegistration,
-      toggleStudentStatus
+      toggleStudentStatus,
     }}>
       {children}
     </DataContext.Provider>

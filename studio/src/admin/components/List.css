@@ -258,15 +258,19 @@
   .admin-root .list-header {
     flex-direction: column;
     align-items: stretch;
+    gap: 12px;
+    margin-bottom: 16px;
   }
 
   .admin-root .header-left-group {
     flex-direction: column;
     align-items: stretch;
+    gap: 12px;
   }
   
   .admin-root .search-box {
     width: 100%;
+    box-sizing: border-box;
   }
   
   .admin-root .tabs {
@@ -277,9 +281,65 @@
 
   .admin-root .tab-btn {
     flex: 1;
-    min-width: 100px;
-    padding: 10px;
+    min-width: 90px;
+    padding: 8px 6px;
+    font-size: 11px;
     white-space: nowrap;
+  }
+
+  /* ── Mobile card-based table layout ── */
+  .admin-root .table-container {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    border-radius: 14px;
+  }
+
+  .admin-root .data-table {
+    min-width: 600px;
+  }
+
+  .admin-root .data-table th,
+  .admin-root .data-table td {
+    padding: 12px 14px;
+    font-size: 13px;
+  }
+
+  /* Stack action buttons on mobile */
+  .admin-root .action-buttons {
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+
+  /* Compact status toggle on small screens */
+  .admin-root .status-toggle-btn {
+    min-width: 80px;
+    padding: 6px 10px;
+    font-size: 10px;
+  }
+
+  /* Alert & info banners full width */
+  .admin-root .alert-banner {
+    font-size: 12px;
+    padding: 10px 14px;
+  }
+
+  .admin-root .info-banner {
+    flex-wrap: wrap;
+    font-size: 11px;
+  }
+}
+
+@media (max-width: 480px) {
+  .admin-root .tab-btn {
+    padding: 8px 4px;
+    font-size: 10px;
+    min-width: 70px;
+  }
+
+  .admin-root .data-table th,
+  .admin-root .data-table td {
+    padding: 10px 10px;
+    font-size: 12px;
   }
 }
 
@@ -347,5 +407,123 @@
   100% {
     transform: rotate(360deg);
   }
+}
+
+/* ── Alert & Info Banners ─────────────────────────────────────────────── */
+.admin-root .alert-banner {
+  margin: 0 0 14px;
+  padding: 12px 18px;
+  border-radius: 12px;
+  font-size: 13px;
+  line-height: 1.5;
+}
+.admin-root .alert-banner--success {
+  background: #d1fae5; color: #065f46; border: 1px solid #6ee7b7;
+}
+.admin-root .alert-banner--error {
+  background: #fee2e2; color: #991b1b; border: 1px solid #fca5a5;
+}
+.admin-root .alert-result-list {
+  margin: 8px 0 0; padding-left: 20px;
+}
+.admin-root .alert-result-list li { margin-bottom: 4px; }
+
+.admin-root .info-banner {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  border-radius: 10px;
+  margin-bottom: 12px;
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
+  color: #1d4ed8;
+  font-size: 12px;
+}
+
+/* ── Pending badge ────────────────────────────────────────────────────── */
+.admin-root .pending-badge {
+  display: inline-block;
+  padding: 3px 10px;
+  border-radius: 12px;
+  background: rgba(239, 68, 68, 0.1);
+  color: var(--error);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+/* ── Student name as link ─────────────────────────────────────────────── */
+.admin-root .student-name-link {
+  background: none;
+  border: none;
+  padding: 0;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--primary-color);
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.admin-root .student-name-link:hover { opacity: 0.8; }
+
+/* ── Inactive label ───────────────────────────────────────────────────── */
+.admin-root .inactive-label {
+  color: #d32f2f;
+  background: #ffebee;
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 700;
+}
+.admin-root .mini-badge.inactive-badge {
+  background-color: rgba(100,100,100,0.1);
+  color: var(--text-muted);
+}
+
+/* ── Per-student reminder button (compact icon) ───────────────────────── */
+.admin-root .reminder-btn-sm {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  border: none;
+  cursor: pointer;
+  font-size: 13px;
+  transition: all 0.2s;
+  flex-shrink: 0;
+}
+.admin-root .reminder-btn-sm--idle {
+  background: rgba(37,211,102,0.12);
+  color: #1a7a42;
+}
+.admin-root .reminder-btn-sm--idle:hover {
+  background: rgba(37,211,102,0.25);
+  transform: scale(1.1);
+}
+.admin-root .reminder-btn-sm--sending {
+  background: rgba(255,140,0,0.12);
+  color: #b36a00;
+  cursor: not-allowed;
+}
+.admin-root .reminder-btn-sm--sent {
+  background: rgba(76,175,80,0.15);
+  color: #2e7d32;
+  cursor: default;
+}
+.admin-root .reminder-btn-sm--error {
+  background: rgba(244,67,54,0.12);
+  color: #c62828;
+  cursor: default;
+}
+.admin-root .btn-spinner-sm {
+  display: inline-block;
+  width: 11px;
+  height: 11px;
+  border: 2px solid currentColor;
+  border-top-color: transparent;
+  border-radius: 50%;
+  animation: rotation 0.7s linear infinite;
 }
 

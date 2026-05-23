@@ -36,6 +36,20 @@ exports.getAllPayments = async (req, res) => {
   }
 };
 
+// ─── GET /api/payments/student/:studentId ────────────────────────────────────
+exports.getStudentPayments = async (req, res) => {
+  try {
+    const { studentId } = req.params;
+    const payments = await Payment.find({ studentId })
+      .sort({ date: -1 })
+      .lean();
+    res.json(payments);
+  } catch (err) {
+    console.error('getStudentPayments error:', err);
+    res.status(500).json({ message: 'Failed to fetch student payments.' });
+  }
+};
+
 // ─── POST /api/payments ──────────────────────────────────────────────────────
 exports.createPayment = async (req, res) => {
   try {
@@ -157,18 +171,17 @@ exports.deletePayment = async (req, res) => {
 // ⚠️ This route must be registered BEFORE /:id routes in paymentRoutes.js
 exports.sendPendingAlerts = async (req, res) => {
   try {
-    const today    = new Date();
-    const students = await Student.find({ isActive: { $ne: false } }).lean();
-    const payments = await Payment.find({ purpose: 'Monthly Fee' })
-      .select('studentId amount')
-      .lean();
+    const today = new Date();
+    const [students, monthlyFeePaidMap] = await Promise.all([
+      Student.find({ isActive: { $ne: false } }).select('studentName phone whatsappNumber classType isActive createdAt lastAlertSent').lean(),
+      Payment.aggregate([
+        { $match: { purpose: 'Monthly Fee' } },
+        { $group: { _id: '$studentId', totalPaid: { $sum: '$amount' } } }
+      ])
+    ]);
 
     // Pre-aggregate total paid per student — O(M) instead of O(N×M)
-    const paidByStudent = new Map();
-    for (const p of payments) {
-      const sid = p.studentId?.toString();
-      if (sid) paidByStudent.set(sid, (paidByStudent.get(sid) || 0) + (p.amount || 0));
-    }
+    const paidByStudent = new Map(monthlyFeePaidMap.map(r => [r._id.toString(), r.totalPaid]));
 
     const results = [];
 
@@ -228,6 +241,70 @@ exports.sendPendingAlerts = async (req, res) => {
     });
   } catch (err) {
     console.error('sendPendingAlerts error:', err);
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+// ─── POST /api/payments/send-reminder/:studentId ─────────────────────────────
+// Send a WhatsApp fee reminder to a single specific student (manual trigger)
+exports.sendStudentReminder = async (req, res) => {
+  try {
+    const { studentId } = req.params;
+    const today   = new Date();
+
+    const student = await Student.findById(studentId).lean();
+    if (!student) return res.status(404).json({ success: false, message: 'Student not found.' });
+    if (student.isActive === false) return res.status(400).json({ success: false, message: 'Student is inactive.' });
+
+    const payments = await Payment.find({ studentId, purpose: 'Monthly Fee' }).lean();
+    const totalPaid = payments.reduce((sum, p) => sum + (p.amount || 0), 0);
+
+    const joinDate = new Date(student.createdAt || student.joinDate);
+    let totalCycles =
+      (today.getFullYear() - joinDate.getFullYear()) * 12 +
+      (today.getMonth()    - joinDate.getMonth()) + 1;
+    if (today.getDate() < joinDate.getDate()) totalCycles--;
+
+    if (totalCycles <= 0) {
+      return res.json({ success: false, message: 'No dues yet — student joined this month.' });
+    }
+
+    const fee           = getMonthlyFee(student.classType);
+    const totalDue      = Math.max(0, totalCycles * fee - totalPaid);
+    const pendingMonths = Math.ceil(totalDue / fee);
+
+    if (totalDue <= 0) {
+      return res.json({ success: false, message: 'Student has no outstanding dues.' });
+    }
+
+    const whatsappNum = student.whatsappNumber || student.phone;
+    if (!whatsappNum) {
+      return res.status(400).json({ success: false, message: 'No WhatsApp/phone number on file.' });
+    }
+
+    const result = await whatsapp.sendPendingFeesAlert(
+      student._id,
+      whatsappNum,
+      student.studentName,
+      pendingMonths,
+      totalDue
+    );
+
+    if (result.success) {
+      await Student.updateOne({ _id: student._id }, { lastAlertSent: today });
+    }
+
+    res.json({
+      success: result.success,
+      message: result.success
+        ? `✅ Reminder sent to ${student.studentName} (${whatsappNum}).`
+        : `⚠️ Could not send: ${result.reason}`,
+      studentName: student.studentName,
+      totalDue,
+      pendingMonths
+    });
+  } catch (err) {
+    console.error('sendStudentReminder error:', err);
     res.status(500).json({ success: false, message: err.message });
   }
 };

@@ -58,11 +58,17 @@ const PaymentForm = ({ formData, setFormData, students, payments = [], currentDe
     if (totalCycles <= 0) totalCycles = 0;
 
     const fee = getMonthlyFee(selectedStudent.classType);
-    const studentFeePayments = payments.filter(p => {
-      const pid = p.studentId?._id || p.studentId;
-      return pid === selectedStudent._id && p.purpose === 'Monthly Fee';
-    });
-    let totalPaid = studentFeePayments.reduce((s, p) => s + (p.amount || 0), 0);
+
+    // Prefer server-side totalPaid (already aggregated from full payment history)
+    // Fall back to filtering the paginated payments prop (less accurate but better than nothing)
+    let totalPaid = selectedStudent.totalPaid ?? null;
+    if (totalPaid === null) {
+      const studentFeePayments = payments.filter(p => {
+        const pid = p.studentId?._id || p.studentId;
+        return pid === selectedStudent._id && p.purpose === 'Monthly Fee';
+      });
+      totalPaid = studentFeePayments.reduce((s, p) => s + (p.amount || 0), 0);
+    }
 
     // When editing, add back the original payment amount to get accurate balance
     if (isEditing && editingPaymentAmount > 0) {

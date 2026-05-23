@@ -170,6 +170,33 @@ app.use((err, req, res, next) => { // eslint-disable-line no-unused-vars
   res.status(500).json({ success: false, message: 'Internal server error.' });
 });
 
+// ── Keep-Alive Ping (Runs every 5 minutes to keep Render / MongoDB active) ──
+const startKeepAlive = () => {
+  console.log('💓 [Keep-Alive] Keep-alive service initialized (every 5 mins).');
+  setInterval(async () => {
+    try {
+      // 1. Keep Database Hot
+      if (mongoose.connection.readyState === 1) {
+        await mongoose.connection.db.admin().ping();
+        console.log('💓 [Keep-Alive] MongoDB connection pinged successfully.');
+      }
+      
+      // 2. Keep Render Web Service awake (pings self URL if hosted on Render)
+      const selfUrl = process.env.RENDER_EXTERNAL_URL || process.env.SELF_URL;
+      if (selfUrl) {
+        const httpLib = selfUrl.startsWith('https') ? require('https') : require('http');
+        httpLib.get(`${selfUrl.replace(/\/$/, '')}/health`, (res) => {
+          console.log(`💓 [Keep-Alive] Self-ping status code: ${res.statusCode}`);
+        }).on('error', (err) => {
+          console.error('❌ [Keep-Alive] Self-ping failed:', err.message);
+        });
+      }
+    } catch (err) {
+      console.error('❌ [Keep-Alive] Error during keep-alive ping:', err.message);
+    }
+  }, 5 * 60 * 1000); // 5 minutes
+};
+
 // ── Database & Server Start ───────────────────────────────────────────────────
 const mongoURI = process.env.MONGODB_URI || 'mongodb://localhost:27017/dance-studio';
 
@@ -183,6 +210,7 @@ mongoose.connect(mongoURI)
     });
 
     startScheduler();
+    startKeepAlive();
 
     server.listen(PORT, () => {
       console.log(`🚀 Server running on port ${PORT} (${process.env.NODE_ENV || 'development'})`);

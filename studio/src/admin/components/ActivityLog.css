@@ -206,16 +206,34 @@
 @media (max-width: 768px) {
   .activity-log-header {
     flex-direction: column;
+    margin-bottom: 18px;
+    gap: 12px;
   }
   
+  .activity-log-header > div:last-child {
+    flex-wrap: wrap;
+  }
+
   .timeline-top {
     flex-wrap: wrap;
+    gap: 10px;
   }
   
   .timeline-meta {
     flex-direction: row;
     width: 100%;
+    align-items: center;
+    justify-content: flex-start;
     margin-top: 8px;
+    gap: 8px;
+  }
+
+  .timeline-content:hover {
+    transform: none;
+  }
+
+  .timeline-info p {
+    white-space: normal;
   }
 }
 
@@ -229,6 +247,20 @@
   }
   
   .timeline-content {
-    padding: 12px 14px;
+    padding: 10px 12px;
+    border-radius: 10px;
+  }
+
+  .timeline-info h4 {
+    font-size: 13px;
+  }
+
+  .timeline-info p {
+    font-size: 12px;
+  }
+
+  .filter-btn {
+    padding: 6px 10px;
+    font-size: 12px;
   }
 }

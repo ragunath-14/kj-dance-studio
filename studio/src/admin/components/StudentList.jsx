@@ -13,7 +13,7 @@ import Pagination from './ui/Pagination';
 import './List.css';
 
 const StudentList = () => {
-  const { students, stats: dashboardStats, loading, refreshData, fetchStudents, toggleStudentStatus } = useData();
+  const { students, stats: dashboardStats, studentsLoading, refreshData, fetchStudents, toggleStudentStatus } = useData();
   const [activeTab, setActiveTab] = useState('Dance Class');
   const [showModal, setShowModal] = useState(false);
   const [editingStudent, setEditingStudent] = useState(null);
@@ -21,8 +21,13 @@ const StudentList = () => {
   const [limit, setLimit] = useState(50);
   const [confirmState, setConfirmState] = useState({ open: false, studentId: null });
 
-  // Server-side fetching when page, tab, or search changes
+  // Server-side fetching when page, tab, or search changes (skipping initial mount duplicate)
+  const isInitialMount = React.useRef(true);
   React.useEffect(() => {
+    if (isInitialMount.current) {
+      isInitialMount.current = false;
+      return;
+    }
     const timer = setTimeout(() => {
       fetchStudents(1, limit, searchTerm, activeTab);
     }, 300);
@@ -198,7 +203,7 @@ const StudentList = () => {
             </tr>
           </thead>
           <tbody>
-            {loading && students.data.length === 0 ? (
+            {studentsLoading && students.data.length === 0 ? (
               <>
                 <SkeletonRow columns={5} />
                 <SkeletonRow columns={5} />
@@ -217,7 +222,7 @@ const StudentList = () => {
             ) : (
               <tr>
                 <td colSpan="5" className="text-center">
-                  {loading ? 'Refreshing...' : `No students found in ${activeTab}`}
+                  {studentsLoading ? 'Refreshing...' : `No students found in ${activeTab}`}
                 </td>
               </tr>
             )}

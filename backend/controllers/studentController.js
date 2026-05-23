@@ -73,68 +73,109 @@ exports.getAllStudents = async (req, res) => {
 };
 
 // ─── GET /api/students/dashboard/stats ───────────────────────────────────────
-// Aggregates all data for the dashboard metrics in one fast call
+// Aggregates all data for the dashboard metrics in one fast call using O(M)
 exports.getDashboardStats = async (req, res) => {
   try {
     const today = new Date();
     const currentMonth = today.getMonth();
     const currentYear = today.getFullYear();
+    const monthStart = new Date(currentYear, currentMonth, 1);
+    const monthEnd   = new Date(currentYear, currentMonth + 1, 1);
 
-    const [students, payments, registrations] = await Promise.all([
-      Student.find().lean(),
-      Payment.find().lean(),
+    // Parallel fetch — aggregate monthly-fee totals per student in one DB call
+    const [students, monthlyFeePaidMap, monthRevenue, lifetimeRevenue, registrations] = await Promise.all([
+      Student.find().select('studentName phone whatsappNumber classType isActive createdAt lastAlertSent').lean(),
+      // O(M) aggregation: total Monthly Fee paid per student (all time)
+      Payment.aggregate([
+        { $match: { purpose: 'Monthly Fee' } },
+        { $group: { _id: '$studentId', totalPaid: { $sum: '$amount' } } }
+      ]),
+      // Current month revenue (all payment types)
+      Payment.aggregate([
+        { $match: { date: { $gte: monthStart, $lt: monthEnd } } },
+        { $group: { _id: null, total: { $sum: '$amount' } } }
+      ]),
+      // Lifetime revenue
+      Payment.aggregate([
+        { $group: { _id: null, total: { $sum: '$amount' } } }
+      ]),
       require('../models/Registration').find({ status: 'pending' }).lean()
     ]);
 
-    // Metrics calculation (Same logic as frontend, but done once on backend)
+    // Build O(1) lookup for monthly fee totals
+    const paidMap = new Map(monthlyFeePaidMap.map(r => [r._id.toString(), r.totalPaid]));
+
     const activeStudents = students.filter(s => s.isActive !== false);
-    
-    const monthRevenue = payments
-      .filter(p => {
-        const d = new Date(p.date || p.createdAt);
-        return d.getMonth() === currentMonth && d.getFullYear() === currentYear;
+
+
+
+
+    // Fetch recent activity in a single payment query
+    const since24h = new Date(Date.now() - 24 * 60 * 60 * 1000);
+    const recentPayments = await Payment
+      .find({ date: { $gte: since24h } })
+      .populate('studentId', 'studentName')
+      .sort({ date: -1 })
+      .limit(10)
+      .lean();
+
+    const recentActivity = [
+      ...recentPayments.map(p => ({
+        type: 'payment', date: p.date || p.createdAt,
+        amount: p.amount, purpose: p.purpose, studentId: p.studentId
+      })),
+      ...registrations
+        .filter(r => new Date(r.createdAt) >= since24h)
+        .map(r => ({ type: 'reg', date: r.createdAt, studentName: r.studentName, classType: r.classType }))
+    ].sort((a, b) => new Date(b.date) - new Date(a.date)).slice(0, 10);
+
+    // Build overdue detail list (used both for count and the overdue panel)
+    const overdueStudents = activeStudents
+      .map(student => {
+        const joinDate = new Date(student.createdAt || student.joinDate);
+        let totalCycles =
+          (today.getFullYear() - joinDate.getFullYear()) * 12 +
+          (today.getMonth()    - joinDate.getMonth()) + 1;
+        if (today.getDate() < joinDate.getDate()) totalCycles--;
+        if (totalCycles <= 0) return null;
+
+        const fee       = getMonthlyFee(student.classType);
+        const totalPaid = paidMap.get(student._id.toString()) || 0;
+        const totalDue  = Math.max(0, totalCycles * fee - totalPaid);
+        if (totalDue <= 0) return null;
+
+        const pendingMonths = Math.ceil(totalDue / fee);
+        return {
+          _id:           student._id,
+          studentName:   student.studentName,
+          phone:         student.phone,
+          whatsappNumber:student.whatsappNumber,
+          classType:     student.classType,
+          totalDue,
+          pendingMonths,
+          lastAlertSent: student.lastAlertSent || null
+        };
       })
-      .reduce((sum, p) => sum + (p.amount || 0), 0);
-
-    const lifetimeRevenue = payments.reduce((sum, p) => sum + (p.amount || 0), 0);
-
-    const overdueCount = activeStudents.filter(student => {
-      const joinDate = new Date(student.createdAt || student.joinDate);
-      let totalCycles = (today.getFullYear() - joinDate.getFullYear()) * 12 + (today.getMonth() - joinDate.getMonth()) + 1;
-      if (today.getDate() < joinDate.getDate()) totalCycles--;
-      if (totalCycles <= 0) return false;
-
-      const totalPaid = payments
-        .filter(p => p.studentId?.toString() === student._id.toString() && p.purpose === 'Monthly Fee')
-        .reduce((sum, p) => sum + (p.amount || 0), 0);
-      
-      const fee = getMonthlyFee(student.classType);
-      return (totalCycles * fee - totalPaid) > 0;
-    }).length;
+      .filter(Boolean)
+      .sort((a, b) => b.totalDue - a.totalDue);
 
     res.json({
       metrics: {
-        total: students.length,
-        totalPayments: payments.length,
-        revenue: monthRevenue,
-        lifetime: lifetimeRevenue,
-        overdue: overdueCount,
-        pending: registrations.length,
+        total:         activeStudents.length,
+        totalStudents: students.length,
+        totalPayments: monthlyFeePaidMap.length, // approximate — avoids extra DB round-trip
+        revenue:       monthRevenue[0]?.total || 0,
+        lifetime:      lifetimeRevenue[0]?.total || 0,
+        overdue:       overdueStudents.length,
+        pending:       registrations.length,
         classTypes: {
-          dance: activeStudents.filter(s => s.classType === 'Dance Class').length,
+          dance:   activeStudents.filter(s => s.classType === 'Dance Class').length,
           regular: activeStudents.filter(s => s.classType === 'Regular Class').length,
           fitness: activeStudents.filter(s => s.classType === 'Fitness Class').length,
         }
       },
-      // Also return recent activity (last 24h)
-      recentActivity: [
-        ...payments
-          .filter(p => new Date(p.date || p.createdAt) >= new Date(Date.now() - 24 * 60 * 60 * 1000))
-          .map(p => ({ type: 'payment', date: p.date || p.createdAt, amount: p.amount, purpose: p.purpose, studentId: p.studentId })),
-        ...registrations
-          .filter(r => new Date(r.createdAt) >= new Date(Date.now() - 24 * 60 * 60 * 1000))
-          .map(r => ({ type: 'reg', date: r.createdAt, studentName: r.studentName, classType: r.classType }))
-      ].sort((a, b) => new Date(b.date) - new Date(a.date)).slice(0, 10)
+      overdueStudents,
+      recentActivity
     });
   } catch (err) {
     console.error('getDashboardStats error:', err);
@@ -146,14 +187,15 @@ exports.getDashboardStats = async (req, res) => {
 exports.getUnpaidStudents = async (req, res) => {
   try {
     const today = new Date();
-    const students = await Student.find({ isActive: { $ne: false } }).lean();
-    const payments = await Payment.find({ purpose: 'Monthly Fee' }).lean();
+    const [students, monthlyFeePaidMap] = await Promise.all([
+      Student.find({ isActive: { $ne: false } }).select('studentName phone whatsappNumber classType isActive createdAt lastAlertSent').lean(),
+      Payment.aggregate([
+        { $match: { purpose: 'Monthly Fee' } },
+        { $group: { _id: '$studentId', totalPaid: { $sum: '$amount' } } }
+      ])
+    ]);
 
-    const paymentsByStudent = new Map();
-    payments.forEach(p => {
-      const sid = p.studentId?.toString();
-      if (sid) paymentsByStudent.set(sid, (paymentsByStudent.get(sid) || 0) + (p.amount || 0));
-    });
+    const paymentsByStudent = new Map(monthlyFeePaidMap.map(r => [r._id.toString(), r.totalPaid]));
 
     const unpaid = students.map(student => {
       const joinDate = new Date(student.createdAt || student.joinDate);

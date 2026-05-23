@@ -195,4 +195,27 @@ exports.sendPaymentConfirmation = async (whatsappNumber, studentName, amount, pu
   });
 };
 
+exports.sendRegistrationConfirmation = async (whatsappNumber, studentName, classType) => {
+  const name = studentName || 'Student';
+  const cls  = classType   || 'Dance';
+
+  const fallback =
+    `Hi ${name}, thank you for registering with Expressionz Dance Studio! ` +
+    `Your request to join the ${cls} class has been received and is pending approval. We will contact you soon!`;
+
+  return sendMessage(whatsappNumber, fallback, {
+    templateName : 'registration_received',
+    languageCode : 'en',
+    components   : [
+      {
+        type: 'body',
+        parameters: [
+          { type: 'text', text: name },
+          { type: 'text', text: cls  }
+        ]
+      }
+    ]
+  });
+};
+
 exports.sendMessage = sendMessage;

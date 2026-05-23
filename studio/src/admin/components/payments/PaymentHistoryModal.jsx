@@ -1,20 +1,45 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
+import axios from 'axios';
 import { X, CreditCard, Calendar, TrendingDown } from 'lucide-react';
+import API_URL from '../../config';
 import Button from '../ui/Button';
 
-const PaymentHistoryModal = ({ student, payments, onClose, onRecordPayment }) => {
+const PaymentHistoryModal = ({ student, onClose, onRecordPayment }) => {
+  const [studentPayments, setStudentPayments] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  const studentIdStr = student?._id?.toString();
+
+  useEffect(() => {
+    if (!studentIdStr) return;
+
+    let isMounted = true;
+    setLoading(true);
+
+    axios.get(`${API_URL}/payments/student/${studentIdStr}`)
+      .then(res => {
+        if (isMounted) {
+          setStudentPayments(res.data || []);
+        }
+      })
+      .catch(err => {
+        console.error('Failed to fetch student payments:', err);
+      })
+      .finally(() => {
+        if (isMounted) {
+          setLoading(false);
+        }
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [studentIdStr]);
+
   if (!student) return null;
 
   const getMonthlyFee = (ct) => ct === 'Fitness Class' ? 2500 : 3500;
   const today = new Date();
-  const studentIdStr = student._id?.toString();
-
-  const studentPayments = (payments.data || [])
-    .filter(p => {
-      const pid = p.studentId?._id?.toString() || p.studentId?.toString();
-      return pid === studentIdStr;
-    })
-    .sort((a, b) => new Date(b.date) - new Date(a.date));
 
   const joinDate = new Date(student.createdAt || student.joinDate || today);
   let totalCycles = (today.getFullYear() - joinDate.getFullYear()) * 12 + (today.getMonth() - joinDate.getMonth()) + 1;
@@ -44,7 +69,7 @@ const PaymentHistoryModal = ({ student, payments, onClose, onRecordPayment }) =>
             <CreditCard size={18} />
             <div>
               <span>Total Paid</span>
-              <strong>₹{totalPaid.toLocaleString()}</strong>
+              <strong>{loading ? '...' : `₹${totalPaid.toLocaleString()}`}</strong>
             </div>
           </div>
           <div className="hs-card orange">
@@ -58,7 +83,7 @@ const PaymentHistoryModal = ({ student, payments, onClose, onRecordPayment }) =>
             <TrendingDown size={18} />
             <div>
               <span>Pending Dues</span>
-              <strong>{totalDue > 0 ? `₹${totalDue.toLocaleString()}` : 'Clear ✓'}</strong>
+              <strong>{loading ? '...' : (totalDue > 0 ? `₹${totalDue.toLocaleString()}` : 'Clear ✓')}</strong>
             </div>
           </div>
         </div>
@@ -74,15 +99,27 @@ const PaymentHistoryModal = ({ student, payments, onClose, onRecordPayment }) =>
               </tr>
             </thead>
             <tbody>
-              {studentPayments.length > 0 ? studentPayments.map((p, i) => (
-                <tr key={i}>
-                  <td>{new Date(p.date).toLocaleDateString('en-GB')}</td>
-                  <td style={{ color: '#4CAF50', fontWeight: 700 }}>₹{p.amount.toLocaleString()}</td>
-                  <td>{p.method || '—'}</td>
-                  <td>{p.purpose || '—'}</td>
+              {loading ? (
+                <tr>
+                  <td colSpan="4" className="text-center" style={{ padding: '24px', color: 'var(--text-muted)' }}>
+                    Loading payment records...
+                  </td>
                 </tr>
-              )) : (
-                <tr><td colSpan="4" className="text-center" style={{ padding: '24px', color: 'var(--text-muted)' }}>No payment records found.</td></tr>
+              ) : studentPayments.length > 0 ? (
+                studentPayments.map((p, i) => (
+                  <tr key={i}>
+                    <td>{new Date(p.date).toLocaleDateString('en-GB')}</td>
+                    <td style={{ color: '#4CAF50', fontWeight: 700 }}>₹{p.amount.toLocaleString()}</td>
+                    <td>{p.method || '—'}</td>
+                    <td>{p.purpose || '—'}</td>
+                  </tr>
+                ))
+              ) : (
+                <tr>
+                  <td colSpan="4" className="text-center" style={{ padding: '24px', color: 'var(--text-muted)' }}>
+                    No payment records found.
+                  </td>
+                </tr>
               )}
             </tbody>
           </table>

@@ -1,20 +1,19 @@
-const cron       = require('node-cron');
-const Student     = require('./models/Student');
-const Payment     = require('./models/Payment');
-const whatsapp    = require('./services/whatsappService');
+const cron      = require('node-cron');
+const Student   = require('./models/Student');
+const Payment   = require('./models/Payment');
+const whatsapp  = require('./services/whatsappService');
 
 const getMonthlyFee = (classType) => classType === 'Fitness Class' ? 2500 : 3500;
 
 /**
- * Core logic: find students whose fee due date is TODAY and who still
- * have outstanding dues, then fire a WhatsApp reminder for each.
+ * Core logic: find students with outstanding dues and fire WhatsApp reminders.
  *
- * "Fee due date" = the same day-of-month as the student's joining date.
- * e.g. if a student joined on the 5th, their fee is due on the 5th of
- * every subsequent month.
+ * Rules:
+ *  (a) On the student's monthly fee-due date (anniversary day) → always alert if any due.
+ *  (b) If the student is overdue by MORE than 1 full month AND at least 4 days have
+ *      passed since the last alert → send a follow-up reminder.
  *
- * Called automatically by the cron job, but also exported so it can be
- * triggered manually from a route if needed for testing.
+ * Called by the daily cron job and also exported for manual/test triggers.
  */
 async function runPendingFeeAlerts() {
   const today    = new Date();
@@ -23,15 +22,16 @@ async function runPendingFeeAlerts() {
   console.log(`\n🕘 [Scheduler] Running daily checks (Fees Alerts) — ${today.toDateString()}`);
 
   try {
-    const students = await Student.find().lean(); // Fetch ALL students
+    const students = await Student.find().lean();
     const payments = await Payment.find({ purpose: 'Monthly Fee' })
       .select('studentId amount')
       .lean();
 
-    // Pre-calculate payments per student (O(M)) to prevent O(N*M) slowdowns
+    // Pre-calculate payments per student O(M) to avoid O(N×M) slowdown
+    // Note: payments are fetched with .lean() so studentId is always a plain ObjectId
     const paymentsByStudent = new Map();
     for (const p of payments) {
-      const sid = p.studentId?._id?.toString() || p.studentId?.toString();
+      const sid = p.studentId?.toString();
       if (sid) {
         paymentsByStudent.set(sid, (paymentsByStudent.get(sid) || 0) + (p.amount || 0));
       }
@@ -42,54 +42,53 @@ async function runPendingFeeAlerts() {
     let alertsFailed  = 0;
 
     for (const student of students) {
-      const joinDate    = new Date(student.createdAt || student.joinDate);
-      const joinDay     = joinDate.getDate(); // The day-of-month fees are due/anniversary
+      // Skip inactive students
+      if (student.isActive === false) continue;
+
+      const joinDate      = new Date(student.createdAt || student.joinDate);
+      const joinDay       = joinDate.getDate();
       const isAnniversary = todayDay === joinDay;
       const whatsappNum   = student.whatsappNumber || student.phone;
 
-      // Skip fee logic for inactive students
-      if (student.isActive === false) {
-        continue;
-      }
-
-      // ── Active Student Logic: Calculate how many months of fees are owed ──
+      // ── Calculate dues ────────────────────────────────────────────────────
       let totalCycles =
         (today.getFullYear() - joinDate.getFullYear()) * 12 +
         (today.getMonth()    - joinDate.getMonth()) + 1;
 
-      // Anniversary day check
-      if (today.getDate() < joinDay) {
-        totalCycles--;
-      }
-      
-      if (totalCycles <= 0) continue;
+      if (today.getDate() < joinDay) totalCycles--;
+      if (totalCycles <= 0) continue; // Joined this month or future date — no dues yet
 
-      const totalPaid = paymentsByStudent.get(student._id.toString()) || 0;
-
-      const fee = getMonthlyFee(student.classType);
-      const totalExpected = totalCycles * fee;
-      const totalDue      = Math.max(0, totalExpected - totalPaid);
+      const fee           = getMonthlyFee(student.classType);
+      const totalPaid     = paymentsByStudent.get(student._id.toString()) || 0;
+      const totalDue      = Math.max(0, (totalCycles * fee) - totalPaid);
 
       if (totalDue <= 0) {
-        // Clear lastAlertSent if they are fully paid
+        // Student is fully paid — clear any stale lastAlertSent flag
         if (student.lastAlertSent) {
-          await Student.updateOne({ _id: student._id }, { $unset: { lastAlertSent: "" } });
+          await Student.updateOne({ _id: student._id }, { $unset: { lastAlertSent: '' } });
         }
         alertsSkipped++;
         continue;
       }
 
-      // ── Decision Logic: When to send an alert? ───────────────────────────
+      const pendingMonths = Math.ceil(totalDue / fee);
+
+      // ── Decision Logic ─────────────────────────────────────────────────────
       const lastAlert = student.lastAlertSent ? new Date(student.lastAlertSent) : null;
-      const diffDays = lastAlert ? Math.floor((today - lastAlert) / (1000 * 60 * 60 * 24)) : 999;
-      
-      // Send if it's the anniversary...
-      // ...OR if they are already overdue and it's been at least 3 days since the last alert
-      if (!isAnniversary && diffDays < 3) {
+      const diffDays  = lastAlert
+        ? Math.floor((today - lastAlert) / (1000 * 60 * 60 * 24))
+        : 999; // No prior alert → treat as always eligible
+
+      // Send alert only when:
+      //  (a) Today is the student's fee-due anniversary day (any overdue amount), OR
+      //  (b) Student is overdue by MORE than 1 month AND at least 4 days since last alert
+      const isOverdueMoreThanOneMonth = pendingMonths > 1;
+      const isRepeatEligible = isOverdueMoreThanOneMonth && diffDays >= 4;
+
+      if (!isAnniversary && !isRepeatEligible) {
+        alertsSkipped++;
         continue;
       }
-
-      const pendingMonths = Math.ceil(totalDue / fee);
 
       if (!whatsappNum) {
         alertsSkipped++;
@@ -106,8 +105,7 @@ async function runPendingFeeAlerts() {
         );
 
         if (result.success) {
-          console.log(`  📲 Alert sent → ${student.studentName} (+${whatsappNum}) — ₹${totalDue} due`);
-          // Record the timestamp
+          console.log(`  📲 Alert sent → ${student.studentName} (+${whatsappNum}) — ₹${totalDue} due (${pendingMonths} month(s))`);
           await Student.updateOne({ _id: student._id }, { lastAlertSent: today });
           alertsSent++;
         } else {
@@ -121,7 +119,7 @@ async function runPendingFeeAlerts() {
     }
 
     console.log(
-      `🔔 [Scheduler] Done — Fee Alerts Sent: ${alertsSent} | Skipped: ${alertsSkipped} | Failed: ${alertsFailed}\n`
+      `🔔 [Scheduler] Done — Sent: ${alertsSent} | Skipped: ${alertsSkipped} | Failed: ${alertsFailed}\n`
     );
   } catch (err) {
     console.error('❌ [Scheduler] Error during daily checks:', err.message);
@@ -129,21 +127,20 @@ async function runPendingFeeAlerts() {
 }
 
 /**
- * Start the scheduled job.
- * Runs every day at 09:00 AM server time.
- * Cron syntax: second(opt) minute hour day month weekday
+ * Start the scheduled cron job.
+ * Default: every day at 09:00 AM IST.
+ * Override via WHATSAPP_SCHEDULE_TIME env var (cron syntax).
  */
 function startScheduler() {
-  // Run every day at configured time (default 09:00 AM IST)
   const scheduleTime = process.env.WHATSAPP_SCHEDULE_TIME || '0 9 * * *';
   cron.schedule(scheduleTime, () => {
     runPendingFeeAlerts();
   }, {
     scheduled: true,
-    timezone: process.env.TZ || 'Asia/Kolkata'  // IST by default
+    timezone: process.env.TZ || 'Asia/Kolkata'
   });
 
-  console.log(`⏰ [Scheduler] Pending-fee alert job scheduled — runs daily at ${scheduleTime} (Timezone: ${process.env.TZ || 'Asia/Kolkata'})`);
+  console.log(`⏰ [Scheduler] Fee alert job scheduled — daily at ${scheduleTime} (TZ: ${process.env.TZ || 'Asia/Kolkata'})`);
 }
 
 module.exports = { startScheduler, runPendingFeeAlerts };

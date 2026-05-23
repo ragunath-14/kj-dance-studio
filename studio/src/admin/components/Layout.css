@@ -117,7 +117,20 @@
   }
   
   .admin-root .page-container {
-    padding: 15px;
+    padding: 14px 12px;
+  }
+
+  .admin-root .mobile-header h1 {
+    font-size: 16px;
+    font-weight: 800;
+    margin: 0;
+    letter-spacing: -0.3px;
+  }
+}
+
+@media (max-width: 480px) {
+  .admin-root .page-container {
+    padding: 10px 10px;
   }
 }
 

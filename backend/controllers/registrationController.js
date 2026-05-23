@@ -33,9 +33,18 @@ exports.createPendingRegistration = async (req, res) => {
     const registration = new Registration(cleanData);
     await registration.save();
 
-    // Notify admin dashboard in real-time
+    // Send a WhatsApp confirmation that registration has been received and is pending approval
+    const whatsappNum = registration.whatsappNumber || registration.phone;
+    if (whatsappNum) {
+      whatsapp.sendRegistrationConfirmation(whatsappNum, registration.studentName, registration.classType)
+        .catch((e) => console.error('WhatsApp registration confirmation error:', e));
+    }
+
+    // Notify admin dashboard in real-time (triggers dashboard refresh + badge bump)
     const io = req.app.get('socketio');
-    if (io) io.emit('dataChanged', { type: 'registration', name: registration.studentName });
+    if (io) {
+      io.emit('dataChanged', { type: 'registration', name: registration.studentName });
+    }
 
     res.status(201).json({
       success: true,
