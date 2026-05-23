@@ -31,6 +31,7 @@ const paymentRoutes          = require('./routes/paymentRoutes');
 const registrationRoutes     = require('./routes/registrationRoutes');
 const registrationController = require('./controllers/registrationController');
 const studentController      = require('./controllers/studentController');
+const Student                = require('./models/Student');
 const { verifyAdminToken }   = require('./middleware/auth');
 const { startScheduler, runPendingFeeAlerts } = require('./scheduler');
 
@@ -175,20 +176,32 @@ const startKeepAlive = () => {
   console.log('💓 [Keep-Alive] Keep-alive service initialized (every 5 mins).');
   setInterval(async () => {
     try {
-      // 1. Keep Database Hot
+      // 1. Keep Database Hot - Get students from DB
       if (mongoose.connection.readyState === 1) {
-        await mongoose.connection.db.admin().ping();
-        console.log('💓 [Keep-Alive] MongoDB connection pinged successfully.');
+        const studentCount = await Student.countDocuments();
+        // Also fetch one student to simulate real data access
+        await Student.findOne().lean();
+        console.log(`💓 [Keep-Alive] DB Query successful. Total Students in DB: ${studentCount}`);
       }
       
-      // 2. Keep Render Web Service awake (pings self URL if hosted on Render)
-      const selfUrl = process.env.RENDER_EXTERNAL_URL || process.env.SELF_URL;
+      // 2. Keep Render Web Service awake (pings frontend URL & backend health)
+      const selfUrl = process.env.RENDER_EXTERNAL_URL || process.env.SELF_URL || 'https://www.expressionzdancestudio.in';
       if (selfUrl) {
-        const httpLib = selfUrl.startsWith('https') ? require('https') : require('http');
-        httpLib.get(`${selfUrl.replace(/\/$/, '')}/health`, (res) => {
-          console.log(`💓 [Keep-Alive] Self-ping status code: ${res.statusCode}`);
+        const urlToPing = selfUrl.replace(/\/$/, '');
+        const httpLib = urlToPing.startsWith('https') ? require('https') : require('http');
+        
+        // Ping the root frontend URL to keep frontend static serving alive
+        httpLib.get(urlToPing, (res) => {
+          console.log(`💓 [Keep-Alive] Frontend root self-ping status code: ${res.statusCode}`);
         }).on('error', (err) => {
-          console.error('❌ [Keep-Alive] Self-ping failed:', err.message);
+          console.error('❌ [Keep-Alive] Frontend root self-ping failed:', err.message);
+        });
+
+        // Ping the backend health endpoint to verify API layer
+        httpLib.get(`${urlToPing}/health`, (res) => {
+          console.log(`💓 [Keep-Alive] Backend health self-ping status code: ${res.statusCode}`);
+        }).on('error', (err) => {
+          console.error('❌ [Keep-Alive] Backend health self-ping failed:', err.message);
         });
       }
     } catch (err) {
