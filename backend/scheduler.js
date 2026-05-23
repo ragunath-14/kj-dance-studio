@@ -133,14 +133,31 @@ async function runPendingFeeAlerts() {
  */
 function startScheduler() {
   const scheduleTime = process.env.WHATSAPP_SCHEDULE_TIME || '0 9 * * *';
-  cron.schedule(scheduleTime, () => {
-    runPendingFeeAlerts();
-  }, {
-    scheduled: true,
-    timezone: process.env.TZ || 'Asia/Kolkata'
-  });
+  
+  // Sanitize TZ to prevent "RangeError: Invalid time value" if quotes or spaces are present
+  let tz = (process.env.TZ || 'Asia/Kolkata').trim();
+  if ((tz.startsWith('"') && tz.endsWith('"')) || (tz.startsWith("'") && tz.endsWith("'"))) {
+    tz = tz.slice(1, -1).trim();
+  }
 
-  console.log(`⏰ [Scheduler] Fee alert job scheduled — daily at ${scheduleTime} (TZ: ${process.env.TZ || 'Asia/Kolkata'})`);
+  try {
+    cron.schedule(scheduleTime, () => {
+      runPendingFeeAlerts();
+    }, {
+      scheduled: true,
+      timezone: tz
+    });
+    console.log(`⏰ [Scheduler] Fee alert job scheduled — daily at ${scheduleTime} (TZ: ${tz})`);
+  } catch (cronError) {
+    console.error(`⚠️ [Scheduler] Failed to schedule with timezone "${tz}". Falling back to local/UTC:`, cronError.message);
+    // Fallback: schedule without explicit timezone
+    cron.schedule(scheduleTime, () => {
+      runPendingFeeAlerts();
+    }, {
+      scheduled: true
+    });
+    console.log(`⏰ [Scheduler] Fee alert job scheduled (fallback) — daily at ${scheduleTime} (Local/UTC Time)`);
+  }
 }
 
 module.exports = { startScheduler, runPendingFeeAlerts };
