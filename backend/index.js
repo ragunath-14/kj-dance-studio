@@ -14,18 +14,6 @@
 
 'use strict';
 
-// ── Clean & Sanitize TZ (Prevents global RangeError timezone crashes on boot) ──
-if (process.env.TZ) {
-  try {
-    process.env.TZ = process.env.TZ.trim().replace(/^['"]|['"]$/g, '').trim();
-    // Test if the timezone is actually supported by the Node.js Intl system
-    new Intl.DateTimeFormat('en-US', { timeZone: process.env.TZ });
-  } catch (err) {
-    console.warn(`⚠️ [TZ Sanitizer] Timezone "${process.env.TZ}" is unsupported. Deleting TZ to fallback to system UTC.`);
-    delete process.env.TZ;
-  }
-}
-
 const express    = require('express');
 const mongoose   = require('mongoose');
 const cors       = require('cors');

@@ -132,31 +132,19 @@ async function runPendingFeeAlerts() {
  * Override via WHATSAPP_SCHEDULE_TIME env var (cron syntax).
  */
 function startScheduler() {
-  const scheduleTime = process.env.WHATSAPP_SCHEDULE_TIME || '0 9 * * *';
-  
-  // Sanitize TZ to prevent "RangeError: Invalid time value" if quotes or spaces are present
-  let tz = (process.env.TZ || 'Asia/Kolkata').trim();
-  if ((tz.startsWith('"') && tz.endsWith('"')) || (tz.startsWith("'") && tz.endsWith("'"))) {
-    tz = tz.slice(1, -1).trim();
-  }
+  // Default: 03:30 UTC = 09:00 IST. Override via WHATSAPP_SCHEDULE_TIME (UTC cron syntax).
+  // We intentionally do NOT pass a timezone to node-cron because Render's Linux containers
+  // lack tzdata, which causes "Invalid time value" crashes when any timezone is specified.
+  const scheduleTime = process.env.WHATSAPP_SCHEDULE_TIME || '30 3 * * *';
 
   try {
     cron.schedule(scheduleTime, () => {
       runPendingFeeAlerts();
-    }, {
-      scheduled: true,
-      timezone: tz
-    });
-    console.log(`⏰ [Scheduler] Fee alert job scheduled — daily at ${scheduleTime} (TZ: ${tz})`);
+    }, { scheduled: true });
+
+    console.log(`⏰ [Scheduler] Fee alert job scheduled — daily at ${scheduleTime} UTC (≈ 09:00 IST)`);
   } catch (cronError) {
-    console.error(`⚠️ [Scheduler] Failed to schedule with timezone "${tz}". Falling back to local/UTC:`, cronError.message);
-    // Fallback: schedule without explicit timezone
-    cron.schedule(scheduleTime, () => {
-      runPendingFeeAlerts();
-    }, {
-      scheduled: true
-    });
-    console.log(`⏰ [Scheduler] Fee alert job scheduled (fallback) — daily at ${scheduleTime} (Local/UTC Time)`);
+    console.error('❌ [Scheduler] Could not start cron job:', cronError.message);
   }
 }
 
