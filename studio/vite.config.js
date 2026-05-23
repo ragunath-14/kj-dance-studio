@@ -9,11 +9,11 @@ export default defineConfig({
     host: true,
     proxy: {
       '/api': {
-        target: 'http://127.0.0.1:5001',
+        target: 'https://dance-studio-5nu0.onrender.com',
         changeOrigin: true
       },
       '/socket.io': {
-        target: 'http://127.0.0.1:5001',
+        target: 'https://dance-studio-5nu0.onrender.com',
         ws: true,
         changeOrigin: true
       }
