@@ -127,25 +127,36 @@ async function runPendingFeeAlerts() {
 }
 
 /**
- * Start the scheduled cron job.
- * Default: every day at 09:00 AM IST.
- * Override via WHATSAPP_SCHEDULE_TIME env var (cron syntax).
+ * Start the scheduled job using native Node.js timers.
+ * Fires daily at 03:30 UTC = 09:00 IST.
+ * Uses setInterval instead of node-cron to avoid Intl/timezone crashes on Render.
  */
 function startScheduler() {
-  // Default: 03:30 UTC = 09:00 IST. Override via WHATSAPP_SCHEDULE_TIME (UTC cron syntax).
-  // We intentionally do NOT pass a timezone to node-cron because Render's Linux containers
-  // lack tzdata, which causes "Invalid time value" crashes when any timezone is specified.
-  const scheduleTime = process.env.WHATSAPP_SCHEDULE_TIME || '30 3 * * *';
+  const TARGET_UTC_HOUR   = 3;
+  const TARGET_UTC_MINUTE = 30;
 
-  try {
-    cron.schedule(scheduleTime, () => {
+  const getNextFireMs = () => {
+    const now  = new Date();
+    const next = new Date();
+    next.setUTCHours(TARGET_UTC_HOUR, TARGET_UTC_MINUTE, 0, 0);
+    // If target has already passed today, schedule for tomorrow
+    if (next <= now) next.setUTCDate(next.getUTCDate() + 1);
+    return next - now;
+  };
+
+  const scheduleNext = () => {
+    const msUntilNext = getNextFireMs();
+    const hoursUntil  = (msUntilNext / 3_600_000).toFixed(1);
+    console.log(`⏰ [Scheduler] Next fee alert in ${hoursUntil}h (03:30 UTC = 09:00 IST)`);
+
+    setTimeout(() => {
       runPendingFeeAlerts();
-    }, { scheduled: true });
+      // After first fire, repeat every 24 hours
+      setInterval(runPendingFeeAlerts, 24 * 60 * 60 * 1000);
+    }, msUntilNext);
+  };
 
-    console.log(`⏰ [Scheduler] Fee alert job scheduled — daily at ${scheduleTime} UTC (≈ 09:00 IST)`);
-  } catch (cronError) {
-    console.error('❌ [Scheduler] Could not start cron job:', cronError.message);
-  }
+  scheduleNext();
 }
 
 module.exports = { startScheduler, runPendingFeeAlerts };
