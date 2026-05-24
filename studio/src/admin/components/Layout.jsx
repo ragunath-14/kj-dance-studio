@@ -19,6 +19,29 @@ const Layout = ({ children, onLogout }) => {
           {isMobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
         </button>
         <h1>Dance Studio</h1>
+        <div className="mobile-header-actions">
+          <ThemeToggle />
+          <NavLink to="/admin/registrations" className="topbar-notification" style={{ padding: '6px' }}>
+            <Bell size={20} />
+            {registrations.length > 0 && <span className="notification-badge">{registrations.length}</span>}
+          </NavLink>
+          {onLogout && (
+            <button
+              onClick={onLogout}
+              style={{
+                background: 'transparent',
+                border: '1px solid #ef4444',
+                color: '#ef4444',
+                padding: '5px 10px',
+                borderRadius: '6px',
+                cursor: 'pointer',
+                fontWeight: '600',
+                fontSize: '12px',
+              }}>
+              Logout
+            </button>
+          )}
+        </div>
       </div>
       
       <div className={`sidebar-overlay ${isMobileMenuOpen ? 'show' : ''}`} onClick={toggleMobileMenu}></div>

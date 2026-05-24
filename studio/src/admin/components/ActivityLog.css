@@ -55,6 +55,7 @@
   align-items: center;
   justify-content: center;
   transition: all 0.2s ease;
+  flex-shrink: 0;
 }
 
 .refresh-btn:hover {
@@ -137,6 +138,7 @@
 .timeline-info {
   flex: 1;
   min-width: 0;
+  overflow: hidden;
 }
 
 .timeline-info h4 {
@@ -144,6 +146,9 @@
   font-size: 14px;
   font-weight: 700;
   color: var(--text-main);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .timeline-info p {
@@ -155,12 +160,16 @@
   text-overflow: ellipsis;
 }
 
+/* Meta row: always below the icon+info row */
 .timeline-meta {
   display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: 6px;
-  flex-shrink: 0;
+  flex-direction: row;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 8px;
+  margin-top: 10px;
+  padding-top: 8px;
+  border-top: 1px solid var(--border-color);
 }
 
 .timeline-time {
@@ -172,6 +181,7 @@
   gap: 4px;
   text-transform: uppercase;
   letter-spacing: 0.3px;
+  white-space: nowrap;
 }
 
 .meta-badge {
@@ -180,6 +190,7 @@
   padding: 3px 10px;
   border-radius: 6px;
   text-transform: capitalize;
+  white-space: nowrap;
 }
 
 .meta-badge.method {
@@ -202,30 +213,30 @@
   color: var(--info);
 }
 
-/* Responsive */
+/* ── Responsive: Tablet ──────────────────────────────────────── */
 @media (max-width: 768px) {
   .activity-log-header {
     flex-direction: column;
     margin-bottom: 18px;
     gap: 12px;
   }
-  
+
   .activity-log-header > div:last-child {
-    flex-wrap: wrap;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
   }
 
-  .timeline-top {
-    flex-wrap: wrap;
-    gap: 10px;
+  .activity-filter-tabs {
+    flex: 1;
+    justify-content: space-between;
   }
-  
-  .timeline-meta {
-    flex-direction: row;
-    width: 100%;
-    align-items: center;
-    justify-content: flex-start;
-    margin-top: 8px;
-    gap: 8px;
+
+  .filter-btn {
+    flex: 1;
+    text-align: center;
+    padding: 8px 6px;
   }
 
   .timeline-content:hover {
@@ -237,30 +248,118 @@
   }
 }
 
+/* ── Responsive: Mobile ──────────────────────────────────────── */
 @media (max-width: 480px) {
+  /* Tighten the timeline gutter so cards don't get clipped */
   .activity-timeline {
-    padding-left: 10px;
-  }
-  
-  .timeline-entry {
     padding-left: 16px;
   }
-  
+
+  .activity-timeline::before {
+    left: 5px;
+  }
+
+  .timeline-entry {
+    padding-left: 16px;
+    margin-bottom: 8px;
+  }
+
+  .timeline-dot {
+    left: -14px;
+    top: 18px;
+    width: 9px;
+    height: 9px;
+  }
+
   .timeline-content {
-    padding: 10px 12px;
-    border-radius: 10px;
+    padding: 12px 14px;
+    border-radius: 12px;
+  }
+
+  /* Stack icon + info vertically to avoid overflow */
+  .timeline-top {
+    flex-wrap: nowrap;
+    align-items: flex-start;
+    gap: 10px;
+  }
+
+  .timeline-icon {
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    flex-shrink: 0;
+  }
+
+  .timeline-info {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
   }
 
   .timeline-info h4 {
     font-size: 13px;
+    white-space: normal;
+    word-break: break-word;
   }
 
   .timeline-info p {
     font-size: 12px;
+    white-space: normal;
+    word-break: break-word;
+  }
+
+  /* Push meta (time + badge) below, full width */
+  .timeline-meta {
+    flex-direction: row;
+    flex-wrap: wrap;
+    width: 100%;
+    align-items: center;
+    justify-content: flex-start;
+    margin-top: 8px;
+    gap: 6px;
+    border-top: 1px solid var(--border-color);
+    padding-top: 8px;
+  }
+
+  .timeline-time {
+    font-size: 10px;
+  }
+
+  .meta-badge {
+    font-size: 10px;
+    padding: 2px 8px;
+  }
+
+  /* Header: make tabs and refresh fit on one row */
+  .activity-log-header {
+    gap: 10px;
+    margin-bottom: 14px;
+  }
+
+  .activity-log-header > div:first-child h1 {
+    font-size: 22px !important;
+  }
+
+  .activity-log-header > div:first-child p {
+    font-size: 12px !important;
+  }
+
+  .activity-log-header > div:last-child {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+  }
+
+  .activity-filter-tabs {
+    flex: 1;
+    padding: 3px;
   }
 
   .filter-btn {
-    padding: 6px 10px;
-    font-size: 12px;
+    flex: 1;
+    padding: 6px 4px;
+    font-size: 11px;
+    text-align: center;
   }
 }

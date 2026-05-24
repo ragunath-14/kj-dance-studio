@@ -328,7 +328,7 @@
   transform: translateX(2px);
 }
 
-@media (max-width: 600px) {
+@media (max-width: 768px) {
   .admin-root .history-summary { grid-template-columns: 1fr; padding: 20px; }
   .admin-root .history-header { padding: 20px; }
   .admin-root .history-table-wrap { padding: 0 20px; }

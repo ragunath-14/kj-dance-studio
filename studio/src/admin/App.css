@@ -381,3 +381,11 @@
   color: var(--error);
   border-color: var(--error);
 }
+
+/* Responsive utilities */
+@media (max-width: 768px) {
+  .admin-root .hide-mobile {
+    display: none !important;
+  }
+}
+

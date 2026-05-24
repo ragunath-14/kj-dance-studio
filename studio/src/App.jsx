@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react'
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom'
-import WelcomeModal from './components/WelcomeModal.jsx'
 import RegisterModal from './components/RegisterModal.jsx'
 import FloatingActions from './components/FloatingActions.jsx'
 import Header from './components/Header.jsx'
@@ -16,7 +15,6 @@ import './App.css'
 const MainPortal = () => {
   const [isScrolled, setIsScrolled] = useState(false)
   const [isMenuOpen, setIsMenuOpen] = useState(false)
-  const [showModal, setShowModal] = useState(true)
   const [showRegisterModal, setShowRegisterModal] = useState(false)
 
   useEffect(() => {
@@ -27,11 +25,6 @@ const MainPortal = () => {
 
   return (
     <div className="app">
-      <WelcomeModal 
-        showModal={showModal} 
-        setShowModal={setShowModal} 
-        onRegister={() => setShowRegisterModal(true)} 
-      />
       <RegisterModal showModal={showRegisterModal} setShowModal={setShowRegisterModal} />
       <FloatingActions />
       <Header 

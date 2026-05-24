@@ -14,7 +14,9 @@ const PaymentHistoryModal = ({ student, onClose, onRecordPayment }) => {
     if (!studentIdStr) return;
 
     let isMounted = true;
-    setLoading(true);
+    Promise.resolve().then(() => {
+      if (isMounted) setLoading(true);
+    });
 
     axios.get(`${API_URL}/payments/student/${studentIdStr}`)
       .then(res => {

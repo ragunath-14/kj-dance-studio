@@ -60,36 +60,37 @@ const StudentList = () => {
     return dashboardStats.metrics.classTypes || { dance: 0, regular: 0, fitness: 0 };
   }, [dashboardStats]);
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    
-    const wasEditing = editingStudent;
-    
-    try {
-      if (wasEditing) {
-        await axios.put(`${API_URL}/students/${wasEditing._id}`, formData);
-      } else {
-        await axios.post(`${API_URL}/students`, formData);
-      }
-      
-      await refreshData();
-      setShowModal(false);
-      setEditingStudent(null);
-      setFormData({ 
-        studentName: '', email: '', phone: '', whatsappNumber: '', 
-        danceStyle: '', danceForFitness: '', 
-        studentAge: '', gender: '', bloodGroup: '', parentName: '', 
-        emergencyContactName: '', emergencyContactPhone: '', 
-        location: '', address: '', batchTiming: '', notes: '',
-        classType: 'Dance Class', 
-        createdAt: new Date().toISOString().split('T')[0] 
-      });
-    } catch (err) {
-      console.error(err);
-      const errorMsg = err.response?.data?.message || 'Failed to save to database. Please check console and try again.';
-      alert(errorMsg);
-    }
-  };
+  // handleSubmit is handled inside StudentForm component.
+  // const handleSubmit = async (e) => {
+  //   e.preventDefault();
+  //   
+  //   const wasEditing = editingStudent;
+  //   
+  //   try {
+  //     if (wasEditing) {
+  //       await axios.put(`${API_URL}/students/${wasEditing._id}`, formData);
+  //     } else {
+  //       await axios.post(`${API_URL}/students`, formData);
+  //     }
+  //     
+  //     await refreshData();
+  //     setShowModal(false);
+  //     setEditingStudent(null);
+  //     setFormData({ 
+  //       studentName: '', email: '', phone: '', whatsappNumber: '', 
+  //       danceStyle: '', danceForFitness: '', 
+  //       studentAge: '', gender: '', bloodGroup: '', parentName: '', 
+  //       emergencyContactName: '', emergencyContactPhone: '', 
+  //       location: '', address: '', batchTiming: '', notes: '',
+  //       classType: 'Dance Class', 
+  //       createdAt: new Date().toISOString().split('T')[0] 
+  //     });
+  //   } catch (err) {
+  //     console.error(err);
+  //     const errorMsg = err.response?.data?.message || 'Failed to save to database. Please check console and try again.';
+  //     alert(errorMsg);
+  //   }
+  // };
 
   const handleDelete = (id) => {
     setConfirmState({ open: true, studentId: id });

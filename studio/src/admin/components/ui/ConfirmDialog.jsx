@@ -248,6 +248,18 @@ const ConfirmDialog = ({
             box-shadow: 0 0 0 8px rgba(245, 158, 11, 0), 0 0 20px rgba(245, 158, 11, 0.25);
           }
         }
+
+        @media (max-width: 480px) {
+          .confirm-actions-row {
+            flex-direction: column;
+            gap: 10px;
+          }
+          .confirm-btn-secondary,
+          .confirm-btn-primary {
+            width: 100%;
+            padding: 14px 16px;
+          }
+        }
       `}</style>
     </div>,
     document.body
