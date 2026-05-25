@@ -9,12 +9,7 @@ export default defineConfig({
     host: true,
     proxy: {
       '/api': {
-        target: 'https://dance-studio-5nu0.onrender.com',
-        changeOrigin: true
-      },
-      '/socket.io': {
-        target: 'https://dance-studio-5nu0.onrender.com',
-        ws: true,
+        target: 'http://localhost:5001',
         changeOrigin: true
       }
     }

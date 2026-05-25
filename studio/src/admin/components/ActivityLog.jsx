@@ -128,16 +128,16 @@ const ActivityLog = () => {
                     <h4>{act.title}</h4>
                     <p>{act.desc}</p>
                   </div>
-                  <div className="timeline-meta">
-                    <span className="timeline-time">
-                      <Clock size={12} /> {formatRelativeTime(act.date)}
-                    </span>
-                    {act.type === 'payment' ? (
-                      <span className="meta-badge method">{act.meta}</span>
-                    ) : (
-                      <span className={`meta-badge ${getStatusBadgeClass(act.meta)}`}>{act.meta}</span>
-                    )}
-                  </div>
+                </div>
+                <div className="timeline-meta">
+                  <span className="timeline-time">
+                    <Clock size={12} /> {formatRelativeTime(act.date)}
+                  </span>
+                  {act.type === 'payment' ? (
+                    <span className="meta-badge method">{act.meta}</span>
+                  ) : (
+                    <span className={`meta-badge ${getStatusBadgeClass(act.meta)}`}>{act.meta}</span>
+                  )}
                 </div>
               </div>
             </div>

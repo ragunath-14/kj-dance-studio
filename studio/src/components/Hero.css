@@ -9,6 +9,7 @@
   background-size: cover;
   background-position: center;
   color: white;
+  overflow: hidden;
 }
 
 .hero-overlay {
@@ -17,12 +18,45 @@
   left: 0;
   width: 100%;
   height: 100%;
-  background: linear-gradient(to right, rgba(20, 20, 20, 0.6), rgba(92, 91, 82, 0.4));
+  background: linear-gradient(to right, rgba(20, 20, 20, 0.65), rgba(92, 91, 82, 0.4));
+}
+
+/* Decorative floating orbs */
+.hero-orb {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(60px);
+  opacity: 0.25;
+  pointer-events: none;
+}
+
+.hero-orb-1 {
+  width: 350px;
+  height: 350px;
+  background: radial-gradient(circle, #fb923c, transparent);
+  top: -80px;
+  right: -80px;
+  animation: orbFloat 8s ease-in-out infinite;
+}
+
+.hero-orb-2 {
+  width: 250px;
+  height: 250px;
+  background: radial-gradient(circle, #f97316, transparent);
+  bottom: 60px;
+  left: -60px;
+  animation: orbFloat 10s ease-in-out infinite reverse;
+}
+
+@keyframes orbFloat {
+  0%, 100% { transform: translateY(0) scale(1); }
+  50% { transform: translateY(-30px) scale(1.1); }
 }
 
 .hero-container {
   position: relative;
   z-index: 10;
+  width: 100%;
 }
 
 .hero-content {
@@ -42,7 +76,7 @@
   font-size: 4rem;
   font-weight: 800;
   line-height: 1.1;
-  margin-bottom: 2rem;
+  margin-bottom: 1.5rem;
 }
 
 .hero-title span {
@@ -51,14 +85,80 @@
 
 .hero-description {
   font-size: 1.2rem;
-  margin-bottom: 2.5rem;
+  margin-bottom: 1.5rem;
   color: #ffffff;
   font-weight: 600;
+}
+
+/* Dance style badges — visible on mobile, hidden on desktop */
+.hero-style-badges {
+  display: none;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-bottom: 1.8rem;
+}
+
+.style-badge {
+  background: rgba(251, 146, 60, 0.18);
+  border: 1px solid rgba(251, 146, 60, 0.5);
+  color: #fdba74;
+  padding: 0.3rem 0.85rem;
+  border-radius: 50px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  backdrop-filter: blur(4px);
 }
 
 .hero-btns {
   display: flex;
   gap: 1rem;
+}
+
+/* Mobile stats strip — visible only on mobile */
+.hero-mobile-stats {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  gap: 0;
+  background: rgba(0, 0, 0, 0.45);
+  border: 1px solid rgba(251, 146, 60, 0.25);
+  border-radius: 20px;
+  backdrop-filter: blur(12px);
+  padding: 1.2rem 1rem;
+  margin-top: 2.5rem;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+}
+
+.mobile-stat-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  flex: 1;
+}
+
+.mobile-stat-num {
+  font-size: 1.8rem;
+  font-weight: 800;
+  color: var(--primary);
+  line-height: 1;
+}
+
+.mobile-stat-label {
+  font-size: 0.7rem;
+  color: #d1d5db;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin-top: 0.3rem;
+  font-weight: 600;
+}
+
+.mobile-stat-divider {
+  width: 1px;
+  height: 40px;
+  background: rgba(251, 146, 60, 0.3);
+  flex-shrink: 0;
 }
 
 .hero-stats {
@@ -96,21 +196,54 @@
 }
 
 @media (max-width: 480px) {
+  .hero {
+    align-items: flex-start;
+    padding-top: 7rem;
+    padding-bottom: 2rem;
+  }
+
+  .hero-orb-1 {
+    width: 220px;
+    height: 220px;
+    opacity: 0.3;
+  }
+
+  .hero-orb-2 {
+    width: 160px;
+    height: 160px;
+    opacity: 0.2;
+  }
+
   .hero-title {
     font-size: 2.2rem;
+    margin-bottom: 1rem;
   }
   
   .hero-subtitle {
-    font-size: 0.8rem;
+    font-size: 0.75rem;
     letter-spacing: 1px;
   }
   
   .hero-description {
-    font-size: 1rem;
-    margin-bottom: 2rem;
+    font-size: 0.95rem;
+    margin-bottom: 1.2rem;
+  }
+
+  /* Show badges and stats on mobile */
+  .hero-style-badges {
+    display: flex;
+  }
+
+  .hero-mobile-stats {
+    display: flex;
   }
   
   .hero-stat h3 {
     font-size: 1.8rem;
+  }
+
+  .hero-btns .btn {
+    width: 100%;
+    justify-content: center;
   }
 }

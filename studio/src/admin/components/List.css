@@ -84,7 +84,9 @@
   background-color: var(--bg-card);
   border-radius: 20px;
   border: 1px solid var(--border-color);
-  overflow: hidden;
+  overflow-x: auto;
+  overflow-y: visible;
+  -webkit-overflow-scrolling: touch;
   box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
 }
 

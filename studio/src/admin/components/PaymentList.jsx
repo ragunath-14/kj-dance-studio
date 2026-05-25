@@ -248,7 +248,7 @@ const PaymentList = () => {
             {activeTab === 'paid' ? (
               <tr>
                 <th>Date</th><th>Student</th><th>Amount</th>
-                <th>Method</th><th>Purpose</th><th>Actions</th>
+                <th className="hide-mobile">Method</th><th className="hide-mobile">Purpose</th><th>Actions</th>
               </tr>
             ) : (
               <tr>

@@ -29,6 +29,17 @@ export const DataProvider = ({ children }) => {
   const [payments,      setPayments]      = useState({ data: [], total: 0, page: 1, limit: 50, totalPages: 1 });
   const [registrations, setRegistrations] = useState([]);
   const [stats,         setStats]         = useState(null);
+  const [toasts,        setToasts]        = useState([]);
+
+  const showToast = useCallback((message, type = 'success') => {
+    const id = Date.now() + Math.random().toString(36).substr(2, 9);
+    setToasts(prev => [...prev, { id, message, type }]);
+    
+    // Auto-remove toast after 4 seconds
+    setTimeout(() => {
+      setToasts(prev => prev.filter(t => t.id !== id));
+    }, 4000);
+  }, []);
 
   // Granular loading flags
   const [loading,         setLoading]         = useState(true);   // global loading
@@ -144,12 +155,32 @@ export const DataProvider = ({ children }) => {
   useEffect(() => {
     fetchAllData();
 
-    const socketUrl = API_URL.replace(/\/api$/, '');
+    // Connect socket.io directly to the backend URL.
+    // In dev: uses VITE_SOCKET_URL=http://localhost:5001 (bypasses Vite proxy — avoids ECONNABORTED).
+    // In production: backend and frontend are on the same origin, so use window.location.origin.
+    const socketUrl = import.meta.env.VITE_SOCKET_URL || window.location.origin;
     const socket = io(socketUrl, { transports: ['websocket', 'polling'] });
 
     // Handle incoming real-time socket events with debouncing to prevent twinkling/flickering
-    socket.on('dataChanged',          () => debouncedRefresh(true));
-    socket.on('registrationApproved', () => debouncedRefresh(true));
+    socket.on('dataChanged', (payload) => {
+      console.log('⚡ Real-time data changed event:', payload);
+      debouncedRefresh(true);
+
+      if (payload && payload.type === 'registration') {
+        showToast(`🎉 New pending registration received for ${payload.name || 'a student'}!`);
+      } else if (payload && payload.type === 'student' && payload.action === 'create') {
+        showToast(`👤 Student added successfully!`);
+      } else if (payload && payload.type === 'payment' && payload.action === 'create') {
+        showToast(`💰 Payment recorded successfully!`);
+      }
+    });
+
+    socket.on('registrationApproved', (payload) => {
+      debouncedRefresh(true);
+      if (payload && payload.name) {
+        showToast(`🎓 Registration approved for ${payload.name}!`);
+      }
+    });
 
     return () => {
       if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
@@ -210,8 +241,93 @@ export const DataProvider = ({ children }) => {
       approveRegistration,
       rejectRegistration,
       toggleStudentStatus,
+      showToast,
     }}>
       {children}
+      
+      {/* Floating Glassmorphic Toast Notifications */}
+      <div className="toast-container">
+        {toasts.map(toast => (
+          <div key={toast.id} className={`toast-card ${toast.type}`}>
+            <span className="toast-icon">
+              {toast.type === 'success' ? '✨' : '🔔'}
+            </span>
+            <div className="toast-message">{toast.message}</div>
+            <button className="toast-close-btn" onClick={() => setToasts(prev => prev.filter(t => t.id !== toast.id))}>
+              ×
+            </button>
+          </div>
+        ))}
+      </div>
+      <style>{`
+        .admin-root .toast-container {
+          position: fixed;
+          bottom: 24px;
+          right: 24px;
+          display: flex;
+          flex-direction: column;
+          gap: 12px;
+          z-index: 9999;
+          pointer-events: none;
+        }
+        .admin-root .toast-card {
+          pointer-events: auto;
+          background: linear-gradient(135deg, rgba(30, 41, 59, 0.92) 0%, rgba(15, 23, 42, 0.96) 100%);
+          border: 1px solid rgba(255, 140, 0, 0.3) !important;
+          box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.4), 0 0 20px rgba(255, 140, 0, 0.15) !important;
+          backdrop-filter: blur(16px);
+          -webkit-backdrop-filter: blur(16px);
+          border-radius: 16px;
+          padding: 16px 20px;
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          color: #ffffff;
+          font-family: 'Inter', system-ui, -apple-system, sans-serif;
+          font-size: 0.88rem;
+          font-weight: 700;
+          min-width: 285px;
+          max-width: 400px;
+          animation: toastSlideIn 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+        .admin-root .toast-icon {
+          font-size: 1.2rem;
+          filter: drop-shadow(0 0 8px rgba(255, 140, 0, 0.4));
+        }
+        .admin-root .toast-message {
+          flex: 1;
+          line-height: 1.4;
+        }
+        .admin-root .toast-close-btn {
+          background: transparent;
+          border: none;
+          color: rgba(255, 255, 255, 0.4);
+          cursor: pointer;
+          font-size: 1.25rem;
+          font-weight: 300;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          width: 24px;
+          height: 24px;
+          border-radius: 50%;
+          transition: all 0.2s;
+        }
+        .admin-root .toast-close-btn:hover {
+          color: #ffffff;
+          background: rgba(255, 255, 255, 0.08);
+        }
+        @keyframes toastSlideIn {
+          from {
+            opacity: 0;
+            transform: translateY(24px) scale(0.92);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0) scale(1);
+          }
+        }
+      `}</style>
     </DataContext.Provider>
   );
 };

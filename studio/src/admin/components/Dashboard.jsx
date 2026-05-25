@@ -12,7 +12,7 @@ import './Dashboard.css';
 
 const Dashboard = () => {
   const { stats, loading, statsLoading } = useData();
-  const [now, setNow] = useState(Date.now());
+  const [now, setNow] = useState(() => Date.now());
   const [overdueOpen, setOverdueOpen] = useState(false);
   // Per-student reminder state: { [studentId]: 'idle' | 'sending' | 'sent' | 'error' }
   const [reminderState, setReminderState] = useState({});

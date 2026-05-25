@@ -266,7 +266,49 @@
     padding: 16px 18px;
   }
 
+<<<<<<< HEAD
   .admin-root .history-body {
     padding: 16px 18px;
   }
+=======
+.admin-root .history-table tr:last-child td {
+  border-bottom: none;
+}
+
+.admin-root .history-table tr:hover td {
+  color: var(--primary-color);
+}
+
+.admin-root .history-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  padding: 20px 32px 28px;
+  border-top: 1px solid var(--border-color);
+  background: rgba(0,0,0,0.02);
+}
+
+.admin-root .student-name-link {
+  background: none;
+  border: none;
+  color: var(--text-main);
+  font-weight: 700;
+  font-size: 14px;
+  cursor: pointer;
+  padding: 0;
+  text-align: left;
+  transition: all 0.2s;
+}
+
+.admin-root .student-name-link:hover {
+  color: var(--primary-color);
+  transform: translateX(2px);
+}
+
+@media (max-width: 768px) {
+  .admin-root .history-summary { grid-template-columns: 1fr; padding: 20px; }
+  .admin-root .history-header { padding: 20px; }
+  .admin-root .history-table-wrap { padding: 0 20px; }
+  .admin-root .history-footer { padding: 20px; }
+>>>>>>> c792a713bdff3a9356a754f3d0ec17c2da4bc73a
 }

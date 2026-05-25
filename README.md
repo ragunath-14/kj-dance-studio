@@ -1,6 +1,6 @@
 # Deployment Instructions for Dance Studio Management System
 
-This project has been consolidated into a unified structure within the `dance studio` folder. It is production-ready and security-hardened.
+This project has been consolidated into a unified structure in the root directory. It is production-ready and security-hardened.
 
 ---
 
@@ -37,7 +37,7 @@ This project has been consolidated into a unified structure within the `dance st
 
 ## 1. Unified Backend (Node.js/Express)
 
-Deploy the contents of `dance studio/backend/` to **Render, Railway, or Heroku**.
+Deploy the contents of `backend/` to **Render, Railway, or Heroku**.
 
 ### Environment Variables (Required)
 
@@ -54,38 +54,16 @@ Deploy the contents of `dance studio/backend/` to **Render, Railway, or Heroku**
 
 ---
 
-## 2. Studio Landing Page (React/Vite)
+## 2. Consolidated Frontend (React/Vite)
 
-Deploy the contents of `dance studio/studio/` to **Vercel or Netlify**.
+The frontend projects (both the Public Studio Landing Page and the Admin Management Panel) are fully consolidated under the `/studio` directory. 
 
-### Environment Variables
+In production, they are compiled into static assets and served directly by the Express backend.
 
-| Variable            | Description                                     | Example                                      |
-| ------------------- | ----------------------------------------------- | -------------------------------------------- |
-| `VITE_API_URL`      | Backend URL + /api                              | `https://your-backend.onrender.com/api`      |
-| `VITE_ADMIN_API_URL`| Backend URL + /api (for PayPortal)              | `https://your-backend.onrender.com/api`      |
-
-### Build Command
-```bash
-npm run build
-```
-
----
-
-## 3. Admin Panel (React/Vite)
-
-Deploy the contents of `dance studio/admin/` to **Vercel or Netlify**.
-
-### Environment Variables
-
-| Variable       | Description                          | Example                                       |
-| -------------- | ------------------------------------ | --------------------------------------------- |
-| `VITE_API_URL` | Backend URL + /api                   | `https://your-backend.onrender.com/api`       |
-
-### Build Command
-```bash
-npm run build
-```
+### Automatic Production Build
+When deploying the backend to Render, the build process automatically handles compilation:
+- **Build Command:** `npm run build` (runs `node build-prod.js` inside `/backend` which builds the `/studio` project and installs dependencies).
+- **Static Assets:** The compiled files reside in `/studio/dist/` and are served by the backend at `/` (landing page) and `/admin` (admin module).
 
 ---
 

@@ -34,6 +34,7 @@ const Layout = ({ children, onLogout }) => {
   const closeMobileMenu = () => setIsMobileMenuOpen(false);
 
   return (
+<<<<<<< HEAD
     <div className="layout">
       {/* ── Mobile Header (only shown on mobile) ── */}
       {isMobile && (
@@ -47,6 +48,67 @@ const Layout = ({ children, onLogout }) => {
               {isMobileMenuOpen ? <X size={20} /> : <Menu size={20} />}
             </button>
             <h1>Expressionz Studio</h1>
+=======
+    <div className={`layout ${isMobileMenuOpen ? 'mobile-menu-open' : ''}`}>
+      <div className="mobile-header">
+        <button className="menu-toggle" onClick={toggleMobileMenu}>
+          {isMobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
+        </button>
+        <h1>Dance Studio</h1>
+        <div className="mobile-header-actions">
+          <ThemeToggle />
+          <NavLink to="/admin/registrations" className="topbar-notification" style={{ padding: '6px' }}>
+            <Bell size={20} />
+            {registrations.length > 0 && <span className="notification-badge">{registrations.length}</span>}
+          </NavLink>
+          {onLogout && (
+            <button
+              onClick={onLogout}
+              style={{
+                background: 'transparent',
+                border: '1px solid #ef4444',
+                color: '#ef4444',
+                padding: '5px 10px',
+                borderRadius: '6px',
+                cursor: 'pointer',
+                fontWeight: '600',
+                fontSize: '12px',
+              }}>
+              Logout
+            </button>
+          )}
+        </div>
+      </div>
+      
+      <div className={`sidebar-overlay ${isMobileMenuOpen ? 'show' : ''}`} onClick={toggleMobileMenu}></div>
+      
+      <Sidebar isOpen={isMobileMenuOpen} onClose={() => setIsMobileMenuOpen(false)} />
+      
+      <main className="content">
+        <header className="topbar">
+          <h1>Admin Management</h1>
+          <div className="topbar-actions" style={{display: 'flex', alignItems: 'center', gap: '20px'}}>
+            <ThemeToggle />
+            <NavLink to="/admin/registrations" className="topbar-notification">
+              <Bell size={24} />
+              {registrations.length > 0 && <span className="notification-badge">{registrations.length}</span>}
+            </NavLink>
+            {onLogout && (
+              <button 
+                onClick={onLogout} 
+                style={{
+                  background: 'transparent', 
+                  border: '1px solid #ef4444', 
+                  color: '#ef4444', 
+                  padding: '6px 12px', 
+                  borderRadius: '6px', 
+                  cursor: 'pointer',
+                  fontWeight: '500'
+                }}>
+                Logout
+              </button>
+            )}
+>>>>>>> c792a713bdff3a9356a754f3d0ec17c2da4bc73a
           </div>
           <div className="mobile-header-right">
             <ThemeToggle />
