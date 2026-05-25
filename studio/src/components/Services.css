@@ -1,6 +1,11 @@
+.services {
+  padding: 6rem 0;
+  overflow: hidden;
+}
+
 .section-header-centered {
   text-align: center;
-  margin-bottom: 6rem;
+  margin-bottom: 4rem;
   position: relative;
 }
 
@@ -25,6 +30,7 @@
   font-weight: 600;
 }
 
+/* ── Services Grid ─────────────────────────────── */
 .premium-services {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
@@ -169,26 +175,68 @@
   opacity: 1;
 }
 
+/* ── Tablet (≤768px) ─────────────────────────── */
 @media (max-width: 768px) {
-  .section-header-centered {
-    margin-bottom: 4rem;
+  .services {
+    padding: 4rem 0;
   }
-  
+
+  .section-header-centered {
+    margin-bottom: 3rem;
+  }
+
   .section-title {
     font-size: 2rem;
   }
-  
-  .premium-service-card {
-    padding: 1.5rem;
+
+  .premium-services {
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
   }
-  
+
+  .premium-service-card {
+    padding: 1.4rem;
+  }
+
   .premium-service-card h3 {
-    font-size: 1.2rem;
+    font-size: 1.1rem;
+  }
+
+  .card-desc-text {
+    font-size: 0.85rem;
+  }
+
+  .p-feature-list li {
+    font-size: 0.78rem;
   }
 }
 
+/* ── Phone (≤480px) — Horizontal scroll carousel ─────── */
 @media (max-width: 480px) {
-  /* Horizontal scroll carousel for mobile */
+  .services {
+    padding: 3rem 0;
+  }
+
+  .section-title {
+    font-size: 1.8rem;
+  }
+
+  .section-header-centered {
+    margin-bottom: 2rem;
+  }
+
+  /* Scroll hint label */
+  .section-header-centered::before {
+    content: '← swipe to explore →';
+    display: block;
+    font-size: 0.7rem;
+    color: rgba(251, 146, 60, 0.7);
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    margin-top: 0.5rem;
+    font-weight: 700;
+  }
+
   .premium-services {
     display: flex;
     flex-direction: row;
@@ -199,6 +247,8 @@
     padding: 0.5rem 1rem 1.5rem;
     margin: 0 -1rem;
     scrollbar-width: none;
+    /* Don't clip hover lift */
+    padding-bottom: 2rem;
   }
 
   .premium-services::-webkit-scrollbar {
@@ -207,28 +257,18 @@
 
   .premium-service-card {
     scroll-snap-align: start;
-    min-width: 72vw;
+    min-width: 78vw;
     flex-shrink: 0;
-    border: 1px solid rgba(251, 146, 60, 0.2);
+    border: 1px solid rgba(251, 146, 60, 0.25);
+    padding: 1.4rem;
   }
 
   .premium-service-card:last-child {
     margin-right: 1rem;
   }
 
-  .section-title {
-    font-size: 1.8rem;
-  }
-
-  /* Swipe hint indicator */
-  .section-header-centered::before {
-    content: '← swipe to explore →';
-    display: block;
-    font-size: 0.7rem;
-    color: rgba(251, 146, 60, 0.7);
-    letter-spacing: 1px;
-    text-transform: uppercase;
-    margin-top: 0.5rem;
-    font-weight: 700;
+  /* Disable hover lift on touch carousels */
+  .premium-service-card:hover {
+    transform: none;
   }
 }

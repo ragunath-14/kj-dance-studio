@@ -17,7 +17,7 @@ const WhyChoose = () => {
       <div className="container">
         <div className="why-choose-grid">
           <motion.div initial={{ opacity: 0, x: -30 }} whileInView={{ opacity: 1, x: 0 }} className="why-text">
-            <h2 className="section-title" style={{ textAlign: 'left', marginBottom: '1rem' }}>Why Choose <span>Expressionz?</span></h2>
+            <h2 className="why-choose-title">Why Choose <span>Expressionz?</span></h2>
             <ul className="why-list">
               {points.map((p, i) => (
                 <li key={i}><CheckCircle className="text-purple-500" /> <span>{p}</span></li>

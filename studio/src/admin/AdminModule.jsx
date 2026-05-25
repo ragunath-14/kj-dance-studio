@@ -37,7 +37,7 @@ const AdminModule = () => {
 
   return (
     <div className="admin-root">
-      <DataProvider>
+      <DataProvider isAuthenticated={isAuthenticated}>
         <Routes>
           <Route path="/login" element={<Login onLogin={handleLogin} />} />
           

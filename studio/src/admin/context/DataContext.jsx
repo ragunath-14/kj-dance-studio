@@ -22,7 +22,7 @@ export const useData = () => {
   return context;
 };
 
-export const DataProvider = ({ children }) => {
+export const DataProvider = ({ children, isAuthenticated }) => {
   const [students,      setStudents]      = useState({ data: [], total: 0, page: 1, limit: 50, totalPages: 1 });
   const [unpaidStudents,setUnpaidStudents]= useState({ data: [], total: 0, page: 1, limit: 50, totalPages: 1 });
   const [allStudents,   setAllStudents]   = useState([]);   // for dropdowns / payment form
@@ -151,8 +151,9 @@ export const DataProvider = ({ children }) => {
     }, 250);
   }, [fetchAllData]);
 
-  // ── Initial load + Socket.io real-time updates ─────────────────────────────
   useEffect(() => {
+    if (!isAuthenticated) return;
+
     fetchAllData();
 
     // Connect socket.io directly to the backend URL.
@@ -186,8 +187,7 @@ export const DataProvider = ({ children }) => {
       if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
       socket.disconnect();
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [isAuthenticated, fetchAllData, debouncedRefresh, showToast]);
 
   // ── Action helpers ─────────────────────────────────────────────────────────
   const refreshData = useCallback(() => debouncedRefresh(false), [debouncedRefresh]);

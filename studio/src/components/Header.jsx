@@ -1,4 +1,4 @@
-import { X, Menu, Settings } from '../icons'
+import { X, Menu, Settings, UserPlus } from '../icons'
 import './Header.css'
 import { navLinks } from '../constants'
 
@@ -18,25 +18,53 @@ const Header = ({ isScrolled, isMenuOpen, setIsMenuOpen, onRegister }) => {
               </li>
             ))}
             <li className="mobile-only-action">
-              <button className="btn btn-primary btn-full" onClick={() => { onRegister(); setIsMenuOpen(false); }}>Register Now</button>
+              <button className="btn btn-primary btn-full" onClick={() => { onRegister(); setIsMenuOpen(false); }}>
+                Register Now
+              </button>
             </li>
             <li className="mobile-only-action mobile-admin-btn">
-              <button className="btn btn-admin-mobile btn-full" onClick={() => { window.location.href = '/admin'; setIsMenuOpen(false); }}>⚙ Admin Panel</button>
+              <button className="btn btn-admin-mobile btn-full" onClick={() => { window.location.href = '/admin'; setIsMenuOpen(false); }}>
+                ⚙ Admin Panel
+              </button>
             </li>
           </ul>
         </nav>
 
         <div className="header-actions">
-          <button className="btn btn-primary btn-sm hide-mobile" onClick={() => window.location.href = '/admin'} style={{background: 'transparent', border: '1px solid var(--primary)', color: 'var(--primary)', marginRight: '10px'}}>Admin</button>
-          <button className="btn btn-primary btn-sm hide-mobile" onClick={onRegister}>Register Now</button>
-          <button 
-            className="mobile-admin-btn-header show-mobile-only" 
+          {/* Desktop buttons */}
+          <button
+            className="btn btn-sm hide-mobile"
+            onClick={() => window.location.href = '/admin'}
+            style={{ background: 'transparent', border: '1px solid var(--primary)', color: 'var(--primary)', marginRight: '6px' }}
+          >
+            Admin
+          </button>
+          <button className="btn btn-primary btn-sm hide-mobile" onClick={onRegister}>
+            Register Now
+          </button>
+
+          {/* Mobile: Register icon button */}
+          <button
+            className="mobile-register-btn"
+            onClick={onRegister}
+            title="Register for Classes"
+            aria-label="Register for Classes"
+          >
+            <UserPlus size={19} />
+          </button>
+
+          {/* Mobile: Admin gear icon */}
+          <button
+            className="mobile-admin-btn-header"
             onClick={() => window.location.href = '/admin'}
             title="Go to Admin Panel"
+            aria-label="Admin Panel"
           >
-            <Settings size={20} />
+            <Settings size={19} />
           </button>
-          <button className="menu-toggle" onClick={() => setIsMenuOpen(!isMenuOpen)}>
+
+          {/* Hamburger toggle */}
+          <button className="menu-toggle" onClick={() => setIsMenuOpen(!isMenuOpen)} aria-label="Toggle menu">
             {isMenuOpen ? <X /> : <Menu />}
           </button>
         </div>

@@ -22,13 +22,18 @@ html {
   box-sizing: border-box;
 }
 
+html, body {
+  width: 100%;
+  max-width: 100%;
+  overflow-x: hidden;
+}
+
 body {
   font-family: var(--font-main);
   background-color: var(--bg-main);
   color: var(--text-main);
   font-weight: 500;
   line-height: 1.6;
-  overflow-x: hidden;
 }
 
 img,

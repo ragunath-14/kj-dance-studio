@@ -1,10 +1,10 @@
 import React from 'react';
 import { NavLink } from 'react-router-dom';
-import { LayoutDashboard, Users, CreditCard, UserPlus, Activity } from 'lucide-react';
+import { LayoutDashboard, Users, CreditCard, UserPlus, Activity, LogOut } from 'lucide-react';
 import { useData } from '../context/DataContext';
 import './Sidebar.css';
 
-const Sidebar = ({ isOpen, onClose }) => {
+const Sidebar = ({ isOpen, onClose, onLogout }) => {
   const { registrations } = useData();
   const navLinks = [
     { to: '/admin', icon: LayoutDashboard, label: 'Dashboard' },
@@ -14,6 +14,11 @@ const Sidebar = ({ isOpen, onClose }) => {
     { to: '/admin/activity', icon: Activity, label: 'Activity Log' },
   ];
 
+  const handleLogout = () => {
+    onClose();
+    if (onLogout) onLogout();
+  };
+
   return (
     <aside className={`sidebar ${isOpen ? 'open' : ''}`}>
       <div className="logo-container">
@@ -22,9 +27,9 @@ const Sidebar = ({ isOpen, onClose }) => {
       </div>
       <nav className="nav-menu">
         {navLinks.map((link) => (
-          <NavLink 
-            key={link.to} 
-            to={link.to} 
+          <NavLink
+            key={link.to}
+            to={link.to}
             end={link.to === '/admin'}
             className={({ isActive }) => (isActive ? 'nav-item active' : 'nav-item')}
             onClick={onClose}
@@ -37,6 +42,18 @@ const Sidebar = ({ isOpen, onClose }) => {
           </NavLink>
         ))}
       </nav>
+
+      {/* ── Logout at the bottom of sidebar ── */}
+      <div className="sidebar-footer">
+        {onLogout && (
+          <button className="nav-item logout sidebar-logout-btn" onClick={handleLogout}>
+            <div className="nav-item-content">
+              <LogOut size={20} />
+              <span>Logout</span>
+            </div>
+          </button>
+        )}
+      </div>
     </aside>
   );
 };

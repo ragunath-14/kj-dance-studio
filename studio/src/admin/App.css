@@ -381,7 +381,6 @@
   color: var(--error);
   border-color: var(--error);
 }
-<<<<<<< HEAD
 /* ── Global Mobile Protection ────────────────────────────────────────── */
 @media (max-width: 768px) {
   .admin-root {
@@ -409,14 +408,9 @@
     max-width: 100%;
     left: 0;
   }
-}
-=======
 
-/* Responsive utilities */
-@media (max-width: 768px) {
   .admin-root .hide-mobile {
     display: none !important;
   }
 }
 
->>>>>>> c792a713bdff3a9356a754f3d0ec17c2da4bc73a
