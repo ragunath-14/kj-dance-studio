@@ -72,9 +72,9 @@ const RegisterModal = ({ showModal, setShowModal }) => {
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
-    setFormData({ 
-      ...formData, 
-      [name]: type === 'checkbox' ? checked : value 
+    setFormData({
+      ...formData,
+      [name]: type === 'checkbox' ? checked : value
     })
     if (fieldErrors[name]) {
       setFieldErrors(prev => ({ ...prev, [name]: '' }))
@@ -116,7 +116,7 @@ const RegisterModal = ({ showModal, setShowModal }) => {
         setStatus({ type: 'success', message: 'Congratulations! Registration successful. A confirmation message has been sent to your WhatsApp!' });
         setFormData({
           studentName: '', studentAge: '', classType: '', danceStyle: '',
-          danceForFitness: '', whatsappSame: true, whatsappNumber: '', 
+          danceForFitness: '', whatsappSame: true, whatsappNumber: '',
           parentName: '', phone: '', location: '', notes: '', gender: ''
         });
         setFieldErrors({});
@@ -140,9 +140,9 @@ const RegisterModal = ({ showModal, setShowModal }) => {
   }
 
   const slideVariants = {
-    enter: (dir) => ({ x: dir > 0 ? 60 : -60, opacity: 0 }),
+    enter: (dir) => ({ x: dir > 0 ? 30 : -30, opacity: 0 }),
     center: { x: 0, opacity: 1 },
-    exit: (dir) => ({ x: dir > 0 ? -60 : 60, opacity: 0 }),
+    exit: (dir) => ({ x: dir > 0 ? -30 : 30, opacity: 0 }),
   }
 
   return (

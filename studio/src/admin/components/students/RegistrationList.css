@@ -181,11 +181,36 @@
   to { transform: rotate(360deg); }
 }
 
+@media (max-width: 768px) {
+  .admin-root .registration-grid {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+
+  .admin-root .registration-card {
+    padding: 18px;
+  }
+
+  .admin-root .registration-card:hover {
+    transform: none;
+  }
+}
+
 @media (max-width: 480px) {
   .admin-root .registration-grid {
     grid-template-columns: 1fr;
+    gap: 12px;
+  }
+
+  .admin-root .reg-header h3 {
+    font-size: 16px;
+  }
+
+  .admin-root .reg-actions {
+    gap: 8px;
   }
 }
+
 
 /* ── Dark Theme Overrides ─────────────────────────────────────── */
 [data-theme="dark"] .admin-root .registration-card {

@@ -381,3 +381,31 @@
   color: var(--error);
   border-color: var(--error);
 }
+/* ── Global Mobile Protection ────────────────────────────────────────── */
+@media (max-width: 768px) {
+  .admin-root {
+    overflow-x: hidden;
+  }
+
+  /* Force all inner containers to fit within parent */
+  .admin-root .student-list,
+  .admin-root .payment-list,
+  .admin-root .activity-log,
+  .admin-root .registration-list-container {
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  /* Dashboard mobile header row */
+  .admin-root .list-header {
+    width: 100%;
+    box-sizing: border-box;
+  }
+
+  /* Prevent suggestion dropdowns from overflowing */
+  .admin-root .suggestions-dropdown {
+    width: calc(100vw - 40px);
+    max-width: 100%;
+    left: 0;
+  }
+}

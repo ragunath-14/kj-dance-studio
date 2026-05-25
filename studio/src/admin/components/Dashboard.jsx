@@ -1,8 +1,9 @@
 import React, { useMemo, useState, useEffect } from 'react';
 import axios from 'axios';
+import { NavLink } from 'react-router-dom';
 import {
   Users, CreditCard, TrendingUp, AlertCircle,
-  Calendar, Music, UserPlus, Bell, Send,
+  Calendar, Music, UserPlus, Send,
   ChevronDown, ChevronUp, Phone
 } from 'lucide-react';
 import { useData } from '../context/DataContext';
@@ -179,7 +180,6 @@ const Dashboard = () => {
             </div>
             <div className="class-pills">
               <ClassPill label="Dance"   count={metrics.classTypes.dance}   total={metrics.total || 1} className="dance"   />
-              <ClassPill label="Regular" count={metrics.classTypes.regular} total={metrics.total || 1} className="regular" />
               <ClassPill label="Fitness" count={metrics.classTypes.fitness} total={metrics.total || 1} className="fitness" />
             </div>
           </div>
@@ -188,8 +188,8 @@ const Dashboard = () => {
         <div className="dashboard-sidebar">
           <div className="card">
             <div className="card-header">
-              <h2>Activity (Last 24h)</h2>
-              <TrendingUp size={20} className="text-muted" />
+              <h2>Last 24h Activity</h2>
+              <NavLink to="/admin/activity" style={{ fontSize: '13px', color: 'var(--primary-color)', fontWeight: 700, textDecoration: 'none' }}>View All →</NavLink>
             </div>
             <div className="activity-feed">
               {recentActivity.length > 0 ? (
@@ -206,7 +206,11 @@ const Dashboard = () => {
                   </div>
                 ))
               ) : (
-                <p className="placeholder-text">No recent activity detected.</p>
+                <div className="activity-empty">
+                  <div className="activity-empty-icon">📊</div>
+                  <p>No activity in the last 24 hours.</p>
+                  <NavLink to="/admin/activity" className="activity-history-link">View full history →</NavLink>
+                </div>
               )}
             </div>
           </div>

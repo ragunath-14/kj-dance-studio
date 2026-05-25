@@ -198,9 +198,45 @@
   transition: width 1s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
+.admin-root .pill.dance .pill-bar   { background: linear-gradient(90deg, #8b5cf6, #a78bfa); }
 .admin-root .pill.regular .pill-bar { background: linear-gradient(90deg, #FF8C00, #FFA500); }
-.admin-root .pill.summer .pill-bar { background: linear-gradient(90deg, #2196F3, #64B5F6); }
+.admin-root .pill.summer .pill-bar  { background: linear-gradient(90deg, #2196F3, #64B5F6); }
 .admin-root .pill.fitness .pill-bar { background: linear-gradient(90deg, #f97316, #fdba74); }
+
+/* ── Activity Empty State ─────────────────────────────────────────────── */
+.admin-root .activity-empty {
+  text-align: center;
+  padding: 30px 20px;
+  color: var(--text-muted);
+}
+
+.admin-root .activity-empty-icon {
+  font-size: 32px;
+  margin-bottom: 10px;
+  opacity: 0.5;
+}
+
+.admin-root .activity-empty p {
+  font-size: 14px;
+  margin: 0 0 12px;
+  font-style: italic;
+}
+
+.admin-root .activity-history-link {
+  display: inline-block;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--primary-color);
+  text-decoration: none;
+  padding: 6px 14px;
+  border-radius: 8px;
+  background: rgba(255, 140, 0, 0.08);
+  transition: all 0.2s;
+}
+
+.admin-root .activity-history-link:hover {
+  background: rgba(255, 140, 0, 0.16);
+}
 
 .admin-root .pill strong {
   text-align: right;
@@ -441,7 +477,7 @@
   }
 }
 
-@media (max-width: 1024px) {
+@media screen and (max-width: 1024px) {
   .admin-root .dashboard-layout {
     grid-template-columns: 1fr;
   }
@@ -451,16 +487,16 @@
   }
 }
 
-@media (max-width: 768px) {
+@media screen and (max-width: 768px) {
   .admin-root .dashboard-header {
     flex-direction: column;
     align-items: flex-start;
-    gap: 14px;
-    margin-bottom: 20px;
+    gap: 12px;
+    margin-bottom: 18px;
   }
-  
+
   .admin-root .welcome h1 {
-    font-size: 24px;
+    font-size: 22px !important;
     letter-spacing: -0.5px;
   }
 
@@ -473,74 +509,96 @@
     padding: 8px 14px;
   }
 
+  /* CRITICAL: 2-column grid on mobile */
   .admin-root .stats-grid {
     grid-template-columns: repeat(2, 1fr);
-    gap: 12px;
-    margin-bottom: 20px;
+    gap: 10px;
+    margin-bottom: 18px;
   }
 
   .admin-root .stat-card {
-    padding: 16px;
+    padding: 14px 12px;
     border-radius: 14px;
   }
 
   .admin-root .stat-card:hover {
-    transform: none; /* disable hover lift on touch devices */
+    transform: none;
+  }
+
+  /* Stack icon + text vertically so text is always visible */
+  .admin-root .stat-card-inner {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
   }
 
   .admin-root .stat-icon-wrap {
-    width: 44px;
-    height: 44px;
-    border-radius: 12px;
+    width: 40px;
+    height: 40px;
+    border-radius: 11px;
   }
 
   .admin-root .stat-icon-wrap svg {
-    width: 20px;
-    height: 20px;
+    width: 18px;
+    height: 18px;
+  }
+
+  .admin-root .stat-label {
+    font-size: 10px;
+    letter-spacing: 0.5px;
   }
 
   .admin-root .stat-value {
     font-size: 20px;
+    min-height: auto;
   }
-  
+
+  .admin-root .stat-trend {
+    font-size: 11px;
+  }
+
+  .admin-root .dashboard-layout {
+    grid-template-columns: 1fr;
+    gap: 14px;
+  }
+
   .admin-root .card {
     padding: 16px;
     border-radius: 16px;
   }
-  
+
+  .admin-root .card-header {
+    margin-bottom: 18px;
+  }
+
+  .admin-root .card-header h2 {
+    font-size: 16px;
+  }
+
   .admin-root .pill {
-    grid-template-columns: 70px 1fr 30px;
+    grid-template-columns: 60px 1fr 28px;
     gap: 10px;
   }
 
-  /* Overdue panel responsive */
   .admin-root .overdue-panel-toggle {
     padding: 12px 16px;
     font-size: 13px;
   }
+
   .admin-root .overdue-toggle-left {
     gap: 6px;
     flex-wrap: wrap;
   }
 }
 
-@media (max-width: 480px) {
+@media screen and (max-width: 480px) {
   .admin-root .stats-grid {
-    grid-template-columns: 1fr 1fr;
-    gap: 10px;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
   }
 
   .admin-root .stat-card {
-    padding: 12px;
-  }
-
-  .admin-root .stat-card-inner {
-    gap: 12px;
-  }
-
-  .admin-root .stat-icon-wrap {
-    width: 38px;
-    height: 38px;
+    padding: 10px 10px;
   }
 
   .admin-root .stat-value {
@@ -548,11 +606,11 @@
   }
 
   .admin-root .stat-label {
-    font-size: 10px;
+    font-size: 9px;
   }
-  
+
   .admin-root .welcome h1 {
-    font-size: 20px;
+    font-size: 20px !important;
   }
 }
 

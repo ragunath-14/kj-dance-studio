@@ -1,33 +1,65 @@
-/* Registration Modal - Two-Step Version */
+/* ══════════════════════════════════════════════════════════════
+   REGISTRATION MODAL — Public-facing registration form
+   ══════════════════════════════════════════════════════════════ */
+
+/* ── Overlay (Fullscreen Fixed) ─────────────────────────────── */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.8);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  padding: 20px;
+  overflow-y: auto;
+  /* Ensures overlay itself scrolls on small screens */
+  -webkit-overflow-scrolling: touch;
+}
+
+/* ── Card Container ─────────────────────────────────────────── */
 .registration-card-container {
   max-width: 900px;
-  width: 95%;
-  margin: 0 auto;
+  width: 100%;
+  margin: auto;
   font-family: 'Inter', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
   color: white;
   display: flex;
   flex-direction: column;
   position: relative;
   z-index: 100;
+  border-radius: 12px;
+  overflow: hidden;
 }
 
+/* ── Close Button ─────────────────────────────────────────── */
 .modal-close-reg {
   position: absolute;
-  top: 0;
-  right: 0;
-  background: transparent;
-  border: none;
+  top: 12px;
+  right: 12px;
+  background: rgba(0, 0, 0, 0.4);
+  border: 1px solid rgba(255,255,255,0.15);
+  border-radius: 50%;
+  width: 36px;
+  height: 36px;
   color: white;
   cursor: pointer;
-  z-index: 101;
-  opacity: 0.7;
-  transition: opacity 0.2s;
+  z-index: 110;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0.85;
+  transition: all 0.2s;
 }
 
 .modal-close-reg:hover {
   opacity: 1;
+  background: rgba(239, 68, 68, 0.7);
 }
 
+/* ── Header (Outside main box) ──────────────────────────────── */
 .registration-header-outside {
   text-align: center;
   margin-bottom: 1.5rem;
@@ -53,7 +85,7 @@
   margin-bottom: 1rem;
 }
 
-/* ── Step Progress Indicator ── */
+/* ── Step Progress ──────────────────────────────────────────── */
 .step-progress {
   display: flex;
   align-items: center;
@@ -109,7 +141,7 @@
   font-weight: 700;
 }
 
-/* ── Layout ── */
+/* ── Main Box (sidebar + form) ──────────────────────────────── */
 .registration-main-box {
   display: flex;
   border-radius: 10px;
@@ -117,6 +149,7 @@
   box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
 }
 
+/* ── Left Sidebar ─────────────────────────────────────────── */
 .reg-sidebar {
   background-color: var(--primary);
   color: black;
@@ -124,6 +157,7 @@
   padding: 2.5rem 2rem;
   display: flex;
   flex-direction: column;
+  flex-shrink: 0;
 }
 
 .reg-sidebar h3 {
@@ -203,14 +237,16 @@
 .reg-email-icon { color: #60a5fa; }
 .reg-send-icon { color: #4ade80; }
 
+/* ── Form Area ──────────────────────────────────────────────── */
 .reg-form-content {
   background-color: black;
-  width: 65%;
+  flex: 1;
   padding: 2rem 2.5rem 2.5rem;
-  overflow: hidden;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
 }
 
-/* ── Slides ── */
+/* ── Form Slides ────────────────────────────────────────────── */
 .slides-wrapper {
   overflow: hidden;
   position: relative;
@@ -228,7 +264,7 @@
   margin-bottom: 0.25rem;
 }
 
-/* ── Form Rows & Groups ── */
+/* ── Form Rows & Groups ─────────────────────────────────────── */
 .dance-reg-form .form-row {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -302,7 +338,7 @@
   resize: vertical;
 }
 
-/* ── Class Type Cards ── */
+/* ── Class Type Cards ───────────────────────────────────────── */
 .class-type-cards {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -348,7 +384,7 @@
   color: var(--primary);
 }
 
-/* ── Navigation Buttons ── */
+/* ── Navigation Buttons ─────────────────────────────────────── */
 .btn-next {
   background-color: var(--primary);
   color: black;
@@ -431,7 +467,7 @@
   transform: none;
 }
 
-/* ── WhatsApp Toggle ── */
+/* ── WhatsApp Toggle ────────────────────────────────────────── */
 .whatsapp-toggle-row {
   margin-bottom: 1.2rem;
   padding: 0.5rem 0;
@@ -458,7 +494,7 @@
   font-weight: 500;
 }
 
-/* ── Errors ── */
+/* ── Error States ───────────────────────────────────────────── */
 .form-group.has-error input,
 .form-group.has-error select,
 .form-group.has-error textarea {
@@ -485,7 +521,7 @@
   font-size: 0.7rem;
 }
 
-/* ── Status messages ── */
+/* ── Status Messages ────────────────────────────────────────── */
 .form-status-msg {
   padding: 1rem;
   border-radius: 8px;
@@ -511,7 +547,7 @@
   margin-right: 0.5rem;
 }
 
-/* ── Misc ── */
+/* ── Misc ───────────────────────────────────────────────────── */
 .form-footer-note {
   text-align: center;
   font-size: 0.75rem;
@@ -519,7 +555,7 @@
   margin-top: 0.8rem;
 }
 
-/* ── Shake Animation ── */
+/* ── Animations ─────────────────────────────────────────────── */
 @keyframes shake {
   0%, 100% { transform: translateX(0); }
   20%, 60% { transform: translateX(-5px); }
@@ -530,7 +566,6 @@
   animation: shake 0.4s cubic-bezier(.36,.07,.19,.97) both;
 }
 
-/* ── Spinner ── */
 .spinner {
   width: 16px;
   height: 16px;
@@ -545,36 +580,189 @@
   to { transform: rotate(360deg); }
 }
 
-/* ── Responsive ── */
-@media (max-width: 800px) {
+/* ══════════════════════════════════════════════════════════════
+   RESPONSIVE — TABLET (800px)
+   ══════════════════════════════════════════════════════════════ */
+@media screen and (max-width: 800px) {
+  .modal-overlay {
+    padding: 12px;
+    align-items: flex-start;
+  }
+
+  .registration-card-container {
+    width: 100%;
+    max-width: 100%;
+    border-radius: 12px;
+  }
+
   .registration-main-box {
     flex-direction: column;
   }
-  .reg-sidebar, .reg-form-content {
+
+  .reg-sidebar {
     width: 100%;
+    padding: 1.5rem;
+    display: none; /* Hidden on tablet/mobile to save space */
+  }
+
+  .reg-form-content {
+    width: 100%;
+    padding: 1.5rem;
+  }
+
+  .registration-header-outside {
+    padding-top: 2rem;
   }
 }
 
-@media (max-width: 500px) {
+/* ══════════════════════════════════════════════════════════════
+   RESPONSIVE — PHONE (600px) — Bottom sheet style
+   ══════════════════════════════════════════════════════════════ */
+@media screen and (max-width: 600px) {
+  .modal-overlay {
+    padding: 0;
+    align-items: flex-end;
+    /* Allow overlay to scroll so user can always reach buttons */
+    overflow-y: auto;
+  }
+
+  .registration-card-container {
+    width: 100%;
+    border-radius: 20px 20px 0 0;
+    /* Bottom sheet takes max 95% of viewport */
+    max-height: 95dvh;
+    max-height: 95vh;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .registration-header-outside {
+    padding: 1.5rem 1.5rem 0.75rem;
+    background: #111;
+    flex-shrink: 0;
+    /* Relative positioning so close button anchors to this */
+    position: relative;
+  }
+
+  .registration-header-outside h2 {
+    font-size: 1.5rem;
+    margin-top: 0.25rem;
+  }
+
+  .registration-header-outside p {
+    font-size: 0.85rem;
+  }
+
+  .step-progress {
+    margin-top: 0.75rem;
+  }
+
+  .step-line {
+    width: 50px;
+  }
+
+  .step-labels {
+    gap: 45px;
+    font-size: 0.72rem;
+  }
+
+  .registration-main-box {
+    flex: 1;
+    /* CRITICAL: this must scroll */
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    min-height: 0;
+  }
+
+  .reg-sidebar {
+    display: none;
+  }
+
+  .reg-form-content {
+    width: 100%;
+    padding: 1.25rem 1.25rem 2.5rem;
+    background: #111;
+    /* Allow form content to grow */
+    flex: 1;
+  }
+
   .dance-reg-form .form-row {
     grid-template-columns: 1fr;
-    gap: 1.2rem;
+    gap: 0.75rem;
+    margin-bottom: 0.75rem;
   }
+
+  .form-row-nested {
+    grid-template-columns: 1fr 1fr;
+    gap: 0.6rem;
+  }
+
+  .form-group.full-width {
+    margin-bottom: 0.75rem;
+  }
+
   .class-type-cards {
     grid-template-columns: 1fr 1fr;
     gap: 0.75rem;
   }
-  .step-labels {
-    gap: 60px;
+
+  .class-card {
+    padding: 0.85rem 0.6rem;
   }
+
+  .class-card-icon {
+    font-size: 1.6rem;
+  }
+
+  .class-card-label {
+    font-size: 0.78rem;
+  }
+
+  .form-actions-row {
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+
+  .btn-back,
+  .btn-join-class {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .btn-next {
+    width: 100%;
+    min-width: unset;
+  }
+
+  .modal-close-reg {
+    position: fixed;
+    top: calc(5dvh + 10px);
+    top: calc(5vh + 10px);
+    right: 14px;
+    background: rgba(0,0,0,0.7);
+    border: 1px solid rgba(255,255,255,0.2);
+  }
+
   .reg-contact-item span {
     word-break: break-all;
     font-size: 0.75rem;
   }
-  .form-actions-row {
-    flex-direction: column;
+}
+
+/* ══════════════════════════════════════════════════════════════
+   RESPONSIVE — TINY PHONE (400px)
+   ══════════════════════════════════════════════════════════════ */
+@media screen and (max-width: 400px) {
+  .registration-header-outside h2 {
+    font-size: 1.3rem;
   }
-  .btn-back, .btn-join-class {
-    width: 100%;
+
+  .step-labels {
+    gap: 35px;
+  }
+
+  .class-type-cards {
+    grid-template-columns: 1fr 1fr;
+    gap: 0.5rem;
   }
 }

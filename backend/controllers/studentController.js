@@ -81,25 +81,37 @@ exports.getDashboardStats = async (req, res) => {
     const currentYear = today.getFullYear();
     const monthStart = new Date(currentYear, currentMonth, 1);
     const monthEnd   = new Date(currentYear, currentMonth + 1, 1);
+    const Registration = require('../models/Registration');
 
     // Parallel fetch — aggregate monthly-fee totals per student in one DB call
-    const [students, monthlyFeePaidMap, monthRevenue, lifetimeRevenue, registrations] = await Promise.all([
+    const [students, monthlyFeePaidMap, monthRevenue, lifetimeRevenue, pendingRegistrations, recentRegistrations] = await Promise.all([
       Student.find().select('studentName phone whatsappNumber classType isActive createdAt lastAlertSent').lean(),
       // O(M) aggregation: total Monthly Fee paid per student (all time)
       Payment.aggregate([
         { $match: { purpose: 'Monthly Fee' } },
         { $group: { _id: '$studentId', totalPaid: { $sum: '$amount' } } }
       ]),
-      // Current month revenue (all payment types)
+      // Current month revenue — match on date OR createdAt so legacy records are included
       Payment.aggregate([
-        { $match: { date: { $gte: monthStart, $lt: monthEnd } } },
+        {
+          $match: {
+            $or: [
+              { date: { $gte: monthStart, $lt: monthEnd } },
+              { createdAt: { $gte: monthStart, $lt: monthEnd } }
+            ]
+          }
+        },
         { $group: { _id: null, total: { $sum: '$amount' } } }
       ]),
       // Lifetime revenue
       Payment.aggregate([
         { $group: { _id: null, total: { $sum: '$amount' } } }
       ]),
-      require('../models/Registration').find({ status: 'pending' }).lean()
+      // Pending registrations for badge count
+      Registration.find({ status: 'pending' }).lean(),
+      // All registrations from last 24h for activity feed
+      Registration.find({ createdAt: { $gte: new Date(Date.now() - 24 * 60 * 60 * 1000) } })
+        .sort({ createdAt: -1 }).limit(10).lean()
     ]);
 
     // Build O(1) lookup for monthly fee totals
@@ -110,13 +122,18 @@ exports.getDashboardStats = async (req, res) => {
 
 
 
-    // Fetch recent activity in a single payment query
+    // Fetch recent activity (last 24 hours) — match on date OR createdAt
     const since24h = new Date(Date.now() - 24 * 60 * 60 * 1000);
     const recentPayments = await Payment
-      .find({ date: { $gte: since24h } })
+      .find({
+        $or: [
+          { date: { $gte: since24h } },
+          { createdAt: { $gte: since24h } }
+        ]
+      })
       .populate('studentId', 'studentName')
       .sort({ date: -1 })
-      .limit(10)
+      .limit(15)
       .lean();
 
     const recentActivity = [
@@ -124,9 +141,9 @@ exports.getDashboardStats = async (req, res) => {
         type: 'payment', date: p.date || p.createdAt,
         amount: p.amount, purpose: p.purpose, studentId: p.studentId
       })),
-      ...registrations
-        .filter(r => new Date(r.createdAt) >= since24h)
-        .map(r => ({ type: 'reg', date: r.createdAt, studentName: r.studentName, classType: r.classType }))
+      ...recentRegistrations.map(r => ({
+        type: 'reg', date: r.createdAt, studentName: r.studentName, classType: r.classType
+      }))
     ].sort((a, b) => new Date(b.date) - new Date(a.date)).slice(0, 10);
 
     // Build overdue detail list (used both for count and the overdue panel)
@@ -167,7 +184,7 @@ exports.getDashboardStats = async (req, res) => {
         revenue:       monthRevenue[0]?.total || 0,
         lifetime:      lifetimeRevenue[0]?.total || 0,
         overdue:       overdueStudents.length,
-        pending:       registrations.length,
+        pending:       pendingRegistrations.length,
         classTypes: {
           dance:   activeStudents.filter(s => s.classType === 'Dance Class').length,
           regular: activeStudents.filter(s => s.classType === 'Regular Class').length,
@@ -175,7 +192,8 @@ exports.getDashboardStats = async (req, res) => {
         }
       },
       overdueStudents,
-      recentActivity
+      recentActivity,
+      registrations: pendingRegistrations
     });
   } catch (err) {
     console.error('getDashboardStats error:', err);

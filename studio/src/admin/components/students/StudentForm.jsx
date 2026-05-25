@@ -280,7 +280,6 @@ const StudentForm = ({ formData, setFormData, onCancel, isEditing, editingStuden
               {[
                 { value: 'Dance Class', icon: '💃', label: 'Dance Class' },
                 { value: 'Fitness Class', icon: '🏋️', label: 'Fitness Class' },
-                { value: 'Regular Class', icon: '🎓', label: 'Regular Class' },
               ].map(cls => (
                 <div
                   key={cls.value}
@@ -707,7 +706,7 @@ const StudentForm = ({ formData, setFormData, onCancel, isEditing, editingStuden
 
         .class-cards-grid {
           display: grid;
-          grid-template-columns: 1fr 1fr 1fr;
+          grid-template-columns: 1fr 1fr;
           gap: 14px;
         }
 
@@ -954,13 +953,62 @@ const StudentForm = ({ formData, setFormData, onCancel, isEditing, editingStuden
           to { transform: rotate(360deg); }
         }
 
-        @media (max-width: 500px) {
+        @media (max-width: 600px) {
+          .modal {
+            border-radius: 16px !important;
+            margin: 8px !important;
+          }
+          .modal-content {
+            padding: 16px 18px !important;
+          }
+          .modal-header {
+            padding: 18px 20px !important;
+          }
+          .modal-header h2 {
+            font-size: 1.15rem !important;
+          }
           .form-grid-2 {
             grid-template-columns: 1fr;
             gap: 12px;
           }
+          .form-grid-nested-2 {
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+          }
           .class-cards-grid {
-            grid-template-columns: 1fr;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+          }
+          .class-selection-card {
+            padding: 12px 8px !important;
+          }
+          .card-emoji {
+            font-size: 1.5rem !important;
+          }
+          .card-text-label {
+            font-size: 0.75rem !important;
+          }
+          .step-labels-row {
+            gap: 40px;
+          }
+          .form-actions, .form-actions-between {
+            flex-direction: column;
+            gap: 10px;
+          }
+          .btn-primary-custom, .btn-secondary-custom, .btn-join-custom {
+            width: 100% !important;
+            justify-content: center !important;
+          }
+          .whatsapp-checkbox-container {
+            height: auto;
+            padding: 10px 0;
+          }
+          .step-progress-row {
+            margin-top: 8px;
+            margin-bottom: 8px;
+          }
+          .step-line {
+            width: 50px;
           }
         }
 

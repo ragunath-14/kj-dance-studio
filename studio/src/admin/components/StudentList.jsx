@@ -45,51 +45,23 @@ const StudentList = () => {
   };
 
   const [formData, setFormData] = useState({
-    danceStyle: '', danceForFitness: '', studentAge: '', 
-    parentName: '', location: '', batchTiming: '', notes: '', classType: 'Dance Class', 
+    studentName: '', email: '', phone: '', whatsappNumber: '',
+    danceStyle: '', danceForFitness: '', 
+    studentAge: '', gender: '', bloodGroup: '', parentName: '', 
+    emergencyContactName: '', emergencyContactPhone: '', 
+    location: '', address: '', batchTiming: '', notes: '',
+    classType: 'Dance Class', 
     createdAt: new Date().toISOString().split('T')[0]
   });
 
   const processedStudents = students.data || [];
-
   const totalPages = students.totalPages || 1;
   const currentPage = students.page || 1;
 
   const metrics = useMemo(() => {
-    if (!dashboardStats || !dashboardStats.metrics) return { dance: 0, regular: 0, fitness: 0 };
-    return dashboardStats.metrics.classTypes || { dance: 0, regular: 0, fitness: 0 };
+    if (!dashboardStats || !dashboardStats.metrics) return { dance: 0, fitness: 0 };
+    return dashboardStats.metrics.classTypes || { dance: 0, fitness: 0 };
   }, [dashboardStats]);
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    
-    const wasEditing = editingStudent;
-    
-    try {
-      if (wasEditing) {
-        await axios.put(`${API_URL}/students/${wasEditing._id}`, formData);
-      } else {
-        await axios.post(`${API_URL}/students`, formData);
-      }
-      
-      await refreshData();
-      setShowModal(false);
-      setEditingStudent(null);
-      setFormData({ 
-        studentName: '', email: '', phone: '', whatsappNumber: '', 
-        danceStyle: '', danceForFitness: '', 
-        studentAge: '', gender: '', bloodGroup: '', parentName: '', 
-        emergencyContactName: '', emergencyContactPhone: '', 
-        location: '', address: '', batchTiming: '', notes: '',
-        classType: 'Dance Class', 
-        createdAt: new Date().toISOString().split('T')[0] 
-      });
-    } catch (err) {
-      console.error(err);
-      const errorMsg = err.response?.data?.message || 'Failed to save to database. Please check console and try again.';
-      alert(errorMsg);
-    }
-  };
 
   const handleDelete = (id) => {
     setConfirmState({ open: true, studentId: id });
@@ -167,12 +139,6 @@ const StudentList = () => {
               onClick={() => setActiveTab('Dance Class')}
             >
               Dance ({metrics.dance || 0})
-            </button>
-            <button 
-              className={`tab-btn ${activeTab === 'Regular Class' ? 'active' : ''}`}
-              onClick={() => setActiveTab('Regular Class')}
-            >
-              Regular ({metrics.regular || 0})
             </button>
             <button 
               className={`tab-btn ${activeTab === 'Fitness Class' ? 'active' : ''}`}
