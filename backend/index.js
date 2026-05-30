@@ -34,6 +34,7 @@ const studentController      = require('./controllers/studentController');
 const Student                = require('./models/Student');
 const { verifyAdminToken }   = require('./middleware/auth');
 const { startScheduler, runPendingFeeAlerts } = require('./scheduler');
+const whatsapp               = require('./services/whatsappService');
 
 // ── App & Server Setup ───────────────────────────────────────────────────────
 const app    = express();
@@ -83,11 +84,13 @@ const apiLimiter = rateLimit({
 // Health check (used by deployment platforms / uptime monitors)
 app.get('/health', (req, res) => {
   const dbState = mongoose.connection.readyState;
+  const waStatus = whatsapp.getStatus();
   res.status(dbState === 1 ? 200 : 503).json({
-    status : dbState === 1 ? 'healthy' : 'unhealthy',
-    db     : dbState === 1 ? 'connected' : 'disconnected',
-    uptime : Math.round(process.uptime()),
-    version: '1.2.0'
+    status   : dbState === 1 ? 'healthy' : 'unhealthy',
+    db       : dbState === 1 ? 'connected' : 'disconnected',
+    uptime   : Math.round(process.uptime()),
+    version  : '1.2.0',
+    whatsapp : waStatus
   });
 });
 
