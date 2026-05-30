@@ -4,7 +4,7 @@ const MonthlyStat = require('../models/MonthlyStat');
 const whatsapp = require('../services/whatsappService');
 
 // ─── Fee helper ──────────────────────────────────────────────────────────────
-const getMonthlyFee = (classType) => classType === 'Fitness Class' ? 2500 : 3500;
+const getMonthlyFee = (studentCategory) => studentCategory === 'Kids' ? 1000 : 2000;
 
 // ─── Format mongoose validation errors ───────────────────────────────────────
 const formatValidationErrors = (err) =>
@@ -19,6 +19,7 @@ exports.getAllStudents = async (req, res) => {
     const skip = (page - 1) * limit;
     const search = req.query.search || '';
     const classType = req.query.classType || '';
+    const studentCategory = req.query.studentCategory || '';
 
     let query = {};
     if (search) {
@@ -30,6 +31,9 @@ exports.getAllStudents = async (req, res) => {
     }
     if (classType) {
       query.classType = classType;
+    }
+    if (studentCategory) {
+      query.studentCategory = studentCategory;
     }
 
     const [students, total] = await Promise.all([
@@ -165,7 +169,7 @@ exports.getDashboardStats = async (req, res) => {
                           ]
                         }
                       },
-                      in: { $multiply: ['$$cycles', { $cond: [{ $eq: [{ $ifNull: ['$classType', 'Regular Class'] }, 'Fitness Class'] }, 2500, 3500] }] }
+                      in: { $multiply: ['$$cycles', { $cond: [{ $eq: [{ $ifNull: ['$studentCategory', 'Adults'] }, 'Kids'] }, 1000, 2000] }] }
                     }
                   }
                 }
@@ -280,7 +284,11 @@ exports.getDashboardStats = async (req, res) => {
 exports.getUnpaidStudents = async (req, res) => {
   try {
     const today = new Date();
-    const students = await Student.find({ isActive: { $ne: false } }).lean();
+    const studentCategoryFilter = req.query.studentCategory || '';
+    const baseQuery = { isActive: { $ne: false } };
+    if (studentCategoryFilter) baseQuery.studentCategory = studentCategoryFilter;
+
+    const students = await Student.find(baseQuery).lean();
     const payments = await Payment.find({ purpose: 'Monthly Fee' }).lean();
 
     const paymentsByStudent = new Map();
@@ -311,7 +319,7 @@ exports.getUnpaidStudents = async (req, res) => {
       let totalCycles = (today.getFullYear() - joinDate.getFullYear()) * 12 + (today.getMonth() - joinDate.getMonth()) + 1;
       if (today.getDate() < joinDate.getDate()) totalCycles--;
       
-      const fee = getMonthlyFee(student.classType);
+      const fee = getMonthlyFee(student.studentCategory);
       const totalDue = Math.max(0, (totalCycles * fee) - totalPaid);
       const pendingMonths = Math.ceil(totalDue / fee);
 
@@ -363,7 +371,7 @@ exports.getStudentDues = async (req, res) => {
     }).lean();
 
     const totalPaid = payments.reduce((sum, p) => sum + (p.amount || 0), 0);
-    const fee = getMonthlyFee(student.classType);
+    const fee = getMonthlyFee(student.studentCategory);
     const totalDue = Math.max(0, (totalCycles * fee) - totalPaid);
     const pendingMonths = Math.ceil(totalDue / fee);
 
@@ -410,8 +418,14 @@ exports.createStudent = async (req, res) => {
     const newStudent = await student.save();
 
     // Send automated WhatsApp Welcome message (non-blocking)
+    const phone = newStudent.whatsappNumber || newStudent.phone;
+    console.log(`📲 [Add Student] Sending welcome WhatsApp to ${phone} for ${newStudent.studentName}...`);
     whatsapp.sendWelcomeMessage(newStudent, newStudent.studentName, newStudent.classType)
-      .catch((e) => console.error('WhatsApp welcome error (Manual Add):', e));
+      .then(r => {
+        if (r.success) console.log(`✅ [Add Student] Welcome message sent to ${phone} (${newStudent.studentName})`);
+        else console.warn(`⚠️  [Add Student] Welcome message failed for ${phone}: ${r.reason}`);
+      })
+      .catch(e => console.error(`❌ [Add Student] WhatsApp error for ${phone}:`, e.message));
 
     const io = req.app.get('socketio');
     if (io) io.emit('dataChanged', { type: 'student', action: 'create' });
@@ -484,9 +498,9 @@ exports.toggleStatus = async (req, res) => {
       
       // Send standard Welcome message for a fresh start
       whatsapp.sendWelcomeMessage(student, student.studentName, student.classType)
-        .then(res => {
-          if (res.success) console.log(`✅ [ToggleStatus] Welcome message sent to ${student.studentName}`);
-          else console.warn(`⚠️ [ToggleStatus] Welcome message FAILED for ${student.studentName}: ${res.reason}`);
+        .then(r => {
+          if (r.success) console.log(`✅ [ToggleStatus] Welcome message sent to ${student.studentName}`);
+          else console.warn(`⚠️ [ToggleStatus] Welcome message FAILED for ${student.studentName}: ${r.reason}`);
         })
         .catch(err => console.error(`❌ [ToggleStatus] WhatsApp Error (Welcome) for ${student.studentName}:`, err.message));
     } 
@@ -495,9 +509,9 @@ exports.toggleStatus = async (req, res) => {
     if (student.isActive === false) {
       console.log(`📣 [ToggleStatus] ${student.studentName} is now INACTIVE. Student is now "Inactivated from Payment". Triggering Rejoin Invitation...`);
       whatsapp.sendRejoinMessage(student, student.studentName, student.classType)
-        .then(res => {
-          if (res.success) console.log(`✅ [ToggleStatus] Rejoin Invitation sent to ${student.studentName}`);
-          else console.warn(`⚠️ [ToggleStatus] Rejoin Invitation FAILED for ${student.studentName}: ${res.reason}`);
+        .then(r => {
+          if (r.success) console.log(`✅ [ToggleStatus] Rejoin Invitation sent to ${student.studentName}`);
+          else console.warn(`⚠️ [ToggleStatus] Rejoin Invitation FAILED for ${student.studentName}: ${r.reason}`);
         })
         .catch(err => console.error(`❌ [ToggleStatus] WhatsApp Error for ${student.studentName}:`, err.message));
     }
@@ -545,50 +559,56 @@ exports.deleteStudent = async (req, res) => {
 // ─── GET /api/activity (Paginated Log) ──────────────────────────────────────
 exports.getActivityLog = async (req, res) => {
   try {
-    const page = parseInt(req.query.page) || 1;
+    const page  = parseInt(req.query.page)  || 1;
     const limit = parseInt(req.query.limit) || 20;
-    const skip = (page - 1) * limit;
+    const skip  = (page - 1) * limit;
+    const Registration = require('../models/Registration');
+
+    // Fetch enough records from both sources to build a merged, sorted page.
+    // We take (skip + limit) from each so we always have enough after merging.
+    const fetchN = skip + limit;
 
     const [pays, regs, totalPays, totalRegs] = await Promise.all([
       Payment.find()
         .populate('studentId', 'studentName')
         .sort({ createdAt: -1 })
-        .skip(skip)
-        .limit(limit)
+        .limit(fetchN)
         .lean(),
-      require('../models/Registration').find()
+      Registration.find()
         .sort({ createdAt: -1 })
-        .skip(skip)
-        .limit(limit)
+        .limit(fetchN)
         .lean(),
       Payment.countDocuments(),
-      require('../models/Registration').countDocuments()
+      Registration.countDocuments()
     ]);
 
-    const combined = [
-      ...pays.map(p => ({ 
-        type: 'payment', 
-        date: p.createdAt, 
-        amount: p.amount, 
-        purpose: p.purpose, 
+    const allItems = [
+      ...pays.map(p => ({
+        type: 'payment',
+        date: p.createdAt,
+        amount: p.amount,
+        purpose: p.purpose,
         studentName: p.studentId?.studentName || 'Unknown Student',
-        id: p._id 
+        id: p._id
       })),
-      ...regs.map(r => ({ 
-        type: 'reg', 
-        date: r.createdAt, 
-        studentName: r.studentName, 
+      ...regs.map(r => ({
+        type: 'reg',
+        date: r.createdAt,
+        studentName: r.studentName,
         classType: r.classType,
-        id: r._id 
+        id: r._id
       }))
-    ].sort((a, b) => new Date(b.date) - new Date(a.date)).slice(0, limit);
+    ].sort((a, b) => new Date(b.date) - new Date(a.date));
+
+    const paginated = allItems.slice(skip, skip + limit);
+    const total     = totalPays + totalRegs;
 
     res.json({
-      data: combined,
-      total: totalPays + totalRegs,
+      data: paginated,
+      total,
       page,
       limit,
-      totalPages: Math.ceil((totalPays + totalRegs) / limit)
+      totalPages: Math.ceil(total / limit)
     });
   } catch (err) {
     console.error('getActivityLog error:', err);

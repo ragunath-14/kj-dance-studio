@@ -2,36 +2,45 @@ import React, { useMemo, useState } from 'react';
 import { Edit2, Trash2, CheckCircle, AlertCircle, ToggleLeft, ToggleRight, MessageCircle, History } from 'lucide-react';
 import Button from '../ui/Button';
 
-const StudentRow = ({ student, payments, onEdit, onDelete, onToggleStatus, onViewHistory }) => {
+const StudentRow = ({ student, payments, showFitnessCol, onEdit, onDelete, onToggleStatus, onViewHistory }) => {
   const [toggling, setToggling] = useState(false);
+  const [toggleError, setToggleError] = useState('');
   const isActive = student.isActive !== false; // default true for existing students
 
   const isPaid = useMemo(() => {
     const today = new Date();
-    const getMonthlyFee = (classType) => classType === 'Fitness Class' ? 2500 : 3500;
-    
+    const getMonthlyFee = (studentCategory) => studentCategory === 'Kids' ? 1000 : 2000;
+
     const rawJoinDate = student.createdAt || student.joinDate || new Date().toISOString();
     const joinDate = new Date(rawJoinDate);
-    
-    // Total cycles expected since joining (consistent with PaymentList)
+
     let totalCycles = (today.getFullYear() - joinDate.getFullYear()) * 12 + (today.getMonth() - joinDate.getMonth()) + 1;
-    if (today.getDate() < joinDate.getDate()) {
-      totalCycles--;
-    }
+    if (today.getDate() < joinDate.getDate()) totalCycles--;
 
     if (totalCycles <= 0) return true;
 
     const totalPaid = student.totalPaid || 0;
-    const fee = getMonthlyFee(student.classType);
+    const fee = getMonthlyFee(student.studentCategory);
     const totalExpected = totalCycles * fee;
-    
+
     return totalPaid >= totalExpected;
   }, [student]);
 
   const handleToggle = async () => {
     setToggling(true);
-    await onToggleStatus(student._id);
-    setToggling(false);
+    setToggleError('');
+    try {
+      const result = await onToggleStatus(student._id);
+      if (result && !result.success) {
+        setToggleError(result.message || 'Failed to update status');
+        setTimeout(() => setToggleError(''), 4000);
+      }
+    } catch (err) {
+      setToggleError('Failed to update status. Try again.');
+      setTimeout(() => setToggleError(''), 4000);
+    } finally {
+      setToggling(false);
+    }
   };
 
   return (
@@ -61,11 +70,13 @@ const StudentRow = ({ student, payments, onEdit, onDelete, onToggleStatus, onVie
           )}
         </div>
       </td>
-      {student.classType === 'Fitness Class' && (
+      {showFitnessCol && (
         <td data-label="Details">
           <div className="dance-info">
-            {student.danceForFitness && <span className="fitness-tag">{student.danceForFitness}</span>}
-            {!student.danceForFitness && <span className="text-muted">None</span>}
+            {student.danceForFitness
+              ? <span className="fitness-tag">{student.danceForFitness}</span>
+              : <span className="text-muted">—</span>
+            }
           </div>
         </td>
       )}
@@ -76,20 +87,25 @@ const StudentRow = ({ student, payments, onEdit, onDelete, onToggleStatus, onVie
       </td>
       <td data-label="Actions">
         <div className="action-buttons">
-          <button 
-            className={`status-toggle-btn ${isActive ? 'active' : 'inactive'}`}
-            onClick={handleToggle}
-            disabled={toggling}
-            title={isActive ? 'Mark Inactive' : 'Mark Active'}
-          >
-            {toggling ? (
-              <span className="toggle-spinner"></span>
-            ) : isActive ? (
-              <><ToggleRight size={16} /> Active</>
-            ) : (
-              <><ToggleLeft size={16} /> Inactive</>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+            <button
+              className={`status-toggle-btn ${isActive ? 'active' : 'inactive'}`}
+              onClick={handleToggle}
+              disabled={toggling}
+              title={isActive ? 'Mark Inactive' : 'Mark Active'}
+            >
+              {toggling ? (
+                <span className="toggle-spinner"></span>
+              ) : isActive ? (
+                <><ToggleRight size={16} /> Active</>
+              ) : (
+                <><ToggleLeft size={16} /> Inactive</>
+              )}
+            </button>
+            {toggleError && (
+              <span style={{ fontSize: '0.7rem', color: '#dc2626' }}>{toggleError}</span>
             )}
-          </button>
+          </div>
           <div className="icon-actions-group">
             <Button 
               variant="icon" 

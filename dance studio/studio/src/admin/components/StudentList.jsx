@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 import { Plus, Search } from 'lucide-react';
@@ -8,6 +8,7 @@ import StudentRow from './students/StudentRow';
 import StudentForm from './students/StudentForm';
 import Modal from './ui/Modal';
 import ConfirmDialog from './ui/ConfirmDialog';
+import CategoryDropdown from './ui/CategoryDropdown';
 import Button from './ui/Button';
 import SkeletonRow from './ui/SkeletonRow';
 import Pagination from './Pagination';
@@ -18,6 +19,7 @@ const StudentList = () => {
   const { students, payments, stats: dashboardStats, loading, refreshData, fetchStudents, toggleStudentStatus } = useData();
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('Regular Class');
+  const [activeCategory, setActiveCategory] = useState('');
   const [showModal, setShowModal] = useState(false);
   const [editingStudent, setEditingStudent] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
@@ -25,15 +27,15 @@ const StudentList = () => {
   const [historyStudent, setHistoryStudent] = useState(null);
 
   // Server-side fetching when page, tab, or search changes
-  React.useEffect(() => {
+  useEffect(() => {
     const timer = setTimeout(() => {
-      fetchStudents(1, 50, searchTerm, activeTab);
+      fetchStudents(1, 50, searchTerm, activeTab, activeCategory);
     }, 300);
     return () => clearTimeout(timer);
-  }, [searchTerm, activeTab]);
+  }, [searchTerm, activeTab, activeCategory]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const onPageChange = (page) => {
-    fetchStudents(page, 50, searchTerm, activeTab);
+    fetchStudents(page, 50, searchTerm, activeTab, activeCategory);
   };
 
   const [formData, setFormData] = useState({
@@ -125,27 +127,31 @@ const StudentList = () => {
         <div className="header-left-group">
           <div className="search-box">
             <Search size={18} />
-            <input 
-              type="text" 
-              placeholder={`Search ${activeTab.split(' ')[0]} students...`} 
+            <input
+              type="text"
+              placeholder="Search students..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
           </div>
           <div className="tabs">
-            <button 
+            <button
               className={`tab-btn ${activeTab === 'Regular Class' ? 'active' : ''}`}
               onClick={() => setActiveTab('Regular Class')}
             >
               Regular ({metrics.regular})
             </button>
-            <button 
+            <button
               className={`tab-btn ${activeTab === 'Fitness Class' ? 'active' : ''}`}
               onClick={() => setActiveTab('Fitness Class')}
             >
               Fitness ({metrics.fitness})
             </button>
           </div>
+          <CategoryDropdown
+            value={activeCategory}
+            onChange={setActiveCategory}
+          />
         </div>
         <Button onClick={() => { 
           setFormData({ 
@@ -182,12 +188,13 @@ const StudentList = () => {
               </>
             ) : processedStudents.length > 0 ? (
               processedStudents.map((student) => (
-                <StudentRow 
-                  key={student._id} 
-                  student={student} 
+                <StudentRow
+                  key={student._id}
+                  student={student}
                   payments={payments.data || []}
-                  onEdit={openEditModal} 
-                  onDelete={handleDelete} 
+                  showFitnessCol={activeTab === 'Fitness Class'}
+                  onEdit={openEditModal}
+                  onDelete={handleDelete}
                   onToggleStatus={toggleStudentStatus}
                   onViewHistory={(s) => setHistoryStudent(s)}
                 />
@@ -208,7 +215,7 @@ const StudentList = () => {
         totalItems={students.total || 0}
         itemsPerPage={students.limit || 50}
         onPageChange={onPageChange} 
-        onLimitChange={(limit) => fetchStudents(1, limit, searchTerm, activeTab)}
+        onLimitChange={(limit) => fetchStudents(1, limit, searchTerm, activeTab, activeCategory)}
       />
 
       <Modal 

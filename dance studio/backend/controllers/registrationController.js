@@ -68,8 +68,16 @@ exports.getAllRegistrations = async (req, res) => {
 // ─── GET /api/registrations/pending ─────────────────────────────────────────
 exports.getPendingRegistrations = async (req, res) => {
   try {
-    const registrations = await Registration.find({ status: 'pending' }).sort({ createdAt: -1 }).lean();
-    res.json(registrations);
+    const page  = parseInt(req.query.page)  || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const skip  = (page - 1) * limit;
+
+    const [registrations, total] = await Promise.all([
+      Registration.find({ status: 'pending' }).sort({ createdAt: -1 }).skip(skip).limit(limit).lean(),
+      Registration.countDocuments({ status: 'pending' })
+    ]);
+
+    res.json({ data: registrations, total, page, limit, totalPages: Math.ceil(total / limit) });
   } catch (err) {
     console.error('getPendingRegistrations error:', err);
     res.status(500).json({ message: err.message });
@@ -117,9 +125,18 @@ exports.approveRegistration = async (req, res) => {
 
     await Registration.findByIdAndDelete(req.params.id);
 
-    // Send a WhatsApp utility message confirming approval (non-blocking)
+    // Send WhatsApp welcome message on approval (non-blocking)
+    const phone = registration.whatsappNumber || registration.phone;
+    console.log(`📲 [Approval] Sending welcome WhatsApp to ${phone} for ${registration.studentName}...`);
     whatsapp.sendWelcomeMessage(registration, registration.studentName, registration.classType)
-      .catch((e) => console.error('WhatsApp approval error:', e));
+      .then(r => {
+        if (r.success) {
+          console.log(`✅ [Approval] Welcome message sent to ${phone} (${registration.studentName})`);
+        } else {
+          console.warn(`⚠️  [Approval] Welcome message failed for ${phone}: ${r.reason}`);
+        }
+      })
+      .catch(e => console.error(`❌ [Approval] WhatsApp error for ${phone}:`, e.message));
 
     const io = req.app.get('socketio');
     if (io) {

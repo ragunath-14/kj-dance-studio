@@ -1,11 +1,16 @@
 .dashboard {
   padding: 10px 0;
-  animation: fadeIn 0.5s ease-out;
+  animation: fadeInUp 0.5s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(24px); }
+  to   { opacity: 1; transform: translateY(0); }
 }
 
 @keyframes fadeIn {
-  from { opacity: 0; transform: translateY(10px); }
-  to { opacity: 1; transform: translateY(0); }
+  from { opacity: 0; }
+  to   { opacity: 1; }
 }
 
 .dashboard-header {
@@ -96,14 +101,39 @@
   border: 1px solid var(--border-color);
   position: relative;
   overflow: hidden;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: transform 0.3s cubic-bezier(0.34,1.56,0.64,1),
+              box-shadow 0.3s ease,
+              border-color 0.3s ease;
   box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+  animation: fadeInUp 0.5s cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
+/* stagger each card */
+.stats-grid .stat-card:nth-child(1) { animation-delay: 0.05s; }
+.stats-grid .stat-card:nth-child(2) { animation-delay: 0.12s; }
+.stats-grid .stat-card:nth-child(3) { animation-delay: 0.19s; }
+.stats-grid .stat-card:nth-child(4) { animation-delay: 0.26s; }
+.stats-grid .stat-card:nth-child(5) { animation-delay: 0.33s; }
+
 .stat-card:hover {
-  transform: translateY(-6px);
-  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+  transform: translateY(-8px) scale(1.01);
+  box-shadow: 0 24px 40px -8px rgba(0, 0, 0, 0.18),
+              0 0 0 1px rgba(237, 28, 36, 0.25);
   border-color: var(--primary-color);
+}
+
+.stat-card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse at top left, rgba(237,28,36,0.06) 0%, transparent 60%);
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  pointer-events: none;
+}
+
+.stat-card:hover::before {
+  opacity: 1;
 }
 
 .stat-card-inner {
@@ -155,6 +185,14 @@
   overflow: hidden;
   text-overflow: ellipsis;
   max-width: 100%;
+  animation: countPop 0.4s cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation-delay: 0.3s;
+}
+
+@keyframes countPop {
+  0%   { transform: scale(0.8); opacity: 0; }
+  60%  { transform: scale(1.06); opacity: 1; }
+  100% { transform: scale(1); }
 }
 
 .stat-trend {
@@ -180,6 +218,17 @@
   border: 1px solid var(--border-color);
   padding: 28px;
   box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+  animation: fadeInUp 0.5s cubic-bezier(0.16, 1, 0.3, 1) both;
+  transition: box-shadow 0.3s ease, border-color 0.3s ease;
+}
+
+.dashboard-layout > .card:nth-child(1) { animation-delay: 0.1s; }
+.dashboard-layout > .card:nth-child(2) { animation-delay: 0.18s; }
+.dashboard-layout > .card:nth-child(3) { animation-delay: 0.26s; }
+
+.card:hover {
+  box-shadow: 0 12px 28px -6px rgba(0, 0, 0, 0.12);
+  border-color: rgba(237, 28, 36, 0.2);
 }
 
 .card-header {
@@ -233,7 +282,12 @@
 .pill-bar {
   height: 100%;
   border-radius: 6px;
-  transition: width 1s cubic-bezier(0.4, 0, 0.2, 1);
+  animation: progressFill 1.2s cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation-delay: 0.4s;
+}
+
+@keyframes progressFill {
+  from { width: 0 !important; }
 }
 
 .pill.regular .pill-bar { background: linear-gradient(90deg, #ED1C24, #ff4d4d); }
@@ -259,14 +313,27 @@
   gap: 16px;
   padding: 16px;
   border-radius: 16px;
-  transition: all 0.2s ease;
+  transition: background 0.2s ease, border-color 0.2s ease, transform 0.25s cubic-bezier(0.34,1.56,0.64,1);
   border: 1px solid transparent;
+  animation: fadeInLeft 0.4s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.activity-feed .activity-entry:nth-child(1) { animation-delay: 0.05s; }
+.activity-feed .activity-entry:nth-child(2) { animation-delay: 0.10s; }
+.activity-feed .activity-entry:nth-child(3) { animation-delay: 0.15s; }
+.activity-feed .activity-entry:nth-child(4) { animation-delay: 0.20s; }
+.activity-feed .activity-entry:nth-child(5) { animation-delay: 0.25s; }
+.activity-feed .activity-entry:nth-child(6) { animation-delay: 0.30s; }
+
+@keyframes fadeInLeft {
+  from { opacity: 0; transform: translateX(-16px); }
+  to   { opacity: 1; transform: translateX(0); }
 }
 
 .activity-entry:hover {
   background: var(--bg-dark);
   border-color: var(--border-color);
-  transform: translateX(4px);
+  transform: translateX(6px);
 }
 
 .activity-icon {

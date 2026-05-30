@@ -41,15 +41,15 @@ export const DataProvider = ({ children }) => {
   const [unpaidStudents, setUnpaidStudents] = useState({ data: [], total: 0, page: 1, limit: 50 });
   const [allStudents, setAllStudents] = useState([]); // For dropdowns
   const [payments, setPayments] = useState({ data: [], total: 0, page: 1, limit: 50 });
-  const [registrations, setRegistrations] = useState([]);
+  const [registrations, setRegistrations] = useState({ data: [], total: 0, page: 1, limit: 10 });
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(false);
   const [notification, setNotification] = useState(null); // { message, type }
   
   // Track last used params to prevent "mixed list" on refresh
-  const [studentParams, setStudentParams] = useState({ page: 1, limit: 50, search: '', classType: 'Regular Class' });
-  const [paymentParams, setPaymentParams] = useState({ page: 1, limit: 50, search: '' });
-  const [unpaidParams, setUnpaidParams] = useState({ page: 1, limit: 50, search: '' });
+  const [studentParams, setStudentParams] = useState({ page: 1, limit: 50, search: '', classType: 'Regular Class', studentCategory: '' });
+  const [paymentParams, setPaymentParams] = useState({ page: 1, limit: 50, search: '', studentCategory: '' });
+  const [unpaidParams, setUnpaidParams]   = useState({ page: 1, limit: 50, search: '', studentCategory: '' });
 
   const fetchStats = async () => {
     try {
@@ -69,39 +69,39 @@ export const DataProvider = ({ children }) => {
     }
   };
 
-  const fetchStudents = async (page = 1, limit = 50, search = '', classType = '') => {
-    setStudentParams({ page, limit, search, classType });
+  const fetchStudents = async (page = 1, limit = 50, search = '', classType = '', studentCategory = '') => {
+    setStudentParams({ page, limit, search, classType, studentCategory });
     try {
-      const res = await axios.get(`${API_URL}/students`, { params: { page, limit, search, classType } });
+      const res = await axios.get(`${API_URL}/students`, { params: { page, limit, search, classType, studentCategory } });
       setStudents(res.data);
     } catch (err) {
       console.error('Students fetch failed:', err);
     }
   };
 
-  const fetchPayments = async (page = 1, limit = 50, search = '') => {
-    setPaymentParams({ page, limit, search });
+  const fetchPayments = async (page = 1, limit = 50, search = '', studentCategory = '') => {
+    setPaymentParams({ page, limit, search, studentCategory });
     try {
-      const res = await axios.get(`${API_URL}/payments`, { params: { page, limit, search } });
+      const res = await axios.get(`${API_URL}/payments`, { params: { page, limit, search, studentCategory } });
       setPayments(res.data);
     } catch (err) {
       console.error('Payments fetch failed:', err);
     }
   };
 
-  const fetchUnpaidStudents = async (page = 1, limit = 50, search = '') => {
-    setUnpaidParams({ page, limit, search });
+  const fetchUnpaidStudents = async (page = 1, limit = 50, search = '', studentCategory = '') => {
+    setUnpaidParams({ page, limit, search, studentCategory });
     try {
-      const res = await axios.get(`${API_URL}/students/unpaid`, { params: { page, limit, search } });
+      const res = await axios.get(`${API_URL}/students/unpaid`, { params: { page, limit, search, studentCategory } });
       setUnpaidStudents(res.data);
     } catch (err) {
       console.error('Unpaid fetch failed:', err);
     }
   };
 
-  const fetchRegistrations = async () => {
+  const fetchRegistrations = async (page = 1, limit = 10) => {
     try {
-      const res = await axios.get(`${API_URL}/registrations/pending`);
+      const res = await axios.get(`${API_URL}/registrations/pending`, { params: { page, limit } });
       setRegistrations(res.data);
     } catch (err) {
       console.error('Registrations fetch failed:', err);
@@ -110,11 +110,11 @@ export const DataProvider = ({ children }) => {
 
   const fetchActivity = async (page = 1, limit = 20) => {
     try {
-      const res = await axios.get(`${API_URL}/activity`, { params: { page, limit } });
+      const res = await axios.get(`${API_URL}/students/activity`, { params: { page, limit } });
       return res.data;
     } catch (err) {
       console.error('Activity fetch failed:', err);
-      return { data: [], total: 0 };
+      return { data: [], total: 0, page: 1, limit, totalPages: 0 };
     }
   };
 
@@ -124,9 +124,9 @@ export const DataProvider = ({ children }) => {
       await Promise.all([
         fetchStats(),
         fetchAllStudents(),
-        fetchStudents(studentParams.page, studentParams.limit, studentParams.search, studentParams.classType),
-        fetchPayments(paymentParams.page, paymentParams.limit, paymentParams.search),
-        fetchUnpaidStudents(unpaidParams.page, unpaidParams.limit, unpaidParams.search),
+        fetchStudents(studentParams.page, studentParams.limit, studentParams.search, studentParams.classType, studentParams.studentCategory),
+        fetchPayments(paymentParams.page, paymentParams.limit, paymentParams.search, paymentParams.studentCategory),
+        fetchUnpaidStudents(unpaidParams.page, unpaidParams.limit, unpaidParams.search, unpaidParams.studentCategory),
         fetchRegistrations()
       ]);
     } finally {
@@ -137,19 +137,24 @@ export const DataProvider = ({ children }) => {
   useEffect(() => {
     fetchAllData();
 
-    const socketUrl = API_URL.endsWith('/api') ? API_URL.slice(0, -4) : API_URL.replace(/\/api$/, '');
-    const socket = io(socketUrl);
+    const socketUrl = API_URL.startsWith('http') ? API_URL.replace(/\/api$/, '') : window.location.origin;
+    const socket = io(socketUrl, {
+      reconnectionAttempts: 5,
+      reconnectionDelay: 2000,
+      timeout: 5000,
+    });
+
+    socket.on('connect_error', () => {
+      // Silently ignore — backend may not be running yet
+    });
 
     socket.on('dataChanged', (payload) => {
       fetchAllData(true);
-      
-      // If it's a new registration, show a toast
       if (payload && payload.type === 'registration') {
         setNotification({
           message: `New Enquiry: ${payload.name || 'A student'} has just registered!`,
           type: 'info'
         });
-        // Clear after 5 seconds
         setTimeout(() => setNotification(null), 5000);
       }
     });
@@ -184,7 +189,7 @@ export const DataProvider = ({ children }) => {
   const toggleStudentStatus = async (id) => {
     try {
       const res = await axios.patch(`${API_URL}/students/${id}/toggle-status`);
-      fetchAllData(true);
+      await fetchAllData(true);
       return { success: true, message: res.data.message };
     } catch (err) {
       return { success: false, message: err.response?.data?.message || err.message };
@@ -207,6 +212,7 @@ export const DataProvider = ({ children }) => {
       fetchPayments,
       fetchUnpaidStudents,
       fetchActivity,
+      fetchRegistrations,
       approveRegistration,
       rejectRegistration,
       toggleStudentStatus

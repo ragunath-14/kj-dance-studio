@@ -4,7 +4,7 @@ const Student = require('../models/Student');
 const whatsapp = require('../services/whatsappService');
 
 // ─── Fee helper ──────────────────────────────────────────────────────────────
-const getMonthlyFee = (classType) => classType === 'Fitness Class' ? 2500 : 3500;
+const getMonthlyFee = (studentCategory) => studentCategory === 'Kids' ? 1000 : 2000;
 
 // ─── GET /api/payments ───────────────────────────────────────────────────────
 exports.getAllPayments = async (req, res) => {
@@ -13,6 +13,7 @@ exports.getAllPayments = async (req, res) => {
     const limit = parseInt(req.query.limit) || 50;
     const search = req.query.search || '';
     const studentId = req.query.studentId;
+    const studentCategory = req.query.studentCategory || '';
     const skip = (page - 1) * limit;
 
     let pipeline = [];
@@ -55,9 +56,13 @@ exports.getAllPayments = async (req, res) => {
 
       if (search) {
         pipeline.push({
-          $match: {
-            'student.studentName': { $regex: search, $options: 'i' }
-          }
+          $match: { 'student.studentName': { $regex: search, $options: 'i' } }
+        });
+      }
+
+      if (studentCategory) {
+        pipeline.push({
+          $match: { 'student.studentCategory': studentCategory }
         });
       }
 

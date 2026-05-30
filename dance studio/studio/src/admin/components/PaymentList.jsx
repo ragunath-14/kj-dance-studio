@@ -3,6 +3,7 @@ import axios from 'axios';
 import { Plus, Search, Check, Bell, History, X, CreditCard, Calendar, TrendingDown } from 'lucide-react';
 import API_URL from '../config';
 import { useData } from '../context/DataContext';
+import CategoryDropdown from './ui/CategoryDropdown';
 import PaymentRow from './payments/PaymentRow';
 import PaymentForm from './payments/PaymentForm';
 import Modal from './ui/Modal';
@@ -16,7 +17,8 @@ import PaymentHistoryModal from './payments/PaymentHistoryModal';
 
 const PaymentList = () => {
   const { payments, unpaidStudents: serverUnpaid, allStudents, stats, loading, refreshData, fetchPayments, fetchUnpaidStudents } = useData();
-  const [activeTab, setActiveTab] = useState('unpaid'); // Default to 'unpaid'
+  const [activeTab, setActiveTab] = useState('unpaid');
+  const [categoryFilter, setCategoryFilter] = useState('');
   const [showModal, setShowModal] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [formData, setFormData] = useState({
@@ -29,13 +31,9 @@ const PaymentList = () => {
   const [historyStudent, setHistoryStudent] = useState(null);
   const [submitting, setSubmitting] = useState(false);
 
-  // Server-side fetching when page or tab changes
   const onPageChange = (page) => {
-    if (activeTab === 'paid') {
-      fetchPayments(page, 50, searchTerm);
-    } else {
-      fetchUnpaidStudents(page, 50, searchTerm);
-    }
+    if (activeTab === 'paid') fetchPayments(page, 50, searchTerm, categoryFilter);
+    else fetchUnpaidStudents(page, 50, searchTerm, categoryFilter);
   };
 
   const paginatedPayments = payments.data || [];
@@ -47,10 +45,13 @@ const PaymentList = () => {
     
   const currentPage = activeTab === 'paid' ? (payments.page || 1) : (serverUnpaid.page || 1);
 
-  // Effect to reset page when filtering changes
   React.useEffect(() => {
-    onPageChange(1);
-  }, [searchTerm, activeTab]);
+    const timer = setTimeout(() => {
+      if (activeTab === 'paid') fetchPayments(1, 50, searchTerm, categoryFilter);
+      else fetchUnpaidStudents(1, 50, searchTerm, categoryFilter);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [searchTerm, activeTab, categoryFilter]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -90,7 +91,7 @@ const PaymentList = () => {
     try {
       await axios.post(`${API_URL}/payments`, {
         studentId: student._id,
-        amount: student.totalDue || (student.classType === 'Fitness Class' ? 2500 : 3500),
+        amount: student.totalDue || (student.studentCategory === 'Kids' ? 1000 : 2000),
         method: 'Cash', purpose: 'Monthly Fee', remainingFees: 0, date: new Date().toISOString()
       });
       await refreshData();
@@ -140,27 +141,31 @@ const PaymentList = () => {
         <div className="header-left-group">
           <div className="search-box">
             <Search size={18} />
-            <input 
-              type="text" 
-              placeholder={`Search ${activeTab}...`} 
+            <input
+              type="text"
+              placeholder={`Search ${activeTab}...`}
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
           </div>
           <div className="tabs">
-            <button 
+            <button
               className={`tab-btn ${activeTab === 'unpaid' ? 'active' : ''}`}
               onClick={() => setActiveTab('unpaid')}
             >
               Unpaid ({stats?.metrics?.overdue || 0})
             </button>
-            <button 
+            <button
               className={`tab-btn ${activeTab === 'paid' ? 'active' : ''}`}
               onClick={() => setActiveTab('paid')}
             >
-              Paid ({stats?.metrics?.totalPayments || payments.total || 0})
+              Paid ({payments.total || 0})
             </button>
           </div>
+          <CategoryDropdown
+            value={categoryFilter}
+            onChange={setCategoryFilter}
+          />
         </div>
           <div style={{ display: 'flex', gap: '8px' }}>
             <Button onClick={() => setShowModal(true)} icon={Plus}>
@@ -204,7 +209,19 @@ const PaymentList = () => {
                   <tr key={student._id}>
                     <td data-label="Student">
                       <div><strong>{student.studentName || student.name}</strong></div>
-                      <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '2px' }}>{student.classType}</div>
+                      <div style={{ display: 'flex', gap: '6px', marginTop: '4px', flexWrap: 'wrap' }}>
+                        {student.studentCategory && (
+                          <span style={{
+                            fontSize: '10px', fontWeight: 700, padding: '2px 8px',
+                            borderRadius: '20px', textTransform: 'uppercase', letterSpacing: '0.5px',
+                            background: student.studentCategory === 'Kids' ? 'rgba(59,130,246,0.15)' : 'rgba(245,158,11,0.15)',
+                            color:      student.studentCategory === 'Kids' ? '#60A5FA'               : '#FBBF24',
+                          }}>{student.studentCategory}</span>
+                        )}
+                        {student.classType && (
+                          <span style={{ fontSize: '10px', color: 'var(--text-muted)' }}>{student.classType}</span>
+                        )}
+                      </div>
                     </td>
                     <td data-label="Phone">{student.phone}</td>
                     <td data-label="Pending"><span className="pending-badge">{student.pendingMonths} month{student.pendingMonths > 1 ? 's' : ''}</span></td>
@@ -279,8 +296,8 @@ const PaymentList = () => {
         itemsPerPage={activeTab === 'paid' ? (payments.limit || 50) : (serverUnpaid.limit || 50)}
         onPageChange={onPageChange} 
         onLimitChange={(limit) => {
-          if (activeTab === 'paid') fetchPayments(1, limit, searchTerm);
-          else fetchUnpaidStudents(1, limit, searchTerm);
+          if (activeTab === 'paid') fetchPayments(1, limit, searchTerm, categoryFilter);
+          else fetchUnpaidStudents(1, limit, searchTerm, categoryFilter);
         }}
       />
 

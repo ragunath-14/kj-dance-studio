@@ -50,6 +50,22 @@ const auth = require('./middleware/auth');
 // Public Registration (Submit form)
 app.post('/api/register', registrationController.createPendingRegistration);
 
+// WhatsApp test (admin only)
+app.post('/api/test-whatsapp', auth, async (req, res) => {
+  const { phone, name } = req.body;
+  if (!phone) return res.status(400).json({ message: 'phone is required' });
+  try {
+    const result = await whatsapp.sendWelcomeMessage(
+      phone,
+      name || 'Test Student',
+      'Dance Class'
+    );
+    res.json({ success: result.success, detail: result });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
 // Global Dashboard Stats (Protected)
 const studentController = require('./controllers/studentController');
 app.get('/api/dashboard/stats', auth, studentController.getDashboardStats);

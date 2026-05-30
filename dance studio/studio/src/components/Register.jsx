@@ -94,8 +94,7 @@ const Register = ({ isOpen, onClose }) => {
     setMessage({ type: '', text: '' });
 
     try {
-      const API_BASE = window.location.hostname === 'localhost' ? 'http://localhost:5001/api' : '/api';
-      const res = await axios.post(`${API_BASE}/register`, formData);
+      const res = await axios.post('/api/register', formData);
 
       if (res.data.success) {
         setMessage({ type: 'success', text: 'Registration submitted successfully! We will contact you soon.' });

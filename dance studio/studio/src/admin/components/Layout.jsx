@@ -51,6 +51,23 @@ const Layout = ({ children, onLogout }) => {
         <button className="menu-toggle" onClick={toggleMobileMenu}>
           {isMobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
         </button>
+        <h1 className="mobile-page-title">KJ Dance Studio</h1>
+        <div style={{ display: 'flex', gap: '8px', marginLeft: 'auto' }}>
+          <button onClick={toggleTheme} className="mobile-theme-btn" title="Toggle theme">
+            {theme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
+          </button>
+          <NavLink to="/admin/registrations" className="topbar-notification" style={{ position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '8px', borderRadius: '10px', color: 'var(--text-muted)', background: '#111', border: '1px solid var(--border-color)' }}>
+            <Bell size={18} />
+            {(registrations.data?.length > 0) && (
+              <span className="notification-badge">{registrations.data.length}</span>
+            )}
+          </NavLink>
+          {onLogout && (
+            <button onClick={onLogout} className="mobile-logout-btn" title="Logout">
+              <LogOut size={18} />
+            </button>
+          )}
+        </div>
       </div>
       
       <div className={`sidebar-overlay ${isMobileMenuOpen ? 'show' : ''}`} onClick={toggleMobileMenu}></div>
@@ -73,7 +90,9 @@ const Layout = ({ children, onLogout }) => {
             </button>
             <NavLink to="/admin/registrations" className="topbar-notification">
               <Bell size={20} />
-              {registrations.length > 0 && <span className="notification-badge">{registrations.length}</span>}
+              {(registrations.data?.length > 0) && (
+                <span className="notification-badge">{registrations.data.length}</span>
+              )}
             </NavLink>
             {onLogout && (
               <button onClick={onLogout} className="logout-btn">
