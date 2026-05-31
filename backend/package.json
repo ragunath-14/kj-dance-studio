@@ -6,7 +6,7 @@
     "start": "node index.js",
     "dev": "nodemon index.js",
     "test": "node __tests__/unit_tests.js",
-    "build": "cd ../frontend && npm install && npm run build",
+    "build": "cd ../frontend && npm install --include=dev && npm run build",
     "build:local": "node build-prod.js"
   },
   "dependencies": {
