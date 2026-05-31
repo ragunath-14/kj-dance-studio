@@ -20,15 +20,10 @@ const app = express();
 const server = http.createServer(app);
 const PORT = process.env.PORT || 5001;
 
-// Dynamic CORS based on environment
-const allowedOrigins = process.env.ALLOWED_ORIGINS
-  ? process.env.ALLOWED_ORIGINS.split(',').map(o => o.trim())
-  : ["http://localhost:3000", "http://localhost:5173", "http://localhost:5174", "http://localhost:5175"];
-
-// Socket.io Setup
+// Allow all origins
 const io = new Server(server, {
   cors: {
-    origin: allowedOrigins,
+    origin: '*',
     methods: ["GET", "POST", "PUT", "DELETE"]
   }
 });
@@ -39,7 +34,7 @@ app.set('socketio', io);
 app.use(helmet({
   contentSecurityPolicy: false, // Disable CSP for easier dev/deployment if needed, or configure strictly
 }));
-app.use(cors({ origin: allowedOrigins }));
+app.use(cors({ origin: '*' }));
 app.use(express.json({ limit: '1mb' }));
 app.use(express.urlencoded({ extended: true, limit: '1mb' }));
 app.set('trust proxy', 1);
