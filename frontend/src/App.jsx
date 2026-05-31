@@ -396,6 +396,9 @@ const LandingPage = ({ setIsRegisterOpen }) => {
             <li className="mobile-only-btn">
               <button onClick={() => { setIsRegisterOpen(true); setIsMenuOpen(false); }} className="btn-nav">Join Now</button>
             </li>
+            <li className="mobile-only-btn">
+              <button onClick={() => { handleAdminClick(); setIsMenuOpen(false); }} className="btn-admin-nav">Admin</button>
+            </li>
           </ul>
           
           <div className="nav-btns desktop-only">

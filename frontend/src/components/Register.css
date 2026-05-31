@@ -102,6 +102,7 @@
 
 .tab-item.active   { opacity: 1; }
 .tab-item.completed{ opacity: 0.8; }
+.tab-item.disabled { opacity: 0.35; cursor: not-allowed; pointer-events: none; }
 
 .step-num {
   width: 24px;
@@ -447,6 +448,13 @@
   box-shadow: 0 15px 30px rgba(237, 28, 36, 0.3);
 }
 
+.btn-primary:disabled,
+.btn-secondary:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  transform: none;
+}
+
 .btn-secondary {
   background: transparent;
   color: #666;
@@ -581,6 +589,13 @@
   .btn-secondary {
     width: 100%;
     justify-content: center;
+  }
+
+  .btn-primary {
+    height: 72px;
+    font-size: 18px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
   }
 
   .register-modal {
