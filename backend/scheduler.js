@@ -3,7 +3,10 @@ const Student     = require('./models/Student');
 const Payment     = require('./models/Payment');
 const whatsapp    = require('./services/whatsappService');
 
-const getMonthlyFee = (studentCategory) => studentCategory === 'Kids' ? 1000 : 2000;
+const getMonthlyFee = (student) => {
+  if (student?.classType === 'Fitness Class') return 2000;
+  return student?.studentCategory === 'Kids' ? 1000 : 1300;
+};
 
 /**
  * Core logic: find students whose fee due date is TODAY and who still
@@ -93,7 +96,7 @@ async function runPendingFeeAlerts() {
       
       if (totalCycles <= 0) continue;
 
-      const fee = getMonthlyFee(student.studentCategory);
+      const fee = getMonthlyFee(student);
       const totalExpected = totalCycles * fee;
       const totalDue      = Math.max(0, totalExpected - totalPaid);
 

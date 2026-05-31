@@ -81,7 +81,7 @@ const ScheduleSection = ({ onRegister }) => {
       label: 'Adults Dance Class',
       accent: '#F59E0B',
       accentBg: 'rgba(245,158,11,0.08)',
-      fee: '₹2000 / month',
+      fee: '₹1300 / month',
       feeNote: 'Adults',
       batches: [
         {

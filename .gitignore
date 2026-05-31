@@ -1,0 +1,66 @@
+# ── Dependencies ──────────────────────────────────────────────────────────────
+node_modules/
+.npm
+.yarn
+.pnp.*
+.yarn-integrity
+
+# ── Build output ──────────────────────────────────────────────────────────────
+frontend/dist/
+backend/dist/
+build/
+dist/
+
+# ── Environment files (secrets) ───────────────────────────────────────────────
+.env
+.env.local
+.env.*.local
+.env.development
+.env.production
+.env.test
+
+# ── Logs ──────────────────────────────────────────────────────────────────────
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# ── OS files ──────────────────────────────────────────────────────────────────
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# ── Editor / IDE ──────────────────────────────────────────────────────────────
+.vscode/
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+*.swp
+
+# ── Vite / React ──────────────────────────────────────────────────────────────
+frontend/.vite/
+frontend/coverage/
+
+# ── Testing ───────────────────────────────────────────────────────────────────
+coverage/
+*.lcov
+.nyc_output/
+
+# ── Misc ──────────────────────────────────────────────────────────────────────
+*.tgz
+*.zip
+*.tar.gz
+.cache/
+tmp/
+temp/

@@ -137,15 +137,44 @@ export const DataProvider = ({ children }) => {
   useEffect(() => {
     fetchAllData();
 
-    const socketUrl = API_URL.startsWith('http') ? API_URL.replace(/\/api$/, '') : window.location.origin;
+    // Derive the socket server URL:
+    // - In dev: Vite proxies /socket.io → localhost:5001, so use window.location.origin
+    // - In prod: same origin as the page (Express serves everything)
+    const socketUrl = window.location.origin;
+
     const socket = io(socketUrl, {
-      reconnectionAttempts: 5,
-      reconnectionDelay: 2000,
-      timeout: 5000,
+      // Don't block page load — connect in background
+      autoConnect: true,
+      // Polling first, then upgrade to WebSocket (more reliable behind proxies)
+      transports: ['polling', 'websocket'],
+      // Backoff settings — prevents hammering the proxy when backend is down
+      reconnection: true,
+      reconnectionAttempts: 10,
+      reconnectionDelay: 3000,        // start at 3s
+      reconnectionDelayMax: 30000,    // cap at 30s
+      randomizationFactor: 0.5,       // add jitter to spread reconnects
+      timeout: 8000,
+    });
+
+    let warnedOffline = false;
+
+    socket.on('connect', () => {
+      warnedOffline = false; // reset on successful connect
     });
 
     socket.on('connect_error', () => {
-      // Silently ignore — backend may not be running yet
+      // Only log once per disconnection cycle, not on every retry
+      if (!warnedOffline) {
+        console.warn('[Socket] Backend unreachable — real-time updates paused. Retrying...');
+        warnedOffline = true;
+      }
+    });
+
+    socket.on('disconnect', (reason) => {
+      if (reason === 'io server disconnect') {
+        // Server intentionally disconnected — reconnect manually
+        socket.connect();
+      }
     });
 
     socket.on('dataChanged', (payload) => {
@@ -161,7 +190,10 @@ export const DataProvider = ({ children }) => {
 
     socket.on('registrationApproved', () => fetchAllData(true));
 
-    return () => socket.disconnect();
+    return () => {
+      socket.removeAllListeners();
+      socket.disconnect();
+    };
   }, []);
 
   const refreshData = () => fetchAllData();

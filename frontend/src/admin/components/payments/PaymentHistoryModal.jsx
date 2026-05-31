@@ -28,7 +28,10 @@ const PaymentHistoryModal = ({ student, onClose, onRecordPayment }) => {
 
   if (!student) return null;
 
-  const getMonthlyFee = (ct) => ct === 'Fitness Class' ? 2500 : 3500;
+  const getMonthlyFee = (student) => {
+    if (student?.classType === 'Fitness Class') return 2000;
+    return student?.studentCategory === 'Kids' ? 1000 : 1300;
+  };
   const today = new Date();
 
   const joinDate = new Date(student.createdAt || student.joinDate || today);
@@ -36,7 +39,7 @@ const PaymentHistoryModal = ({ student, onClose, onRecordPayment }) => {
   if (today.getDate() < joinDate.getDate()) totalCycles--;
   if (totalCycles < 0) totalCycles = 0;
 
-  const fee = getMonthlyFee(student.classType);
+  const fee = getMonthlyFee(student);
   const totalPaid = studentPayments
     .filter(p => p.purpose === 'Monthly Fee' && new Date(p.date) >= joinDate)
     .reduce((s, p) => s + (p.amount || 0), 0);

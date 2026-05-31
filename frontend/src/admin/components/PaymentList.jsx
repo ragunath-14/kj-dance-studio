@@ -31,6 +31,11 @@ const PaymentList = () => {
   const [historyStudent, setHistoryStudent] = useState(null);
   const [submitting, setSubmitting] = useState(false);
 
+  const getMonthlyFee = (student) => {
+    if (student?.classType === 'Fitness Class') return 2000;
+    return student?.studentCategory === 'Kids' ? 1000 : 1300;
+  };
+
   const onPageChange = (page) => {
     if (activeTab === 'paid') fetchPayments(page, 50, searchTerm, categoryFilter);
     else fetchUnpaidStudents(page, 50, searchTerm, categoryFilter);
@@ -87,11 +92,18 @@ const PaymentList = () => {
   const handleQuickPay = async (student) => {
     if (submitting) return;
     
+    // Safety confirmation: show exactly which student is being paid
+    const payAmount = student.totalDue || getMonthlyFee(student);
+    const confirmed = window.confirm(
+      `Confirm payment for:\n\nStudent: ${student.studentName}\nPhone: ${student.phone}\nAmount: ₹${payAmount}\n\nProceed?`
+    );
+    if (!confirmed) return;
+
     setSubmitting(true);
     try {
       await axios.post(`${API_URL}/payments`, {
         studentId: student._id,
-        amount: student.totalDue || (student.studentCategory === 'Kids' ? 1000 : 2000),
+        amount: payAmount,
         method: 'Cash', purpose: 'Monthly Fee', remainingFees: 0, date: new Date().toISOString()
       });
       await refreshData();

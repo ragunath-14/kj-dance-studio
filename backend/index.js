@@ -66,6 +66,38 @@ app.post('/api/test-whatsapp', auth, async (req, res) => {
   }
 });
 
+app.get('/api/whatsapp/messages/:messageId', auth, (req, res) => {
+  const status = whatsapp.getMessageStatus(req.params.messageId);
+  if (!status) return res.status(404).json({ message: 'Message status not found on this server instance.' });
+  return res.json(status);
+});
+
+// Meta WhatsApp webhook verification.
+app.get('/api/webhook', (req, res) => {
+  const mode = req.query['hub.mode'];
+  const token = req.query['hub.verify_token'];
+  const challenge = req.query['hub.challenge'];
+  const verifyToken = process.env.WEBHOOK_VERIFY_TOKEN || 'dance_studio_123';
+
+  if (mode === 'subscribe' && token === verifyToken) {
+    console.log('[WhatsApp webhook] Verified by Meta.');
+    return res.status(200).send(challenge);
+  }
+
+  return res.sendStatus(403);
+});
+
+// Meta sends message delivery status updates here: sent, delivered, read, failed.
+app.post('/api/webhook', (req, res) => {
+  try {
+    whatsapp.handleWebhook(req.body);
+    return res.sendStatus(200);
+  } catch (err) {
+    console.error('[WhatsApp webhook] Handler error:', err.message);
+    return res.sendStatus(200);
+  }
+});
+
 // Global Dashboard Stats (Protected)
 const studentController = require('./controllers/studentController');
 app.get('/api/dashboard/stats', auth, studentController.getDashboardStats);
@@ -92,14 +124,17 @@ app.get('/health', (req, res) => {
 });
 
 app.get('/', (req, res) => {
-  res.json({ message: 'Dance Studio Unified API is running' });
+  if (process.env.NODE_ENV === 'production') return;
+  res.json({ message: 'KJ Dance Studio API is running. Frontend served at same URL in production.' });
 });
 
 // ── Production Frontend Serving ─────────────────────────────────────────────
 if (process.env.NODE_ENV === 'production') {
-  app.use(express.static(path.join(__dirname, '../studio/dist')));
-  app.get(/^(?!\/api|\/health).*$/, (req, res) => {
-    res.sendFile(path.resolve(__dirname, '../studio', 'dist', 'index.html'));
+  const frontendDist = path.join(__dirname, '../frontend/dist');
+  app.use(express.static(frontendDist));
+  // All non-API, non-health, non-socket routes → React SPA
+  app.get(/^(?!\/api|\/health|\/socket\.io).*$/, (req, res) => {
+    res.sendFile(path.join(frontendDist, 'index.html'));
   });
 }
 

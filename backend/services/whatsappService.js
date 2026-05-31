@@ -2,8 +2,8 @@
 
 const axios = require('axios');
 
-// Meta error codes that mean the template is not yet usable
-const TEMPLATE_UNAVAILABLE = [132001, 132000];
+// Meta error codes that mean the template is not available for this account/language.
+const TEMPLATE_UNAVAILABLE = [132001];
 
 // ── Extract phone number from a student/registration object or a plain string ──
 const extractPhone = (recipientOrPhone) => {
@@ -13,42 +13,87 @@ const extractPhone = (recipientOrPhone) => {
 };
 
 // ── Normalize to E.164 without '+' — prepend 91 for 10-digit Indian numbers ───
+// Handles: 10-digit, +91 prefix, 91 prefix, leading-0 (07xxx → strip 0 → 91xxx)
 const normalizePhone = (raw) => {
   let cleaned = String(raw).replace(/\D/g, '');
+  // Strip a leading 0 that sometimes appears (e.g. 07339180919 → 7339180919)
+  if (cleaned.length === 11 && cleaned.startsWith('0')) cleaned = cleaned.slice(1);
+  // Prepend India country code for bare 10-digit numbers
   if (cleaned.length === 10) cleaned = '91' + cleaned;
   return cleaned;
 };
 
 // ── Serial message queue — prevents simultaneous API calls ───────────────────
 let messageQueue = Promise.resolve();
+const messageTracker = new Map();
+
+const rememberMessage = (messageId, meta = {}) => {
+  if (!messageId) return;
+  messageTracker.set(messageId, {
+    ...meta,
+    status: 'accepted',
+    acceptedAt: new Date().toISOString(),
+  });
+};
+
+const updateTrackedMessage = (messageId, update = {}) => {
+  if (!messageId) return null;
+  const next = {
+    ...(messageTracker.get(messageId) || {}),
+    ...update,
+    updatedAt: new Date().toISOString(),
+  };
+  messageTracker.set(messageId, next);
+  return next;
+};
 
 /**
  * Core send: tries a named template first; falls back to plain text if the
- * template is still PENDING (Meta error 132001/132000) and fallbackText is set.
+ * template is unavailable (Meta error 132001) and fallbackText is set.
  *
  * @param {string}      phone        Recipient phone (any format)
  * @param {string|null} fallbackText Plain text used when template unavailable
  * @param {object}      opts         { templateName, languageCode, components }
  */
 const sendMessage = (phone, fallbackText, opts = {}) => {
+  // Each call captures its own result via a dedicated promise
+  let resolveResult, rejectResult;
+  const resultPromise = new Promise((res, rej) => {
+    resolveResult = res;
+    rejectResult  = rej;
+  });
+
   messageQueue = messageQueue.then(async () => {
     await new Promise(r => setTimeout(r, 500)); // 500 ms between calls
 
     if (process.env.USE_META_API !== 'true') {
+      const r = { success: false, reason: 'WhatsApp disabled' };
       console.log(`⏭️  [WhatsApp disabled] Skipping message to ${phone}. Set USE_META_API=true to enable.`);
-      return { success: false, reason: 'WhatsApp disabled' };
+      resolveResult(r);
+      return;
     }
 
-    const token   = process.env.META_ACCESS_TOKEN;
-    const phoneId = process.env.META_PHONE_NUMBER_ID;
-    const version = process.env.META_API_VERSION || 'v19.0';
+    const token   = process.env.META_ACCESS_TOKEN || process.env.WHATSAPP_ACCESS_TOKEN;
+    const phoneId = process.env.META_PHONE_NUMBER_ID || process.env.WHATSAPP_PHONE_NUMBER_ID;
+    const version = process.env.META_API_VERSION || process.env.WHATSAPP_VERSION || 'v19.0';
 
     if (!token || !phoneId) {
+      const r = { success: false, reason: 'Missing Meta API credentials' };
       console.error('❌ Meta Cloud API config missing. Set META_ACCESS_TOKEN and META_PHONE_NUMBER_ID in .env');
-      return { success: false, reason: 'Missing Meta API credentials' };
+      resolveResult(r);
+      return;
     }
 
-    const to      = normalizePhone(phone);
+    const to = normalizePhone(phone);
+
+    // Guard: Reject obviously invalid numbers
+    if (to.length < 10) {
+      const r = { success: false, reason: 'Invalid phone number (too short)' };
+      console.warn(`⚠️  [WhatsApp skipped] Phone "${phone}" → "${to}" is too short/invalid.`);
+      resolveResult(r);
+      return;
+    }
+
     const url     = `https://graph.facebook.com/${version}/${phoneId}/messages`;
     const headers = { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' };
 
@@ -72,16 +117,20 @@ const sendMessage = (phone, fallbackText, opts = {}) => {
     if (opts.templateName) {
       try {
         const res = await axios.post(url, buildPayload(true), { headers });
-        console.log(`✅ [Template: ${opts.templateName}] Sent to ${to}. ID: ${res.data.messages?.[0]?.id}`);
-        return { success: true, response: res.data };
+        const messageId = res.data.messages?.[0]?.id;
+        rememberMessage(messageId, { to, templateName: opts.templateName, type: 'template' });
+        console.log(`✅ [WhatsApp sent] Template "${opts.templateName}" → ${to} | ID: ${messageId}`);
+        resolveResult({ success: true, accepted: true, messageId, to, response: res.data });
+        return;
       } catch (err) {
         const code   = err.response?.data?.error?.code;
         const errMsg = err.response ? JSON.stringify(err.response.data) : err.message;
         if (TEMPLATE_UNAVAILABLE.includes(code) && fallbackText) {
-          console.warn(`⚠️  Template "${opts.templateName}" pending (code ${code}). Sending plain-text fallback to ${to}…`);
+          console.warn(`⚠️  Template "${opts.templateName}" unavailable (${code}). Trying plain-text fallback...`);
         } else {
-          console.error(`❌ Meta API error for ${to}:`, errMsg);
-          return { success: false, reason: errMsg };
+          console.error(`❌ [WhatsApp failed] Template "${opts.templateName}" → ${to}:`, errMsg);
+          resolveResult({ success: false, reason: errMsg });
+          return;
         }
       }
     }
@@ -89,16 +138,23 @@ const sendMessage = (phone, fallbackText, opts = {}) => {
     // Attempt 2: plain-text fallback
     try {
       const res = await axios.post(url, buildPayload(false), { headers });
-      console.log(`✅ [Plain-text fallback] Sent to ${to}. ID: ${res.data.messages?.[0]?.id}`);
-      return { success: true, response: res.data, usedFallback: true };
+      const messageId = res.data.messages?.[0]?.id;
+      rememberMessage(messageId, { to, type: 'text', usedFallback: true });
+      console.log(`✅ [WhatsApp sent] Plain-text fallback → ${to} | ID: ${messageId}`);
+      resolveResult({ success: true, accepted: true, messageId, to, response: res.data, usedFallback: true });
     } catch (err) {
       const errMsg = err.response ? JSON.stringify(err.response.data) : err.message;
-      console.error(`❌ Plain-text fallback failed for ${to}:`, errMsg);
-      return { success: false, reason: errMsg };
+      console.error(`❌ [WhatsApp failed] Plain-text fallback → ${to}:`, errMsg);
+      resolveResult({ success: false, reason: errMsg });
     }
+  }).catch(err => {
+    // Prevent queue from breaking on unexpected errors
+    console.error(`❌ [WhatsApp queue error] for ${phone}:`, err.message);
+    resolveResult({ success: false, reason: err.message });
+    return Promise.resolve(); // keep queue alive
   });
 
-  return messageQueue;
+  return resultPromise;
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -122,6 +178,7 @@ exports.sendWelcomeMessage = (recipientOrPhone, studentName, classType) => {
     languageCode: 'en',
     components  : [{ type: 'body', parameters: [
       { type: 'text', text: name },
+      { type: 'text', text: cls  },
     ]}]
   });
 };
@@ -139,11 +196,12 @@ exports.sendPendingFeesAlert = (recipientOrPhone, studentName, pendingMonths, to
     `for ${months} month(s) at KJ Dance Studio. Please clear it soon. 🙏`;
 
   return sendMessage(phone, fallback, {
-    templateName: 'payment_remainder_r',
+    templateName: 'fee_remainder',
     languageCode: 'en',
     components  : [{ type: 'body', parameters: [
       { type: 'text', text: name },
       { type: 'text', text: due  },
+      { type: 'text', text: months },
     ]}]
   });
 };
@@ -221,10 +279,40 @@ exports.sendRegistrationConfirmation = (recipientOrPhone, studentName, classType
 exports.getStatus = () => ({
   provider  : 'Meta Cloud API',
   isReady   : process.env.USE_META_API === 'true' &&
-              !!process.env.META_ACCESS_TOKEN &&
-              !!process.env.META_PHONE_NUMBER_ID,
+              !!(process.env.META_ACCESS_TOKEN || process.env.WHATSAPP_ACCESS_TOKEN) &&
+              !!(process.env.META_PHONE_NUMBER_ID || process.env.WHATSAPP_PHONE_NUMBER_ID),
   apiEnabled: process.env.USE_META_API === 'true',
+  trackedMessages: messageTracker.size,
 });
+
+exports.getMessageStatus = (messageId) => messageTracker.get(messageId) || null;
+
+exports.handleWebhook = (body) => {
+  const value = body?.entry?.[0]?.changes?.[0]?.value;
+  const statuses = value?.statuses || [];
+
+  for (const status of statuses) {
+    const messageId = status.id;
+    const errors = status.errors || [];
+    const tracked = updateTrackedMessage(messageId, {
+      status: status.status,
+      recipient: status.recipient_id,
+      timestamp: status.timestamp,
+      conversation: status.conversation,
+      pricing: status.pricing,
+      errors,
+    });
+
+    const recipient = status.recipient_id || tracked?.to || 'unknown';
+    if (status.status === 'failed') {
+      console.error(`[WhatsApp delivery failed] ${messageId} to ${recipient}: ${JSON.stringify(errors)}`);
+    } else {
+      console.log(`[WhatsApp delivery ${status.status}] ${messageId} to ${recipient}`);
+    }
+  }
+
+  return { statuses: statuses.length };
+};
 
 // ── No-ops — kept so index.js doesn't crash ───────────────────────────────────
 exports.initWhatsApp    = () => {};

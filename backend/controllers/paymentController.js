@@ -4,7 +4,10 @@ const Student = require('../models/Student');
 const whatsapp = require('../services/whatsappService');
 
 // ─── Fee helper ──────────────────────────────────────────────────────────────
-const getMonthlyFee = (studentCategory) => studentCategory === 'Kids' ? 1000 : 2000;
+const getMonthlyFee = (student) => {
+  if (student?.classType === 'Fitness Class') return 2000;
+  return student?.studentCategory === 'Kids' ? 1000 : 1300;
+};
 
 // ─── GET /api/payments ───────────────────────────────────────────────────────
 exports.getAllPayments = async (req, res) => {
@@ -168,8 +171,14 @@ exports.createPayment = async (req, res) => {
     await newPayment.populate('studentId', 'studentName phone whatsappNumber');
 
     // Automated WhatsApp Receipt
+    const waPhone = student.whatsappNumber || student.phone;
     const formattedDate = new Date(newPayment.date || Date.now()).toLocaleDateString('en-GB').replace(/\//g, '.');
+    console.log(`💰 [Payment] Recording for ${student.studentName} | studentId=${studentId} | phone=${waPhone} | amount=${newPayment.amount}`);
     whatsapp.sendPaymentReceipt(student, student.studentName, newPayment.amount, newPayment.purpose, formattedDate, newPayment.remainingFees)
+      .then(r => {
+        if (r.success) console.log(`✅ [Payment] Receipt sent to ${r.to} for ${student.studentName}`);
+        else console.warn(`⚠️  [Payment] Receipt failed for ${student.studentName}: ${r.reason}`);
+      })
       .catch(e => console.error('WhatsApp receipt error:', e));
 
     const io = req.app.get('socketio');

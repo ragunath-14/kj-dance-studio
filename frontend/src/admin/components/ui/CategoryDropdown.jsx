@@ -4,7 +4,7 @@ import './CategoryDropdown.css';
 
 const OPTIONS = [
   { value: '',       label: 'All Categories', sub: '' },
-  { value: 'Adults', label: 'Adults',         sub: '₹2000/month' },
+  { value: 'Adults', label: 'Adults',         sub: '₹1300/month' },
   { value: 'Kids',   label: 'Kids',           sub: '₹1000/month' },
 ];
 

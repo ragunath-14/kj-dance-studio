@@ -4,7 +4,10 @@ const MonthlyStat = require('../models/MonthlyStat');
 const whatsapp = require('../services/whatsappService');
 
 // ─── Fee helper ──────────────────────────────────────────────────────────────
-const getMonthlyFee = (studentCategory) => studentCategory === 'Kids' ? 1000 : 2000;
+const getMonthlyFee = (student) => {
+  if (student?.classType === 'Fitness Class') return 2000;
+  return student?.studentCategory === 'Kids' ? 1000 : 1300;
+};
 
 // ─── Format mongoose validation errors ───────────────────────────────────────
 const formatValidationErrors = (err) =>
@@ -169,7 +172,18 @@ exports.getDashboardStats = async (req, res) => {
                           ]
                         }
                       },
-                      in: { $multiply: ['$$cycles', { $cond: [{ $eq: [{ $ifNull: ['$studentCategory', 'Adults'] }, 'Kids'] }, 1000, 2000] }] }
+                      in: {
+                        $multiply: [
+                          '$$cycles',
+                          {
+                            $cond: [
+                              { $eq: ['$classType', 'Fitness Class'] },
+                              2000,
+                              { $cond: [{ $eq: [{ $ifNull: ['$studentCategory', 'Adults'] }, 'Kids'] }, 1000, 1300] }
+                            ]
+                          }
+                        ]
+                      }
                     }
                   }
                 }
@@ -319,7 +333,7 @@ exports.getUnpaidStudents = async (req, res) => {
       let totalCycles = (today.getFullYear() - joinDate.getFullYear()) * 12 + (today.getMonth() - joinDate.getMonth()) + 1;
       if (today.getDate() < joinDate.getDate()) totalCycles--;
       
-      const fee = getMonthlyFee(student.studentCategory);
+      const fee = getMonthlyFee(student);
       const totalDue = Math.max(0, (totalCycles * fee) - totalPaid);
       const pendingMonths = Math.ceil(totalDue / fee);
 
@@ -371,7 +385,7 @@ exports.getStudentDues = async (req, res) => {
     }).lean();
 
     const totalPaid = payments.reduce((sum, p) => sum + (p.amount || 0), 0);
-    const fee = getMonthlyFee(student.studentCategory);
+    const fee = getMonthlyFee(student);
     const totalDue = Math.max(0, (totalCycles * fee) - totalPaid);
     const pendingMonths = Math.ceil(totalDue / fee);
 
@@ -422,7 +436,7 @@ exports.createStudent = async (req, res) => {
     console.log(`📲 [Add Student] Sending welcome WhatsApp to ${phone} for ${newStudent.studentName}...`);
     whatsapp.sendWelcomeMessage(newStudent, newStudent.studentName, newStudent.classType)
       .then(r => {
-        if (r.success) console.log(`✅ [Add Student] Welcome message sent to ${phone} (${newStudent.studentName})`);
+        if (r.success) console.log(`[Add Student] Welcome message accepted by Meta for ${r.to || phone} (${newStudent.studentName}). ID: ${r.messageId || 'n/a'}`);
         else console.warn(`⚠️  [Add Student] Welcome message failed for ${phone}: ${r.reason}`);
       })
       .catch(e => console.error(`❌ [Add Student] WhatsApp error for ${phone}:`, e.message));
@@ -499,7 +513,7 @@ exports.toggleStatus = async (req, res) => {
       // Send standard Welcome message for a fresh start
       whatsapp.sendWelcomeMessage(student, student.studentName, student.classType)
         .then(r => {
-          if (r.success) console.log(`✅ [ToggleStatus] Welcome message sent to ${student.studentName}`);
+          if (r.success) console.log(`[ToggleStatus] Welcome message accepted by Meta for ${student.studentName}. ID: ${r.messageId || 'n/a'}`);
           else console.warn(`⚠️ [ToggleStatus] Welcome message FAILED for ${student.studentName}: ${r.reason}`);
         })
         .catch(err => console.error(`❌ [ToggleStatus] WhatsApp Error (Welcome) for ${student.studentName}:`, err.message));
@@ -510,7 +524,7 @@ exports.toggleStatus = async (req, res) => {
       console.log(`📣 [ToggleStatus] ${student.studentName} is now INACTIVE. Student is now "Inactivated from Payment". Triggering Rejoin Invitation...`);
       whatsapp.sendRejoinMessage(student, student.studentName, student.classType)
         .then(r => {
-          if (r.success) console.log(`✅ [ToggleStatus] Rejoin Invitation sent to ${student.studentName}`);
+          if (r.success) console.log(`[ToggleStatus] Rejoin invitation accepted by Meta for ${student.studentName}. ID: ${r.messageId || 'n/a'}`);
           else console.warn(`⚠️ [ToggleStatus] Rejoin Invitation FAILED for ${student.studentName}: ${r.reason}`);
         })
         .catch(err => console.error(`❌ [ToggleStatus] WhatsApp Error for ${student.studentName}:`, err.message));
@@ -615,4 +629,5 @@ exports.getActivityLog = async (req, res) => {
     res.status(500).json({ message: 'Failed to fetch activity log.' });
   }
 };
+
 

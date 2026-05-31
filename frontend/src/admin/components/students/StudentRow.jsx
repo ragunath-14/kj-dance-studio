@@ -9,7 +9,10 @@ const StudentRow = ({ student, payments, showFitnessCol, onEdit, onDelete, onTog
 
   const isPaid = useMemo(() => {
     const today = new Date();
-    const getMonthlyFee = (studentCategory) => studentCategory === 'Kids' ? 1000 : 2000;
+    const getMonthlyFee = (student) => {
+      if (student?.classType === 'Fitness Class') return 2000;
+      return student?.studentCategory === 'Kids' ? 1000 : 1300;
+    };
 
     const rawJoinDate = student.createdAt || student.joinDate || new Date().toISOString();
     const joinDate = new Date(rawJoinDate);
@@ -20,7 +23,7 @@ const StudentRow = ({ student, payments, showFitnessCol, onEdit, onDelete, onTog
     if (totalCycles <= 0) return true;
 
     const totalPaid = student.totalPaid || 0;
-    const fee = getMonthlyFee(student.studentCategory);
+    const fee = getMonthlyFee(student);
     const totalExpected = totalCycles * fee;
 
     return totalPaid >= totalExpected;

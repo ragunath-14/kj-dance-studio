@@ -44,11 +44,12 @@ function skip(name, reason) {
 // §1  BILLING LOGIC
 // ═══════════════════════════════════════════════════════════════════
 
-function getMonthlyFee(classType) {
-  return classType === 'Fitness Class' ? 2500 : 3500;
+function getMonthlyFee(classType, studentCategory = 'Adults') {
+  if (classType === 'Fitness Class') return 2000;
+  return studentCategory === 'Kids' ? 1000 : 1300;
 }
 
-function calculateTotalDue(joinDateStr, todayStr, classType, totalPaid) {
+function calculateTotalDue(joinDateStr, todayStr, classType, totalPaid, studentCategory = 'Adults') {
   const joinDate = new Date(joinDateStr);
   const today = new Date(todayStr);
   let totalCycles =
@@ -56,7 +57,7 @@ function calculateTotalDue(joinDateStr, todayStr, classType, totalPaid) {
     (today.getMonth() - joinDate.getMonth()) + 1;
   if (today.getDate() < joinDate.getDate()) totalCycles--;
   if (totalCycles <= 0) return 0;
-  return Math.max(0, totalCycles * getMonthlyFee(classType) - totalPaid);
+  return Math.max(0, totalCycles * getMonthlyFee(classType, studentCategory) - totalPaid);
 }
 
 function runBillingTests() {
@@ -64,42 +65,43 @@ function runBillingTests() {
   console.log('§1  BILLING CYCLE CALCULATION');
   console.log('══════════════════════════════════════════════════');
 
-  assert(getMonthlyFee('Regular Class') === 3500, 'Regular Class fee = ₹3500');
-  assert(getMonthlyFee('Summer Class') === 3500, 'Summer Class fee = ₹3500');
-  assert(getMonthlyFee('Fitness Class') === 2500, 'Fitness Class fee = ₹2500');
-  assert(getMonthlyFee(undefined) === 3500, 'Undefined class defaults to ₹3500');
+  assert(getMonthlyFee('Regular Class', 'Adults') === 1300, 'Regular adults fee = 1300');
+  assert(getMonthlyFee('Regular Class', 'Kids') === 1000, 'Regular kids fee = 1000');
+  assert(getMonthlyFee('Summer Class', 'Adults') === 1300, 'Summer adults fee = 1300');
+  assert(getMonthlyFee('Fitness Class', 'Kids') === 2000, 'Fitness fee = 2000');
+  assert(getMonthlyFee(undefined) === 1300, 'Undefined class defaults to adult regular fee 1300');
 
   const c1 = calculateTotalDue('2026-01-10', '2026-02-15', 'Regular Class', 0);
-  assert(c1 === 7000, 'Jan10→Feb15, 0 paid = ₹7000 (2 cycles)', `got ₹${c1}`);
+  assert(c1 === 2600, 'Jan10-Feb15, 0 paid = 2600 (2 adult regular cycles)', "got ${c1}");
 
   const c2 = calculateTotalDue('2026-01-15', '2026-02-10', 'Regular Class', 0);
-  assert(c2 === 3500, 'Jan15→Feb10 (before anniversary) = ₹3500', `got ₹${c2}`);
+  assert(c2 === 1300, 'Jan15-Feb10 (before anniversary) = 1300', "got ${c2}");
 
   const c3 = calculateTotalDue('2026-01-15', '2026-02-15', 'Regular Class', 0);
-  assert(c3 === 7000, 'Jan15→Feb15 (on anniversary) = ₹7000', `got ₹${c3}`);
+  assert(c3 === 2600, 'Jan15-Feb15 (on anniversary) = 2600', "got ${c3}");
 
-  const c4 = calculateTotalDue('2026-01-10', '2026-03-15', 'Regular Class', 3500);
-  assert(c4 === 7000, 'Partial payment ₹3500 → ₹7000 still due', `got ₹${c4}`);
+  const c4 = calculateTotalDue('2026-01-10', '2026-03-15', 'Regular Class', 1300);
+  assert(c4 === 2600, 'Partial payment 1300 leaves 2600 due', "got ${c4}");
 
   const c5 = calculateTotalDue('2026-01-10', '2026-02-15', 'Regular Class', 10000);
   assert(c5 === 0, 'Overpaid student = ₹0 due', `got ₹${c5}`);
 
   const c6 = calculateTotalDue('2026-04-10', '2026-04-10', 'Regular Class', 0);
-  assert(c6 === 3500, 'Joined today = ₹3500 (1 cycle)', `got ₹${c6}`);
+  assert(c6 === 1300, 'Joined today = 1300 (1 cycle)', "got ${c6}");
 
   const c7 = calculateTotalDue('2025-11-10', '2026-02-15', 'Fitness Class', 0);
-  assert(c7 === 10000, 'Nov2025→Feb2026 Fitness = ₹10000 (4 cycles)', `got ₹${c7}`);
+  assert(c7 === 8000, 'Nov2025-Feb2026 Fitness = 8000 (4 cycles)', "got ${c7}");
 
   const c8 = calculateTotalDue('2026-05-10', '2026-04-10', 'Regular Class', 0);
   assert(c8 === 0, 'Future join date = ₹0', `got ₹${c8}`);
 
   const c9 = calculateTotalDue('2026-01-31', '2026-02-28', 'Regular Class', 0);
-  assert(c9 === 3500, 'Jan31→Feb28 (anniversary not reached) = ₹3500', `got ₹${c9}`);
+  assert(c9 === 1300, 'Jan31-Feb28 (anniversary not reached) = 1300', "got ${c9}");
 
   // 12 months — join Apr 1 2025, check Apr 1 2026 = 13 cycles
   // (Apr 2025 = cycle 1, ..., Apr 2026 = cycle 13)
   const c10 = calculateTotalDue('2025-04-01', '2026-04-01', 'Regular Class', 0);
-  assert(c10 === 45500, '13 billing cycles Apr2025→Apr2026 Regular = ₹45500', `got ₹${c10}`);
+  assert(c10 === 16900, '13 billing cycles Apr2025-Apr2026 Regular adult = 16900', "got ${c10}");
 }
 
 // ═══════════════════════════════════════════════════════════════════
@@ -653,3 +655,4 @@ async function main() {
 }
 
 main();
+

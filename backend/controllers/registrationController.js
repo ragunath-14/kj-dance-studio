@@ -131,7 +131,7 @@ exports.approveRegistration = async (req, res) => {
     whatsapp.sendWelcomeMessage(registration, registration.studentName, registration.classType)
       .then(r => {
         if (r.success) {
-          console.log(`✅ [Approval] Welcome message sent to ${phone} (${registration.studentName})`);
+          console.log(`[Approval] Welcome message accepted by Meta for ${r.to || phone} (${registration.studentName}). ID: ${r.messageId || 'n/a'}`);
         } else {
           console.warn(`⚠️  [Approval] Welcome message failed for ${phone}: ${r.reason}`);
         }
@@ -165,3 +165,4 @@ exports.rejectRegistration = async (req, res) => {
     res.status(500).json({ message: err.message });
   }
 };
+
