@@ -74,7 +74,7 @@ console.log('  ✅ Structure OK\n');
 separator();
 console.log('Step 1 — Installing frontend dependencies...');
 separator();
-run('npm install --prefer-offline', FRONTEND_DIR);
+run('npm ci', FRONTEND_DIR);
 
 // ── Step 2: Build frontend ────────────────────────────────────────────────────
 separator();
@@ -103,7 +103,7 @@ console.log(`     Files: ${distFiles.join(', ')}`);
 separator();
 console.log('Step 3 — Installing backend production dependencies...');
 separator();
-run('npm install --omit=dev --prefer-offline', BACKEND_DIR);
+run('npm install --production', BACKEND_DIR);
 console.log('\n  ✅ Backend dependencies installed (production only)\n');
 
 // ── Step 4: Verify .env ───────────────────────────────────────────────────────
