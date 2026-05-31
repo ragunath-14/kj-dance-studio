@@ -169,12 +169,15 @@ exports.sendWelcomeMessage = (recipientOrPhone, studentName, classType) => {
   const name = studentName || 'Student';
   const cls  = classType   || 'Dance Class';
 
+  // Template: kj_welcome (Utility)
+  // Body: "Your enrollment at KJ Dance Studio is confirmed, {{1}}. You have been registered for {{2}}. Contact us for any queries."
+  // {{1}} = name, {{2}} = classType
   const fallback =
-    `Hi ${name}, welcome to KJ Dance Studio! ` +
-    `You have been enrolled in ${cls}. We are excited to have you! 💃`;
+    `Your enrollment at KJ Dance Studio is confirmed, ${name}. ` +
+    `You have been registered for ${cls}. Contact us for any queries.`;
 
   return sendMessage(phone, fallback, {
-    templateName: 'welcome_message',
+    templateName: 'kj_welcome',
     languageCode: 'en',
     components  : [{ type: 'body', parameters: [
       { type: 'text', text: name },
@@ -217,14 +220,17 @@ exports.sendPaymentReceipt = (recipientOrPhone, studentName, amount, purpose, pa
 
   let balanceLine = '';
   if (balance !== undefined && balance > 0)  balanceLine = ` Balance remaining: Rs.${balance}.`;
-  else if (balance === 0)                     balanceLine = ' Balance: Nil (Full Payment) ✅';
+  else if (balance === 0)                     balanceLine = ' Balance: Nil (Full Payment).';
 
+  // Template: kj_payment (Utility)
+  // Body: "Payment confirmation: Rs.{{2}} has been received from {{1}} at KJ Dance Studio. This serves as your official payment receipt. Please retain this for your records."
+  // {{1}} = name, {{2}} = amount
   const fallback =
-    `Hi ${name}, we received your payment of Rs.${amt} for ${purp} on ${date} ` +
-    `at KJ Dance Studio.${balanceLine} Thank you! 🎉`;
+    `Payment confirmation: Rs.${amt} has been received from ${name} at KJ Dance Studio. ` +
+    `Purpose: ${purp}. Date: ${date}.${balanceLine} Please retain this for your records.`;
 
   return sendMessage(phone, fallback, {
-    templateName: 'payment_received',
+    templateName: 'kj_payment',
     languageCode: 'en',
     components  : [{ type: 'body', parameters: [
       { type: 'text', text: name },
@@ -238,15 +244,16 @@ exports.sendRejoinMessage = (recipientOrPhone, studentName, classType) => {
   if (!phone) return Promise.resolve({ success: false, reason: 'No phone number' });
 
   const name = studentName || 'Student';
-  const cls  = classType   || 'Dance';
 
+  // Template: kj_rejoin (Utility)
+  // Body: "Hi {{1}}, your account status at KJ Dance Studio has been updated. Please contact the studio for more information."
+  // {{1}} = name only
   const fallback =
-    `Hi ${name}, we miss you at KJ Dance Studio! 💃 ` +
-    `Our new batches for ${cls} have started and we'd love to have you back. ` +
-    `Come visit us soon! 🙏`;
+    `Hi ${name}, your account status at KJ Dance Studio has been updated. ` +
+    `Please contact the studio for more information.`;
 
   return sendMessage(phone, fallback, {
-    templateName: 'rejoin_message',
+    templateName: 'kj_rejoin',
     languageCode: 'en',
     components  : [{ type: 'body', parameters: [
       { type: 'text', text: name },
