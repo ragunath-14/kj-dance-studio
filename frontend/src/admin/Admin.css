@@ -1,0 +1,440 @@
+:root {
+  --primary-color: #ED1C24;
+  --primary-hover: #d11920;
+  --bg-dark: #000000;
+  --bg-card: #111111;
+  --bg-sidebar: #000000;
+  --text-main: #FFFFFF;
+  --text-muted: #B0B0B0;
+  --border-color: #222222;
+  --success: #10b981;
+  --error: #ef4444;
+  --warning: #f59e0b;
+  --info: #3b82f6;
+  --sidebar-width: 260px;
+  --topbar-height: 70px;
+
+  /* Theme Compatibility Aliases */
+  --surface: #111111;
+  --text-secondary: #B0B0B0;
+  --border: #222222;
+  --surface-subtle: rgba(255, 255, 255, 0.05);
+  --surface-overlay: rgba(255, 255, 255, 0.02);
+}
+
+/* ── Light Theme ────────────────────────────────────────────────── */
+[data-theme='light'] {
+  --bg-dark:    #f0f2f5;
+  --bg-card:    #ffffff;
+  --bg-sidebar: #ffffff;
+  --text-main:  #111827;
+  --text-muted: #6b7280;
+  --border-color: #e5e7eb;
+  --surface:    #ffffff;
+  --text-secondary: #6b7280;
+  --border:     #e5e7eb;
+  --surface-subtle: rgba(0, 0, 0, 0.05);
+  --surface-overlay: rgba(0, 0, 0, 0.02);
+}
+
+body {
+  margin: 0;
+  font-family: 'Open Sans', sans-serif;
+  background-color: var(--bg-dark);
+  color: var(--text-main);
+  -webkit-font-smoothing: antialiased;
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: 'Montserrat', sans-serif;
+}
+
+/* Base Global Styles */
+.loading-state {
+  padding: 40px;
+  text-align: center;
+  color: var(--text-muted);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 15px;
+}
+
+.loading-state::after {
+  content: "";
+  width: 30px;
+  height: 30px;
+  border: 3px solid rgba(237, 28, 36, 0.1);
+  border-top-color: var(--primary-color);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.text-center {
+  text-align: center;
+}
+
+/* Form Basics shared globally */
+label {
+  display: block;
+  margin-bottom: 8px;
+  font-size: 14px;
+  color: var(--text-muted);
+}
+
+input, select, textarea {
+  width: 100%;
+  background-color: var(--bg-card);
+  border: 1px solid var(--border-color);
+  padding: 14px 16px;
+  border-radius: 12px;
+  color: var(--text-main);
+  outline: none;
+  box-sizing: border-box;
+  font-size: 14px;
+  transition: all 0.2s ease;
+}
+
+input:focus, select:focus {
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 3px rgba(237, 28, 36, 0.1);
+}
+
+/* Skeleton Loading */
+.skeleton-row td {
+  padding: 20px !important;
+}
+
+.skeleton-pulse {
+  height: 16px;
+  width: 100%;
+  background: linear-gradient(-90deg, var(--bg-card) 0%, var(--border-color) 50%, var(--bg-card) 100%);
+  background-size: 400% 400%;
+  animation: pulse 1.5s ease-in-out infinite;
+  border-radius: 4px;
+}
+
+@keyframes pulse {
+  0% { background-position: 0% 0%; }
+  100% { background-position: -135% 0%; }
+}
+
+/* Badges for different modules */
+.method-badge {
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 700;
+  background-color: rgba(237, 28, 36, 0.15);
+  color: var(--primary-color);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  border: 1px solid rgba(237, 28, 36, 0.2);
+}
+
+.status-badge.regular-class {
+  background-color: rgba(33, 150, 243, 0.15);
+  color: var(--info);
+}
+
+.status-badge.summer-class {
+  background-color: rgba(233, 30, 99, 0.15);
+  color: #e91e63;
+}
+
+.contact-info {
+  display: flex;
+  flex-direction: column;
+}
+
+.contact-info .email {
+  font-weight: 500;
+}
+
+.contact-info .phone {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.amount {
+  font-weight: 700;
+  color: var(--primary-color);
+}
+
+/* ─── Keyframes ─────────────────────────────────────────────────── */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(28px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes fadeInLeft {
+  from { opacity: 0; transform: translateX(-20px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes fadeInRight {
+  from { opacity: 0; transform: translateX(20px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes scaleIn {
+  from { opacity: 0; transform: scale(0.88); }
+  to   { opacity: 1; transform: scale(1); }
+}
+
+@keyframes slideInRight {
+  from { opacity: 0; transform: translateX(110%); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes slideInDown {
+  from { opacity: 0; transform: translateY(-10px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes bounceIn {
+  0%   { opacity: 0; transform: scale(0.4); }
+  55%  { opacity: 1; transform: scale(1.08); }
+  75%  { transform: scale(0.94); }
+  100% { transform: scale(1); }
+}
+
+@keyframes shimmerFlow {
+  0%   { background-position: -400px 0; }
+  100% { background-position: 400px 0; }
+}
+
+@keyframes badgePulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(237,28,36,0.5); }
+  50%       { box-shadow: 0 0 0 5px rgba(237,28,36,0); }
+}
+
+@keyframes glowPulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(237,28,36,0.3); }
+  50%       { box-shadow: 0 0 18px 4px rgba(237,28,36,0.15); }
+}
+
+@keyframes progressFill {
+  from { width: 0; }
+}
+
+@keyframes countPop {
+  0%   { transform: scale(1); }
+  40%  { transform: scale(1.12); }
+  100% { transform: scale(1); }
+}
+
+@keyframes toastSlide {
+  from { opacity: 0; transform: translateX(110%) scale(0.95); }
+  to   { opacity: 1; transform: translateX(0)   scale(1); }
+}
+
+@keyframes toastLeave {
+  from { opacity: 1; transform: translateX(0) scale(1); }
+  to   { opacity: 0; transform: translateX(110%) scale(0.9); }
+}
+
+/* ─── Utility classes ────────────────────────────────────────────── */
+.animate-fade-in    { animation: fadeIn    0.4s cubic-bezier(0.16,1,0.3,1) forwards; }
+.animate-fade-in-up { animation: fadeInUp  0.45s cubic-bezier(0.16,1,0.3,1) forwards; }
+.animate-scale-in   { animation: scaleIn   0.35s cubic-bezier(0.16,1,0.3,1) forwards; }
+.animate-bounce-in  { animation: bounceIn  0.5s  cubic-bezier(0.16,1,0.3,1) forwards; }
+.animate-slide-in-right { animation: fadeInRight 0.35s cubic-bezier(0.16,1,0.3,1) forwards; }
+
+/* stagger helpers */
+.stagger-1  { animation-delay: 0.05s; opacity: 0; }
+.stagger-2  { animation-delay: 0.10s; opacity: 0; }
+.stagger-3  { animation-delay: 0.15s; opacity: 0; }
+.stagger-4  { animation-delay: 0.20s; opacity: 0; }
+.stagger-5  { animation-delay: 0.25s; opacity: 0; }
+
+/* Better skeleton */
+.skeleton-pulse {
+  background: linear-gradient(90deg,
+    var(--bg-card) 25%,
+    var(--border-color) 50%,
+    var(--bg-card) 75%);
+  background-size: 800px 100%;
+  animation: shimmerFlow 1.6s linear infinite;
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   LIGHT THEME OVERRIDES — fix faint elements across all admin views
+   ═══════════════════════════════════════════════════════════════════ */
+
+/* Table headers */
+[data-theme='light'] .data-table th {
+  color: #374151;
+  background-color: #f9fafb;
+}
+
+/* Table cell text */
+[data-theme='light'] .data-table td {
+  color: #111827;
+}
+
+[data-theme='light'] .data-table tr:hover td {
+  background-color: rgba(237, 28, 36, 0.03);
+}
+
+/* Contact / join date text */
+[data-theme='light'] .contact-info .phone {
+  color: #374151;
+}
+
+[data-theme='light'] .contact-info .email {
+  color: #4b5563;
+}
+
+[data-theme='light'] .join-date {
+  color: #4b5563;
+}
+
+/* Dance style text */
+[data-theme='light'] .dance-info span {
+  color: #374151;
+}
+
+[data-theme='light'] .dance-info .fitness-tag {
+  color: #6b7280;
+}
+
+/* Inactive badge */
+[data-theme='light'] .mini-badge.inactive-badge {
+  background-color: rgba(0, 0, 0, 0.06);
+  color: #6b7280;
+}
+
+/* Tab buttons */
+[data-theme='light'] .tab-btn {
+  color: #374151;
+}
+
+[data-theme='light'] .tab-btn:hover:not(.active) {
+  color: #111827;
+  background-color: rgba(0, 0, 0, 0.05);
+}
+
+/* Search box icon */
+[data-theme='light'] .search-box svg {
+  color: #6b7280;
+}
+
+/* Icon action buttons (edit, history, delete) */
+[data-theme='light'] .btn-icon {
+  color: #374151;
+  background: #f3f4f6;
+  border-color: #d1d5db;
+}
+
+[data-theme='light'] .btn-icon:hover {
+  color: #111827;
+  background: #e5e7eb;
+  border-color: var(--primary-color);
+}
+
+/* Topbar */
+[data-theme='light'] .page-title {
+  color: #111827;
+}
+
+[data-theme='light'] .topbar-notification {
+  background: #f3f4f6;
+  color: #374151;
+  border-color: #d1d5db;
+}
+
+[data-theme='light'] .logout-btn {
+  color: #374151;
+  border-color: #d1d5db;
+}
+
+[data-theme='light'] .theme-toggle-btn {
+  color: #374151;
+  border-color: #d1d5db;
+}
+
+[data-theme='light'] .mobile-theme-btn,
+[data-theme='light'] .mobile-logout-btn {
+  color: #374151;
+  border-color: #d1d5db;
+}
+
+/* Stat labels */
+[data-theme='light'] .stat-label {
+  color: #4b5563;
+}
+
+[data-theme='light'] .welcome p {
+  color: #4b5563;
+}
+
+/* Dashboard date pill */
+[data-theme='light'] .date-display {
+  color: #374151;
+}
+
+/* Progress bar background */
+[data-theme='light'] .pill-bar-wrap {
+  background: #e5e7eb;
+}
+
+/* Activity hover */
+[data-theme='light'] .activity-entry:hover {
+  background: #f3f4f6;
+}
+
+/* Skeleton pulse */
+[data-theme='light'] .skeleton-pulse {
+  background: linear-gradient(-90deg, #e5e7eb 0%, #d1d5db 50%, #e5e7eb 100%);
+  background-size: 400% 400%;
+}
+
+/* Modal form class type options */
+[data-theme='light'] .type-option-admin {
+  background: #f9fafb;
+  color: #374151;
+  border-color: #e5e7eb;
+}
+
+[data-theme='light'] .type-option-admin:hover {
+  background: #f3f4f6;
+  border-color: #9ca3af;
+}
+
+[data-theme='light'] .type-option-admin.selected {
+  background: rgba(237, 28, 36, 0.05);
+  color: #ED1C24;
+}
+
+/* Status toggle inactive state */
+[data-theme='light'] .status-toggle-btn.inactive {
+  color: #4b5563;
+  border-color: #d1d5db;
+  background: #f3f4f6;
+}
+
+/* Suggestion dropdown */
+[data-theme='light'] .suggestion-item:hover {
+  background: rgba(0, 0, 0, 0.04);
+}
+
+[data-theme='light'] .suggestion-icon {
+  background: rgba(0, 0, 0, 0.05);
+  color: #6b7280;
+}
+
+/* Quick action buttons */
+[data-theme='light'] .qa-btn {
+  color: #374151;
+}
