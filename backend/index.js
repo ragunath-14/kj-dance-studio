@@ -118,20 +118,22 @@ app.get('/health', (req, res) => {
   });
 });
 
-app.get('/', (req, res) => {
-  if (process.env.NODE_ENV === 'production') return;
-  res.json({ message: 'KJ Dance Studio API is running. Frontend served at same URL in production.' });
-});
-
 // ── Production Frontend Serving ─────────────────────────────────────────────
+// Must be registered AFTER API routes but serves static files for all non-API paths
 if (process.env.NODE_ENV === 'production') {
   const frontendDist = path.join(__dirname, '../frontend/dist');
+  console.log('📁 Serving frontend from:', frontendDist);
   app.use(express.static(frontendDist));
   // All non-API, non-health, non-socket routes → React SPA
   app.get(/^(?!\/api|\/health|\/socket\.io).*$/, (req, res) => {
     res.sendFile(path.join(frontendDist, 'index.html'));
   });
+} else {
+  app.get('/', (req, res) => {
+    res.json({ message: 'KJ Dance Studio API is running. Frontend served at same URL in production.' });
+  });
 }
+
 
 // ── Error Handling ──────────────────────────────────────────────────────────
 app.use((err, req, res, next) => {
