@@ -3,7 +3,10 @@ const Payment  = require('../models/Payment');
 const whatsapp = require('../services/whatsappService');
 
 // ─── Fee helper ──────────────────────────────────────────────────────────────
-const getMonthlyFee = (classType) => classType === 'Fitness Class' ? 2500 : 3500;
+const getMonthlyFee = (classType, studentCategory) => {
+  if (classType === 'Fitness Class') return 2000;
+  return studentCategory === 'Kids' ? 1000 : 1300;
+};
 
 // ─── Format mongoose validation errors ───────────────────────────────────────
 const formatValidationErrors = (err) =>
@@ -16,19 +19,19 @@ exports.getAllStudents = async (req, res) => {
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 50; // Default limit
     const skip = (page - 1) * limit;
-    const search = req.query.search || '';
-    const classType = req.query.classType || '';
+    const search          = req.query.search          || '';
+    const classType       = req.query.classType       || '';
+    const studentCategory = req.query.studentCategory || '';
 
     let query = {};
     if (search) {
       query.$or = [
         { studentName: { $regex: search, $options: 'i' } },
-        { phone: { $regex: search, $options: 'i' } }
+        { phone:       { $regex: search, $options: 'i' } }
       ];
     }
-    if (classType) {
-      query.classType = classType;
-    }
+    if (classType)       query.classType       = classType;
+    if (studentCategory) query.studentCategory = studentCategory;
 
     const [students, total] = await Promise.all([
       Student.find(query)
@@ -156,7 +159,7 @@ exports.getDashboardStats = async (req, res) => {
         if (today.getDate() < joinDate.getDate()) totalCycles--;
         if (totalCycles <= 0) return null;
 
-        const fee       = getMonthlyFee(student.classType);
+        const fee       = getMonthlyFee(student.classType, student.studentCategory);
         const totalPaid = paidMap.get(student._id.toString()) || 0;
         const totalDue  = Math.max(0, totalCycles * fee - totalPaid);
         if (totalDue <= 0) return null;
@@ -204,9 +207,17 @@ exports.getDashboardStats = async (req, res) => {
 // ─── GET /api/students/unpaid (Paginated) ───────────────────────────────────
 exports.getUnpaidStudents = async (req, res) => {
   try {
-    const today = new Date();
+    const today           = new Date();
+    const search          = req.query.search          || '';
+    const studentCategory = req.query.studentCategory || '';
+
+    const dbQuery = { isActive: { $ne: false } };
+    if (studentCategory) dbQuery.studentCategory = studentCategory;
+
     const [students, monthlyFeePaidMap] = await Promise.all([
-      Student.find({ isActive: { $ne: false } }).select('studentName phone whatsappNumber classType isActive createdAt lastAlertSent').lean(),
+      Student.find(dbQuery)
+        .select('studentName phone whatsappNumber classType studentCategory isActive createdAt lastAlertSent')
+        .lean(),
       Payment.aggregate([
         { $match: { purpose: 'Monthly Fee' } },
         { $group: { _id: '$studentId', totalPaid: { $sum: '$amount' } } }
@@ -215,27 +226,35 @@ exports.getUnpaidStudents = async (req, res) => {
 
     const paymentsByStudent = new Map(monthlyFeePaidMap.map(r => [r._id.toString(), r.totalPaid]));
 
-    const unpaid = students.map(student => {
+    let unpaid = students.map(student => {
       const joinDate = new Date(student.createdAt || student.joinDate);
       let totalCycles = (today.getFullYear() - joinDate.getFullYear()) * 12 + (today.getMonth() - joinDate.getMonth()) + 1;
       if (today.getDate() < joinDate.getDate()) totalCycles--;
-      
-      const fee = getMonthlyFee(student.classType);
-      const totalPaid = paymentsByStudent.get(student._id.toString()) || 0;
-      const totalDue = Math.max(0, (totalCycles * fee) - totalPaid);
+      if (totalCycles <= 0) return null;
+
+      const fee           = getMonthlyFee(student.classType, student.studentCategory);
+      const totalPaid     = paymentsByStudent.get(student._id.toString()) || 0;
+      const totalDue      = Math.max(0, (totalCycles * fee) - totalPaid);
       const pendingMonths = Math.ceil(totalDue / fee);
+      if (pendingMonths <= 0) return null;
 
       return { ...student, totalDue, pendingMonths };
-    }).filter(s => s.pendingMonths > 0)
-      .sort((a, b) => b.totalDue - a.totalDue);
+    })
+    .filter(Boolean)
+    .sort((a, b) => b.totalDue - a.totalDue);
 
-    const page = parseInt(req.query.page) || 1;
+    if (search) {
+      const re = new RegExp(search, 'i');
+      unpaid = unpaid.filter(s => re.test(s.studentName) || re.test(s.phone));
+    }
+
+    const page  = parseInt(req.query.page)  || 1;
     const limit = parseInt(req.query.limit) || 50;
-    const skip = (page - 1) * limit;
-    
+    const skip  = (page - 1) * limit;
+
     res.json({
-      data: unpaid.slice(skip, skip + limit),
-      total: unpaid.length,
+      data      : unpaid.slice(skip, skip + limit),
+      total     : unpaid.length,
       page,
       limit,
       totalPages: Math.ceil(unpaid.length / limit)
@@ -438,6 +457,60 @@ exports.deleteStudent = async (req, res) => {
     if (err.name === 'CastError')
       return res.status(400).json({ message: 'Invalid student ID format.' });
     res.status(500).json({ message: err.message });
+  }
+};
+
+// ─── GET /api/students/activity (Paginated activity log) ─────────────────────
+exports.getActivityLog = async (req, res) => {
+  try {
+    const page  = parseInt(req.query.page)  || 1;
+    const limit = parseInt(req.query.limit) || 20;
+    const skip  = (page - 1) * limit;
+    const Registration = require('../models/Registration');
+    const fetchN = skip + limit;
+
+    const [pays, regs, totalPays, totalRegs] = await Promise.all([
+      Payment.find()
+        .populate('studentId', 'studentName')
+        .sort({ createdAt: -1 })
+        .limit(fetchN)
+        .lean(),
+      Registration.find()
+        .sort({ createdAt: -1 })
+        .limit(fetchN)
+        .lean(),
+      Payment.countDocuments(),
+      Registration.countDocuments()
+    ]);
+
+    const allItems = [
+      ...pays.map(p => ({
+        type       : 'payment',
+        date       : p.createdAt,
+        amount     : p.amount,
+        purpose    : p.purpose,
+        studentName: p.studentId?.studentName || 'Unknown Student',
+        id         : p._id
+      })),
+      ...regs.map(r => ({
+        type       : 'reg',
+        date       : r.createdAt,
+        studentName: r.studentName,
+        classType  : r.classType,
+        id         : r._id
+      }))
+    ].sort((a, b) => new Date(b.date) - new Date(a.date));
+
+    res.json({
+      data      : allItems.slice(skip, skip + limit),
+      total     : totalPays + totalRegs,
+      page,
+      limit,
+      totalPages: Math.ceil((totalPays + totalRegs) / limit)
+    });
+  } catch (err) {
+    console.error('getActivityLog error:', err);
+    res.status(500).json({ message: 'Failed to fetch activity log.' });
   }
 };
 

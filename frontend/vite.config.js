@@ -53,17 +53,14 @@ export default defineConfig({
         target: 'http://localhost:5001',
         ws: true,
         changeOrigin: true,
-        // Suppress ECONNREFUSED/ECONNRESET noise when backend is not running
         configure: (proxy) => {
           proxy.on('error', (err, req, res) => {
-            const code = err.code || 'ERR';
-            if (code === 'ECONNREFUSED' || code === 'ECONNRESET') {
-              // Silently drop — Socket.IO client handles reconnection itself
-              if (res && !res.headersSent && typeof res.writeHead === 'function') {
-                res.writeHead(503);
-                res.end();
-              }
-            }
+            // For WS upgrades res is a net.Socket, not an HTTP response.
+            // Destroy it silently — Socket.IO client reconnects on its own.
+            try {
+              if (typeof res.destroy === 'function') res.destroy();
+              else if (!res.headersSent) { res.writeHead(503); res.end(); }
+            } catch (_) {}
           });
         },
       },

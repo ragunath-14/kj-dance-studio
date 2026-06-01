@@ -168,6 +168,21 @@
   display: none;
 }
 
+.mobile-logo-wrap {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.mobile-logo-img {
+  width: 42px;
+  height: 42px;
+  object-fit: contain;
+  border-radius: 7px;
+  background: #fff;
+  box-shadow: 0 0 10px rgba(237, 28, 36, 0.45), 0 0 0 1.5px rgba(237, 28, 36, 0.35);
+}
+
 .mobile-page-title {
   font-size: 14px;
   font-weight: 900;

@@ -1,7 +1,8 @@
 import React from 'react';
 import { NavLink } from 'react-router-dom';
-import { LayoutDashboard, Users, CreditCard, UserPlus, Menu, ChevronRight, Music } from 'lucide-react';
+import { LayoutDashboard, Users, CreditCard, UserPlus, Menu, ChevronRight } from 'lucide-react';
 import { useData } from '../context/DataContext';
+import logo from '../../assets/logo.png';
 import './Sidebar.css';
 
 const Sidebar = ({ isOpen, onClose, isExpanded, onToggleExpand }) => {
@@ -18,11 +19,11 @@ const Sidebar = ({ isOpen, onClose, isExpanded, onToggleExpand }) => {
     <aside className={`sidebar ${isOpen ? 'open' : ''} ${isExpanded ? 'expanded' : 'collapsed'}`}>
       <div className="sidebar-header" onClick={onToggleExpand}>
         <div className="brand-icon-wrapper">
-          <Music size={28} strokeWidth={2.5} className="logo-icon" />
+          <img src={logo} alt="KJ Dance Studio" className="sidebar-logo-img" />
         </div>
         <div className="logo-text">
           <h2>KJ Dance</h2>
-          <p>Fitness Studio</p>
+          <p>Kutty Japan Studio</p>
         </div>
       </div>
 

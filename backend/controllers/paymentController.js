@@ -3,33 +3,44 @@ const Student  = require('../models/Student');
 const whatsapp = require('../services/whatsappService');
 
 // ─── Fee helper ──────────────────────────────────────────────────────────────
-const getMonthlyFee = (classType) => classType === 'Fitness Class' ? 2500 : 3500;
+const getMonthlyFee = (classType, studentCategory) => {
+  if (classType === 'Fitness Class') return 2000;
+  return studentCategory === 'Kids' ? 1000 : 1300;
+};
 
 // ─── GET /api/payments ───────────────────────────────────────────────────────
 // ─── GET /api/payments (Paginated) ──────────────────────────────────────────
 exports.getAllPayments = async (req, res) => {
   try {
-    const page = parseInt(req.query.page) || 1;
-    const limit = parseInt(req.query.limit) || 50;
-    const skip = (page - 1) * limit;
+    const page            = parseInt(req.query.page)  || 1;
+    const limit           = parseInt(req.query.limit) || 50;
+    const skip            = (page - 1) * limit;
+    const search          = req.query.search          || '';
+    const studentCategory = req.query.studentCategory || '';
+
+    // If searching by name, resolve matching student IDs first
+    let studentIdFilter = null;
+    if (search || studentCategory) {
+      const studentQuery = {};
+      if (search)          studentQuery.$or = [{ studentName: { $regex: search, $options: 'i' } }, { phone: { $regex: search, $options: 'i' } }];
+      if (studentCategory) studentQuery.studentCategory = studentCategory;
+      const matchingStudents = await Student.find(studentQuery).select('_id').lean();
+      studentIdFilter = matchingStudents.map(s => s._id);
+    }
+
+    const paymentQuery = studentIdFilter !== null ? { studentId: { $in: studentIdFilter } } : {};
 
     const [payments, total] = await Promise.all([
-      Payment.find()
-        .populate('studentId', 'studentName')
+      Payment.find(paymentQuery)
+        .populate('studentId', 'studentName studentCategory classType')
         .sort({ date: -1 })
         .skip(skip)
         .limit(limit)
         .lean(),
-      Payment.countDocuments()
+      Payment.countDocuments(paymentQuery)
     ]);
 
-    res.json({
-      data: payments,
-      total,
-      page,
-      limit,
-      totalPages: Math.ceil(total / limit)
-    });
+    res.json({ data: payments, total, page, limit, totalPages: Math.ceil(total / limit) });
   } catch (err) {
     console.error('getAllPayments error:', err);
     res.status(500).json({ message: 'Failed to fetch payments.' });
@@ -173,7 +184,7 @@ exports.sendPendingAlerts = async (req, res) => {
   try {
     const today = new Date();
     const [students, monthlyFeePaidMap] = await Promise.all([
-      Student.find({ isActive: { $ne: false } }).select('studentName phone whatsappNumber classType isActive createdAt lastAlertSent').lean(),
+      Student.find({ isActive: { $ne: false } }).select('studentName phone whatsappNumber classType studentCategory isActive createdAt lastAlertSent').lean(),
       Payment.aggregate([
         { $match: { purpose: 'Monthly Fee' } },
         { $group: { _id: '$studentId', totalPaid: { $sum: '$amount' } } }
@@ -194,7 +205,7 @@ exports.sendPendingAlerts = async (req, res) => {
       if (today.getDate() < joinDate.getDate()) totalCycles--;
       if (totalCycles <= 0) continue;   // Joined this month — no dues yet
 
-      const fee          = getMonthlyFee(student.classType);
+      const fee          = getMonthlyFee(student.classType, student.studentCategory);
       const totalPaid    = paidByStudent.get(student._id.toString()) || 0;
       const totalDue     = Math.max(0, totalCycles * fee - totalPaid);
       if (totalDue <= 0) continue;
@@ -269,7 +280,7 @@ exports.sendStudentReminder = async (req, res) => {
       return res.json({ success: false, message: 'No dues yet — student joined this month.' });
     }
 
-    const fee           = getMonthlyFee(student.classType);
+    const fee           = getMonthlyFee(student.classType, student.studentCategory);
     const totalDue      = Math.max(0, totalCycles * fee - totalPaid);
     const pendingMonths = Math.ceil(totalDue / fee);
 

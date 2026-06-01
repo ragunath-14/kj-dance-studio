@@ -234,6 +234,22 @@
   color: white;
 }
 
+.category-auto-badge {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 11px;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 20px;
+  background: rgba(237, 28, 36, 0.12);
+  color: var(--primary-red);
+  border: 1px solid rgba(237, 28, 36, 0.25);
+  pointer-events: none;
+  white-space: nowrap;
+}
+
 .form-row {
   display: grid;
   grid-template-columns: 1fr 1fr;

@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
-const auth = require('../middleware/auth');
+const { verifyAdminToken: auth } = require('../middleware/auth');
 
 // @route   POST api/auth/login
 // @desc    Authenticate user & get token
@@ -57,9 +57,9 @@ router.post('/login', async (req, res) => {
 // @route   GET api/auth/verify
 // @desc    Verify if token is valid
 router.get('/verify', auth, (req, res) => {
-  res.json({ 
-    success: true, 
-    user: req.user 
+  res.json({
+    success: true,
+    user: req.admin
   });
 });
 

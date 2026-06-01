@@ -41,9 +41,9 @@ const ScheduleSection = ({ onRegister }) => {
         {
           name: 'Morning Batch',
           icon: Sun,
-          days: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'],
+          days: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'],
           time: '6:00 AM – 7:00 AM',
-          tag: 'All Week',
+          tag: 'Mon–Fri',
           tagColor: '#ED1C24',
         },
       ],
@@ -378,7 +378,9 @@ const LandingPage = ({ setIsRegisterOpen }) => {
       <nav className={`navbar ${isScrolled ? 'scrolled' : ''}`}>
         <div className="container nav-container">
           <div className="logo">
-            <img src={logo} alt="KJ Studio Logo" className="logo-img" />
+            <div className="logo-bg">
+              <img src={logo} alt="KJ Studio Logo" className="logo-img" />
+            </div>
           </div>
           
           <button className="mobile-menu-btn" onClick={() => setIsMenuOpen(!isMenuOpen)}>
@@ -489,31 +491,17 @@ const LandingPage = ({ setIsRegisterOpen }) => {
             </div>
 
             {/* ── Photo cards for 5 more styles ── */}
-            <div className="class-card" style={{ background: 'linear-gradient(145deg,#c2410c,#fbbf24)' }}>
-              <img
-                src="https://images.unsplash.com/photo-1571019614242-c5c5dee9f50b?auto=format&fit=crop&w=800&q=80"
-                alt="Kuthu Dance"
-                loading="lazy"
-                onError={e => { e.target.style.display = 'none'; }}
-              />
-              <div className="class-overlay">
-                <span className="class-tag">Kollywood</span>
-                <h3>Kuthu Dance</h3>
-                <p>Tamil folk energy with cinematic swagger.</p>
-                <span className="read-more">Explore →</span>
-              </div>
-            </div>
 
             <div className="class-card" style={{ background: 'linear-gradient(145deg,#065f46,#0ea5e9)' }}>
               <img
                 src="https://images.unsplash.com/photo-1518611012118-696072aa579a?auto=format&fit=crop&w=800&q=80"
-                alt="Zumba"
+                alt="Fitness Dance"
                 loading="lazy"
                 onError={e => { e.target.style.display = 'none'; }}
               />
               <div className="class-overlay">
                 <span className="class-tag">Fitness</span>
-                <h3>Zumba</h3>
+                <h3>Fitness Dance</h3>
                 <p>Dance your way to fitness — high-energy fun.</p>
                 <span className="read-more">Explore →</span>
               </div>
@@ -521,7 +509,7 @@ const LandingPage = ({ setIsRegisterOpen }) => {
 
             <div className="class-card" style={{ background: 'linear-gradient(145deg,#1e1b4b,#7c3aed)' }}>
               <img
-                src="https://images.unsplash.com/photo-1508700929628-8e7f2a6d8c8f?auto=format&fit=crop&w=800&q=80"
+                src="https://images.unsplash.com/photo-1519892300165-cb5542fb47c7?auto=format&fit=crop&w=800&q=80"
                 alt="Break Dance"
                 loading="lazy"
                 onError={e => { e.target.style.display = 'none'; }}

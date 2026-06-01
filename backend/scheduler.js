@@ -3,7 +3,10 @@ const Student   = require('./models/Student');
 const Payment   = require('./models/Payment');
 const whatsapp  = require('./services/whatsappService');
 
-const getMonthlyFee = (classType) => classType === 'Fitness Class' ? 2500 : 3500;
+const getMonthlyFee = (classType, studentCategory) => {
+  if (classType === 'Fitness Class') return 2000;
+  return studentCategory === 'Kids' ? 1000 : 1300;
+};
 
 /**
  * Core logic: find students with outstanding dues and fire WhatsApp reminders.
@@ -41,9 +44,29 @@ async function runPendingFeeAlerts() {
     let alertsSkipped = 0;
     let alertsFailed  = 0;
 
+    let rejoinSent = 0;
+
     for (const student of students) {
-      // Skip inactive students
-      if (student.isActive === false) continue;
+      // Inactive students — send rejoin invite on their anniversary day
+      if (student.isActive === false) {
+        const joinDate      = new Date(student.createdAt || student.joinDate);
+        const isAnniversary = todayDay === joinDate.getDate();
+        if (isAnniversary) {
+          const whatsappNum = student.whatsappNumber || student.phone;
+          if (whatsappNum) {
+            try {
+              const result = await whatsapp.sendRejoinMessage(whatsappNum, student.studentName, student.classType);
+              if (result.success) {
+                console.log(`  📲 Rejoin sent → ${student.studentName}`);
+                rejoinSent++;
+              }
+            } catch (err) {
+              console.error(`  ❌ Rejoin failed for ${student.studentName}:`, err.message);
+            }
+          }
+        }
+        continue;
+      }
 
       const joinDate      = new Date(student.createdAt || student.joinDate);
       const joinDay       = joinDate.getDate();
@@ -58,7 +81,7 @@ async function runPendingFeeAlerts() {
       if (today.getDate() < joinDay) totalCycles--;
       if (totalCycles <= 0) continue; // Joined this month or future date — no dues yet
 
-      const fee           = getMonthlyFee(student.classType);
+      const fee           = getMonthlyFee(student.classType, student.studentCategory);
       const totalPaid     = paymentsByStudent.get(student._id.toString()) || 0;
       const totalDue      = Math.max(0, (totalCycles * fee) - totalPaid);
 
@@ -119,7 +142,7 @@ async function runPendingFeeAlerts() {
     }
 
     console.log(
-      `🔔 [Scheduler] Done — Sent: ${alertsSent} | Skipped: ${alertsSkipped} | Failed: ${alertsFailed}\n`
+      `🔔 [Scheduler] Done — Fee Alerts: ${alertsSent} | Rejoin: ${rejoinSent} | Skipped: ${alertsSkipped} | Failed: ${alertsFailed}\n`
     );
   } catch (err) {
     console.error('❌ [Scheduler] Error during daily checks:', err.message);

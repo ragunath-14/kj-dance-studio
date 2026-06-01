@@ -46,11 +46,18 @@ const CustomSelect = ({ value, onChange, options, placeholder, disabled }) => {
   );
 };
 
+/* ─── Category helper ─────────────────────────────────────────────────────── */
+const computeCategory = (age, classType) => {
+  if (classType === 'Fitness Class') return 'Adults';
+  const n = parseInt(age);
+  if (!age || isNaN(n)) return 'Adults';
+  return n > 9 ? 'Adults' : 'Kids';
+};
+
 /* ─── Main Component ─────────────────────────────────────────────────────── */
 const Register = ({ isOpen, onClose }) => {
   const [formData, setFormData] = useState({
     studentName: '',
-    studentCategory: '',
     studentAge: '',
     gender: '',
     classType: '',
@@ -81,10 +88,11 @@ const Register = ({ isOpen, onClose }) => {
     if (next) setFormData(prev => ({ ...prev, whatsappNumber: prev.phone }));
   };
 
+  const studentCategory = computeCategory(formData.studentAge, formData.classType);
+
   const isValid =
     formData.studentName?.trim() &&
     formData.phone?.trim() &&
-    formData.studentCategory &&
     formData.classType;
 
   const handleSubmit = async (e) => {
@@ -94,11 +102,11 @@ const Register = ({ isOpen, onClose }) => {
     setLoading(true);
     setMessage({ type: '', text: '' });
     try {
-      const res = await axios.post('/api/register', formData);
+      const res = await axios.post('/api/register', { ...formData, studentCategory });
       if (res.data.success) {
         setMessage({ type: 'success', text: 'Registration submitted! We will contact you soon.' });
         setFormData({
-          studentName: '', studentCategory: '', studentAge: '', gender: '',
+          studentName: '', studentAge: '', gender: '',
           classType: '', danceForFitness: '', whatsappNumber: '', phone: ''
         });
         setIsSameNumber(false);
@@ -120,10 +128,6 @@ const Register = ({ isOpen, onClose }) => {
     { value: 'Male', label: 'Male' },
     { value: 'Female', label: 'Female' },
     { value: 'Other', label: 'Other' },
-  ];
-  const categoryOptions = [
-    { value: 'Adults', label: 'Adults' },
-    { value: 'Kids', label: 'Kids' },
   ];
 
   return (
@@ -174,7 +178,14 @@ const Register = ({ isOpen, onClose }) => {
 
             <div className="form-group">
               <label><Calendar size={12} /> Age</label>
-              <input type="text" name="studentAge" value={formData.studentAge} onChange={handleChange} placeholder="Age" />
+              <div style={{ position: 'relative' }}>
+                <input type="number" name="studentAge" value={formData.studentAge} onChange={handleChange} placeholder="Age" min="1" max="99" />
+                {formData.studentAge && formData.classType && (
+                  <span className="category-auto-badge">
+                    {studentCategory}
+                  </span>
+                )}
+              </div>
             </div>
 
             <div className="form-group">
@@ -184,16 +195,6 @@ const Register = ({ isOpen, onClose }) => {
                 onChange={handleSelectChange('gender')}
                 options={genderOptions}
                 placeholder="Select Gender"
-              />
-            </div>
-
-            <div className="form-group">
-              <label><Users size={12} /> Student Category *</label>
-              <CustomSelect
-                value={formData.studentCategory}
-                onChange={handleSelectChange('studentCategory')}
-                options={categoryOptions}
-                placeholder="Select Category"
               />
             </div>
 
@@ -207,6 +208,7 @@ const Register = ({ isOpen, onClose }) => {
                     onClick={() => setFormData(prev => ({ ...prev, classType: type }))}
                   >
                     {type}
+                    {type === 'Fitness Class' && <span className="class-note"> — Adults only</span>}
                   </div>
                 ))}
               </div>

@@ -8,13 +8,11 @@
  *   cd backend
  *   node whatsapp-tools/2_create_templates.js
  *
- * TEMPLATES DEFINED:
- *   • welcome_student    (MARKETING) — Sent when a student is added/approved
- *   • fee_reminder       (UTILITY)   — Sent by the daily scheduler for overdue fees
- *   • payment_receipt    (UTILITY)   — Sent after a payment is recorded
- *
- * NOTE: Templates start as PENDING. Meta usually approves UTILITY templates
- *       within minutes to hours, MARKETING within hours to 24 hrs.
+ * TEMPLATES:
+ *   • kj_welcome      (UTILITY) — Student enrolled / registration approved
+ *   • kj_payment      (UTILITY) — Payment confirmation after fee recorded
+ *   • fee_remainder   (UTILITY) — Daily fee due reminder (already active)
+ *   • kj_rejoin       (UTILITY) — Sent to inactive students on their anniversary
  * ─────────────────────────────────────────────────────────────────────────────
  */
 
@@ -33,30 +31,34 @@ if (!token || !wabaId) {
   process.exit(1);
 }
 
-// ─── Template Definitions ─────────────────────────────────────────────────────
-// Update these if the template content ever needs to change.
-// After changing, delete the old template via Meta dashboard, then run this script.
 const TEMPLATES = [
   {
-    name    : 'welcome_student',
-    category: 'MARKETING',
-    language: 'en',
-    body    : 'Hi {{1}}, welcome to Expressionz Dance Studio! You are enrolled in {{2}} class. Batch timing: {{3}}. We are excited to have you!',
-    example : ['Ragu', 'Dance', '5:00 PM']
-  },
-  {
-    name    : 'fee_reminder',
+    name    : 'kj_welcome',
     category: 'UTILITY',
     language: 'en',
-    body    : 'Hi {{1}}, this is a reminder that your fee of Rs.{{2}} is pending for {{3}} month(s) at Expressionz Dance Studio. Please clear it soon.',
-    example : ['Ragu', '3500', '1']
+    body    : 'Hi {{1}}, your enrollment at KJ Dance Studio is confirmed! You are enrolled in {{2}} class. Batch timing: {{3}}. We look forward to seeing you!',
+    example : ['Ragu', 'Regular Class', 'TBA']
   },
   {
-    name    : 'payment_receipt',
+    name    : 'kj_payment',
     category: 'UTILITY',
     language: 'en',
-    body    : 'Hi {{1}}, we received your payment of Rs.{{2}} for {{3}} on {{4}} at Expressionz Dance Studio. Thank you!',
-    example : ['Ragu', '3500', 'Monthly Fee', '21 May 2026']
+    body    : 'Hi {{1}}, we received your payment of Rs.{{2}} for {{3}} on {{4}} at KJ Dance Studio. Thank you!',
+    example : ['Ragu', '1300', 'Monthly Fee', '31 May 2026']
+  },
+  {
+    name    : 'fee_remainder',
+    category: 'UTILITY',
+    language: 'en',
+    body    : 'Hello {{1}}, this is a reminder that your fee of Rs.{{2}} is pending for {{3}} month(s) at KJ Dance Studio. Please clear it soon.',
+    example : ['Ragu', '1300', '1']
+  },
+  {
+    name    : 'kj_rejoin',
+    category: 'UTILITY',
+    language: 'en',
+    body    : 'Hi {{1}}, we miss you at KJ Dance Studio! Your account is currently inactive. We would love to have you back in {{2}} class. Please contact us to rejoin!',
+    example : ['Ragu', 'Regular Class']
   }
 ];
 
@@ -85,10 +87,10 @@ async function createTemplates() {
         console.log(`❌ Failed: ${err?.message || e.message}`);
       }
     }
-    await sleep(1500); // Brief delay between API calls
+    await sleep(1500);
   }
 
-  console.log('\n✅ Done! Run 1_check_templates.js to monitor approval status.\n');
+  console.log('\n✅ Done!\n');
 }
 
 createTemplates().catch(e => {

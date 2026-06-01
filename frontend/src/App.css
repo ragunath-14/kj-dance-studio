@@ -134,10 +134,11 @@
 }
 
 .hero-content h3 {
-  font-size: 1.2rem;
+  font-size: clamp(1.2rem, 2.8vw, 2.2rem);
   margin-bottom: 20px;
-  font-weight: 400;
-  letter-spacing: 5px;
+  font-weight: 600;
+  letter-spacing: 3px;
+  line-height: 1.4;
 }
 
 .hero-content h2 {
@@ -562,7 +563,12 @@
 /* Responsive Adjustments */
 @media (max-width: 992px) {
   .hero-content h2 { font-size: 3.5rem; }
+  .hero-content h3 { font-size: clamp(1rem, 3.5vw, 1.6rem); letter-spacing: 2px; }
   .services-grid { grid-template-columns: repeat(2, 1fr); }
+}
+
+@media (max-width: 576px) {
+  .hero-content h3 { font-size: clamp(0.95rem, 4vw, 1.3rem); letter-spacing: 1.5px; }
 }
 
 @media (max-width: 768px) {
@@ -840,14 +846,47 @@
 
 
 /* Logo Styles */
+.logo {
+  display: flex;
+  align-items: center;
+}
+
+.logo-bg {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #ffffff;
+  border-radius: 14px;
+  padding: 5px;
+  box-shadow:
+    0 0 0 2px rgba(237, 28, 36, 0.45),
+    0 0 18px rgba(237, 28, 36, 0.40),
+    0 0 36px rgba(237, 28, 36, 0.18);
+  transition: box-shadow 0.3s ease, padding 0.3s ease;
+}
+
+.logo-bg:hover {
+  box-shadow:
+    0 0 0 2.5px rgba(237, 28, 36, 0.7),
+    0 0 24px rgba(237, 28, 36, 0.60),
+    0 0 48px rgba(237, 28, 36, 0.28);
+}
+
 .logo-img {
-  height: 60px;
+  height: 58px;
   width: auto;
-  transition: var(--transition);
+  border-radius: 10px;
+  display: block;
+  transition: height 0.3s ease;
+}
+
+.scrolled .logo-bg {
+  padding: 4px;
+  border-radius: 12px;
 }
 
 .scrolled .logo-img {
-  height: 45px;
+  height: 44px;
 }
 
 .footer-logo {

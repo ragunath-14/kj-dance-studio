@@ -29,6 +29,7 @@ require('dotenv').config();
 const studentRoutes          = require('./routes/studentRoutes');
 const paymentRoutes          = require('./routes/paymentRoutes');
 const registrationRoutes     = require('./routes/registrationRoutes');
+const authRoutes             = require('./routes/authRoutes');
 const registrationController = require('./controllers/registrationController');
 const studentController      = require('./controllers/studentController');
 const Student                = require('./models/Student');
@@ -100,7 +101,35 @@ app.post('/api/register', registrationLimiter, registrationController.createPend
 // Public dues check (used by student payment portal, no auth needed)
 app.get('/api/students/:id/public-dues', studentController.getStudentDues);
 
-// ── Admin Authentication ─────────────────────────────────────────────────────
+// ── Auth Routes ──────────────────────────────────────────────────────────────
+app.use('/api/auth', authRoutes);
+
+// ── WhatsApp Template Test (admin only) ──────────────────────────────────────
+app.post('/api/test-whatsapp', verifyAdminToken, async (req, res) => {
+  const { phone, name, template } = req.body;
+  if (!phone) return res.status(400).json({ message: 'phone is required' });
+  try {
+    let result;
+    switch (template) {
+      case 'fee_reminder':
+        result = await whatsapp.sendPendingFeesAlert(null, phone, name || 'Student', 1, 1300);
+        break;
+      case 'payment_receipt':
+        result = await whatsapp.sendPaymentConfirmation(phone, name || 'Student', 1300, 'Monthly Fee', new Date().toLocaleDateString('en-IN'));
+        break;
+      case 'registration_received':
+        result = await whatsapp.sendRegistrationConfirmation(phone, name || 'Student', 'Regular Class');
+        break;
+      default:
+        result = await whatsapp.sendWelcomeMessage(phone, name || 'Student', 'Regular Class', 'TBA');
+    }
+    res.json({ success: result.success, usedFallback: result.usedFallback || false, detail: result });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+// ── Admin Authentication (legacy) ────────────────────────────────────────────
 app.post('/api/admin/login', (req, res) => {
   const { password } = req.body;
   if (!password) {
@@ -115,6 +144,7 @@ app.post('/api/admin/login', (req, res) => {
 
 // ── Protected API Routes ─────────────────────────────────────────────────────
 app.use('/api', apiLimiter);
+app.get('/api/dashboard/stats', verifyAdminToken, studentController.getDashboardStats);
 app.use('/api/students',     verifyAdminToken, studentRoutes);
 app.use('/api/payments',     verifyAdminToken, paymentRoutes);
 app.use('/api/registrations',verifyAdminToken, registrationRoutes);
@@ -162,10 +192,10 @@ app.post('/api/webhook', (req, res) => {
 });
 
 // ── Serve React SPA (Production) ─────────────────────────────────────────────
-// The studio build includes both the public portal (/) and admin panel (/admin/*)
-app.use(express.static(path.join(__dirname, '../studio/dist')));
+// Serves both the public landing page (/) and admin panel (/admin/*)
+app.use(express.static(path.join(__dirname, '../frontend/dist')));
 app.get(/^(?!\/api|\/health).*$/, (req, res) => {
-  res.sendFile(path.resolve(__dirname, '../studio/dist/index.html'));
+  res.sendFile(path.resolve(__dirname, '../frontend/dist/index.html'));
 });
 
 // ── Global Error Handler ─────────────────────────────────────────────────────
@@ -187,24 +217,20 @@ const startKeepAlive = () => {
         console.log(`💓 [Keep-Alive] DB Query successful. Total Students in DB: ${studentCount}`);
       }
       
-      // 2. Keep Render Web Service awake (pings frontend URL & backend health)
-      const selfUrl = process.env.RENDER_EXTERNAL_URL || process.env.SELF_URL || 'https://www.expressionzdancestudio.in';
+      // 2. Self-ping only in production when a real URL is explicitly configured
+      const selfUrl = process.env.RENDER_EXTERNAL_URL || process.env.SELF_URL;
       if (selfUrl) {
         const urlToPing = selfUrl.replace(/\/$/, '');
         const httpLib = urlToPing.startsWith('https') ? require('https') : require('http');
-        
-        // Ping the root frontend URL to keep frontend static serving alive
         httpLib.get(urlToPing, (res) => {
-          console.log(`💓 [Keep-Alive] Frontend root self-ping status code: ${res.statusCode}`);
+          console.log(`💓 [Keep-Alive] Frontend ping: ${res.statusCode}`);
         }).on('error', (err) => {
-          console.error('❌ [Keep-Alive] Frontend root self-ping failed:', err.message);
+          console.error('❌ [Keep-Alive] Frontend ping failed:', err.message);
         });
-
-        // Ping the backend health endpoint to verify API layer
         httpLib.get(`${urlToPing}/health`, (res) => {
-          console.log(`💓 [Keep-Alive] Backend health self-ping status code: ${res.statusCode}`);
+          console.log(`💓 [Keep-Alive] Backend ping: ${res.statusCode}`);
         }).on('error', (err) => {
-          console.error('❌ [Keep-Alive] Backend health self-ping failed:', err.message);
+          console.error('❌ [Keep-Alive] Backend ping failed:', err.message);
         });
       }
     } catch (err) {

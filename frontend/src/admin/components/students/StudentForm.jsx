@@ -2,6 +2,13 @@ import React, { useState } from 'react';
 import { User, Phone, MessageCircle, Calendar, Users, Music } from 'lucide-react';
 import Button from '../ui/Button';
 
+const computeCategory = (age, classType) => {
+  if (classType === 'Fitness Class') return 'Adults';
+  const n = parseInt(age);
+  if (!age || isNaN(n)) return 'Adults';
+  return n > 9 ? 'Adults' : 'Kids';
+};
+
 const StudentForm = ({ formData, setFormData, onSubmit, onCancel, isEditing }) => {
   const [isSameNumber, setIsSameNumber] = useState(
     formData.whatsappNumber === formData.phone && formData.phone !== ''
@@ -23,14 +30,16 @@ const StudentForm = ({ formData, setFormData, onSubmit, onCancel, isEditing }) =
     if (newSame) setFormData(prev => ({ ...prev, whatsappNumber: prev.phone }));
   };
 
+  const studentCategory = computeCategory(formData.studentAge, formData.classType);
+
   const isValid =
     formData.studentName?.trim() &&
     formData.phone?.trim() &&
-    formData.studentCategory &&
     formData.classType;
 
   const handleFormSubmit = (e) => {
     if (!isValid) { e.preventDefault(); return; }
+    setFormData(prev => ({ ...prev, studentCategory }));
     onSubmit(e);
   };
 
@@ -79,27 +88,23 @@ const StudentForm = ({ formData, setFormData, onSubmit, onCancel, isEditing }) =
 
       <div className="form-row">
         <div className="form-group">
-          <label><Users size={14} /> Student Category *</label>
-          <select name="studentCategory" value={formData.studentCategory || ''} onChange={handleChange}>
-            <option value="">Select Category</option>
-            <option value="Adults">Adults</option>
-            <option value="Kids">Kids</option>
-          </select>
+          <label><Calendar size={14} /> Student Age</label>
+          <div style={{ position: 'relative' }}>
+            <input
+              type="number"
+              name="studentAge"
+              value={formData.studentAge || ''}
+              onChange={handleChange}
+              placeholder="Age"
+              min="1"
+              max="99"
+            />
+            {formData.studentAge && (
+              <span className="category-auto-badge">{studentCategory}</span>
+            )}
+          </div>
         </div>
         <div className="form-group">
-          <label><Calendar size={14} /> Student Age</label>
-          <input
-            type="text"
-            name="studentAge"
-            value={formData.studentAge || ''}
-            onChange={handleChange}
-            placeholder="Age"
-          />
-        </div>
-      </div>
-
-      <div className="form-row">
-        <div className="form-group full-width">
           <label><Users size={14} /> Gender</label>
           <select name="gender" value={formData.gender || ''} onChange={handleChange}>
             <option value="">Select Gender</option>
@@ -124,6 +129,7 @@ const StudentForm = ({ formData, setFormData, onSubmit, onCancel, isEditing }) =
               }))}
             >
               {type}
+              {type === 'Fitness Class' && <span style={{ fontSize: '11px', opacity: 0.7, marginLeft: '6px' }}>— Adults only</span>}
             </div>
           ))}
         </div>

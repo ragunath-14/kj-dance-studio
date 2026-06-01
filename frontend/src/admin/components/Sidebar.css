@@ -42,13 +42,33 @@
 }
 
 .brand-icon-wrapper {
-  color: #ED1C24;
   flex-shrink: 0;
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 30px;
-  height: 30px;
+  width: 56px;
+  height: 56px;
+  border-radius: 14px;
+  background: #fff;
+  box-shadow:
+    0 0 0 2px rgba(237, 28, 36, 0.4),
+    0 0 16px rgba(237, 28, 36, 0.35),
+    0 0 32px rgba(237, 28, 36, 0.15);
+  transition: box-shadow 0.3s ease;
+}
+
+.brand-icon-wrapper:hover {
+  box-shadow:
+    0 0 0 2px rgba(237, 28, 36, 0.7),
+    0 0 20px rgba(237, 28, 36, 0.55),
+    0 0 40px rgba(237, 28, 36, 0.25);
+}
+
+.sidebar-logo-img {
+  width: 48px;
+  height: 48px;
+  object-fit: contain;
+  border-radius: 10px;
 }
 
 .logo-text {

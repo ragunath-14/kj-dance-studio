@@ -126,11 +126,11 @@ exports.sendWelcomeMessage = async (whatsappNumber, studentName, classType, batc
   const timing = batchTiming || 'TBA';
 
   const fallback =
-    `Hi ${name}, welcome to Expressionz Dance Studio! ` +
-    `You are enrolled in ${cls} class. Batch timing: ${timing}. We are excited to have you! 💃`;
+    `Hi ${name}, your enrollment at KJ Dance Studio is confirmed! ` +
+    `You are enrolled in ${cls} class. Batch timing: ${timing}. We look forward to seeing you! 💃`;
 
   return sendMessage(whatsappNumber, fallback, {
-    templateName: 'welcome_student',
+    templateName: 'kj_welcome',
     languageCode: 'en',
     components  : [{
       type      : 'body',
@@ -158,7 +158,7 @@ exports.sendPendingFeesAlert = async (studentId, whatsappNumber, studentName, pe
     `for ${months} month(s) at Expressionz Dance Studio. Please clear it soon. 🙏`;
 
   return sendMessage(whatsappNumber, fallback, {
-    templateName: 'fee_reminder',
+    templateName: 'fee_remainder',
     languageCode: 'en',
     components  : [{
       type      : 'body',
@@ -185,7 +185,7 @@ exports.sendPaymentConfirmation = async (whatsappNumber, studentName, amount, pu
     `at Expressionz Dance Studio. Thank you! 🎉`;
 
   return sendMessage(whatsappNumber, fallback, {
-    templateName: 'payment_receipt',
+    templateName: 'kj_payment',
     languageCode: 'en',
     components  : [{
       type      : 'body',
@@ -217,7 +217,32 @@ exports.sendRegistrationConfirmation = async (whatsappNumber, studentName, class
     `We will contact you soon! 🎉`;
 
   return sendMessage(whatsappNumber, fallback, {
-    templateName: 'registration_received',
+    templateName: 'kj_welcome',
+    languageCode: 'en',
+    components  : [{
+      type      : 'body',
+      parameters: [
+        { type: 'text', text: name  },
+        { type: 'text', text: cls   },
+        { type: 'text', text: 'TBA' }
+      ]
+    }]
+  });
+};
+
+/**
+ * Rejoin invitation — sent to inactive students on their monthly anniversary.
+ */
+exports.sendRejoinMessage = async (whatsappNumber, studentName, classType) => {
+  const name = studentName || 'Student';
+  const cls  = classType   || 'Dance';
+
+  const fallback =
+    `Hi ${name}, we miss you at KJ Dance Studio! Your account is currently inactive. ` +
+    `We would love to have you back in ${cls} class. Please contact us to rejoin! 💃`;
+
+  return sendMessage(whatsappNumber, fallback, {
+    templateName: 'kj_rejoin',
     languageCode: 'en',
     components  : [{
       type      : 'body',

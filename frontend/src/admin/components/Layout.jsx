@@ -4,6 +4,7 @@ import { NavLink } from 'react-router-dom';
 import { useData } from '../context/DataContext';
 import { useTheme } from '../context/ThemeContext';
 import Sidebar from './Sidebar';
+import logo from '../../assets/logo.png';
 import './Layout.css';
 
 const Layout = ({ children, onLogout }) => {
@@ -51,7 +52,10 @@ const Layout = ({ children, onLogout }) => {
         <button className="menu-toggle" onClick={toggleMobileMenu}>
           {isMobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
         </button>
-        <h1 className="mobile-page-title">KJ Dance Studio</h1>
+        <div className="mobile-logo-wrap">
+          <img src={logo} alt="KJ" className="mobile-logo-img" />
+          <span className="mobile-page-title">KJ Dance Studio</span>
+        </div>
         <div style={{ display: 'flex', gap: '8px', marginLeft: 'auto' }}>
           <button onClick={toggleTheme} className="mobile-theme-btn" title="Toggle theme">
             {theme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
