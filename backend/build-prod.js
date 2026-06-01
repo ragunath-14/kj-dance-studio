@@ -38,7 +38,9 @@ check(FRONTEND_DIR, 'frontend/');
 
 // ── Build frontend ─────────────────────────────────
 console.log('\n📦 Step 1: Building frontend...');
-run('npm install --prefer-offline', FRONTEND_DIR);
+// --include=dev is required: Render sets NODE_ENV=production which would otherwise
+// skip devDependencies (vite, @vitejs/plugin-react, etc.) causing 'vite: not found'.
+run('npm install --include=dev', FRONTEND_DIR);
 run('npm run build', FRONTEND_DIR);
 
 // ── Verify build output ────────────────────────────

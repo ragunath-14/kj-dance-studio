@@ -4,7 +4,6 @@ node_modules/
 .wwebjs_cache/
 .DS_Store
 dist/
-studio/dist/
 admin/dist/
 *.log
 npm-debug.log*
