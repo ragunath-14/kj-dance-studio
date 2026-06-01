@@ -101,8 +101,16 @@ export const DataProvider = ({ children }) => {
 
   const fetchRegistrations = async (page = 1, limit = 10) => {
     try {
-      const res = await axios.get(`${API_URL}/registrations/pending`, { params: { page, limit } });
-      setRegistrations(res.data);
+      // Backend returns a plain array; normalize it to {data, total, page, limit}
+      const res = await axios.get(`${API_URL}/registrations/pending`);
+      const list = Array.isArray(res.data) ? res.data : (res.data?.data ?? []);
+      setRegistrations({
+        data: list,
+        total: list.length,
+        page: 1,
+        limit: list.length || 10,
+        totalPages: 1
+      });
     } catch (err) {
       console.error('Registrations fetch failed:', err);
     }
@@ -204,6 +212,12 @@ export const DataProvider = ({ children }) => {
       fetchAllData(true);
       return { success: true };
     } catch (err) {
+      // 409 = student already exists; backend still marks the reg as approved
+      // Treat it as a soft-success so the list refreshes and the card disappears
+      if (err.response?.status === 409) {
+        fetchAllData(true);
+        return { success: false, message: err.response.data?.message || 'Student already exists — registration marked as approved.' };
+      }
       return { success: false, message: err.response?.data?.message || err.message };
     }
   };

@@ -10,7 +10,7 @@ const Sidebar = ({ isOpen, onClose, isExpanded, onToggleExpand }) => {
 
   const navLinks = [
     { to: '/admin', icon: LayoutDashboard, label: 'Dashboard' },
-    { to: '/admin/registrations', icon: UserPlus, label: 'New Joiners', badge: registrations.length },
+    { to: '/admin/registrations', icon: UserPlus, label: 'New Joiners', badge: registrations.data?.length ?? 0 },
     { to: '/admin/students', icon: Users, label: 'Students' },
     { to: '/admin/payments', icon: CreditCard, label: 'Payments' },
   ];

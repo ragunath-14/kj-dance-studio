@@ -40,7 +40,7 @@ const RegistrationList = () => {
     if (!result.success) showFeedback(result.message || 'Failed to reject registration.');
   };
 
-  if (!loading && total === 0) {
+  if (!loading && list.length === 0) {
     return (
       <div className="empty-state">
         <Clock size={48} />
