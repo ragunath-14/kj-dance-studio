@@ -6,7 +6,7 @@
  * Architecture:
  *   • Express REST API  → /api/*
  *   • Socket.io         → Real-time dashboard updates
- *   • Static serving    → Serves studio/dist (React SPA + /admin route)
+ *   • Static serving    → Serves frontend/dist (React SPA + /admin route)
  *   • WhatsApp          → Meta Cloud API (controlled via USE_META_API env flag)
  *   • Scheduler         → Daily fee-reminder cron job
  * ─────────────────────────────────────────────────────────────────────────────
