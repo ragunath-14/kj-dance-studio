@@ -118,7 +118,7 @@ const StudentForm = ({ formData, setFormData, onSubmit, onCancel, isEditing }) =
       <div className="form-group full-width">
         <label><Music size={14} /> Dance Class *</label>
         <div className="class-type-selector-admin">
-          {['Regular Class', 'Fitness Class'].map(type => (
+          {['Regular Class', 'Fitness Class', 'Online Class'].map(type => (
             <div
               key={type}
               className={`type-option-admin ${formData.classType === type ? 'selected' : ''}`}
@@ -130,6 +130,7 @@ const StudentForm = ({ formData, setFormData, onSubmit, onCancel, isEditing }) =
             >
               {type}
               {type === 'Fitness Class' && <span style={{ fontSize: '11px', opacity: 0.7, marginLeft: '6px' }}>— Adults only</span>}
+              {type === 'Online Class' && <span style={{ fontSize: '11px', opacity: 0.7, marginLeft: '6px' }}>— Virtual</span>}
             </div>
           ))}
         </div>

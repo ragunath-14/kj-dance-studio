@@ -29,7 +29,7 @@ const Dashboard = () => {
   const metrics = useMemo(() => {
     if (!stats || !stats.metrics) return {
       total: 0, revenue: 0, overdue: 0, pending: 0,
-      classTypes: { regular: 0, summer: 0, fitness: 0 }
+      classTypes: { regular: 0, summer: 0, fitness: 0, online: 0 }
     };
     return stats.metrics;
   }, [stats]);
@@ -142,6 +142,13 @@ const Dashboard = () => {
                   <div className="pill-bar" style={{ width: `${(metrics.classTypes.fitness / (metrics.total || 1)) * 100}%` }}></div>
                 </div>
                 <strong>{metrics.classTypes.fitness}</strong>
+              </div>
+              <div className="pill online">
+                <span>Online</span>
+                <div className="pill-bar-wrap">
+                  <div className="pill-bar" style={{ width: `${((metrics.classTypes.online || 0) / (metrics.total || 1)) * 100}%` }}></div>
+                </div>
+                <strong>{metrics.classTypes.online || 0}</strong>
               </div>
             </div>
           </div>

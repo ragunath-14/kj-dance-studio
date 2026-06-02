@@ -13,7 +13,7 @@ const RegistrationSchema = new mongoose.Schema({
   classType: {
     type: String,
     enum: {
-      values: ['Dance Class', 'Fitness Class', 'Regular Class'],
+      values: ['Dance Class', 'Fitness Class', 'Regular Class', 'Online Class'],
       message: '{VALUE} is not a valid class type'
     },
     default: 'Dance Class'

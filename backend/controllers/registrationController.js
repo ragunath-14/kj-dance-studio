@@ -33,12 +33,7 @@ exports.createPendingRegistration = async (req, res) => {
     const registration = new Registration(cleanData);
     await registration.save();
 
-    // Send a WhatsApp confirmation that registration has been received and is pending approval
-    const whatsappNum = registration.whatsappNumber || registration.phone;
-    if (whatsappNum) {
-      whatsapp.sendRegistrationConfirmation(whatsappNum, registration.studentName, registration.classType)
-        .catch((e) => console.error('WhatsApp registration confirmation error:', e));
-    }
+    // NOTE: WhatsApp welcome is sent ONLY when admin approves the registration, not on submission.
 
     // Notify admin dashboard in real-time (triggers dashboard refresh + badge bump)
     const io = req.app.get('socketio');

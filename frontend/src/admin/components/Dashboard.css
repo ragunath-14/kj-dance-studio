@@ -293,6 +293,7 @@
 .pill.regular .pill-bar { background: linear-gradient(90deg, #ED1C24, #ff4d4d); }
 .pill.summer .pill-bar { background: linear-gradient(90deg, #2196F3, #64B5F6); }
 .pill.fitness .pill-bar { background: linear-gradient(90deg, #9C27B0, #D1C4E9); }
+.pill.online .pill-bar { background: linear-gradient(90deg, #00897B, #4DB6AC); }
 
 .pill strong {
   text-align: right;

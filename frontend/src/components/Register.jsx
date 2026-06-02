@@ -201,7 +201,7 @@ const Register = ({ isOpen, onClose }) => {
             <div className="form-group full-width">
               <label>Dance Class *</label>
               <div className="class-type-selector">
-                {['Regular Class', 'Fitness Class'].map(type => (
+                {['Regular Class', 'Fitness Class', 'Online Class'].map(type => (
                   <div
                     key={type}
                     className={`type-option ${formData.classType === type ? 'selected' : ''}`}
@@ -209,6 +209,7 @@ const Register = ({ isOpen, onClose }) => {
                   >
                     {type}
                     {type === 'Fitness Class' && <span className="class-note"> — Adults only</span>}
+                    {type === 'Online Class' && <span className="class-note"> — Virtual</span>}
                   </div>
                 ))}
               </div>

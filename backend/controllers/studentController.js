@@ -192,6 +192,7 @@ exports.getDashboardStats = async (req, res) => {
           dance:   activeStudents.filter(s => s.classType === 'Dance Class').length,
           regular: activeStudents.filter(s => s.classType === 'Regular Class').length,
           fitness: activeStudents.filter(s => s.classType === 'Fitness Class').length,
+          online:  activeStudents.filter(s => s.classType === 'Online Class').length,
         }
       },
       overdueStudents,
@@ -424,6 +425,13 @@ exports.toggleStatus = async (req, res) => {
 
     const io = req.app.get('socketio');
     if (io) io.emit('dataChanged', { type: 'student', action: 'statusToggle' });
+
+    // Send rejoin WhatsApp whenever admin toggles active ↔ inactive
+    const whatsappNum = student.whatsappNumber || student.phone;
+    if (whatsappNum) {
+      whatsapp.sendRejoinMessage(whatsappNum, student.studentName, student.classType)
+        .catch((e) => console.error('WhatsApp rejoin message error (toggleStatus):', e));
+    }
 
     res.json({
       message: `Student marked as ${student.isActive ? 'Active' : 'Inactive'}. ${student.isActive ? 'Join date reset to today.' : ''}`,

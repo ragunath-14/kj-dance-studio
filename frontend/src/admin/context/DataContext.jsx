@@ -235,7 +235,18 @@ export const DataProvider = ({ children }) => {
   const toggleStudentStatus = async (id) => {
     try {
       const res = await axios.patch(`${API_URL}/students/${id}/toggle-status`);
-      await fetchAllData(true);
+      // Targeted refresh: only re-fetch the student list and stats to avoid
+      // a race condition that would briefly wipe out the visible student rows.
+      await Promise.all([
+        fetchStudents(
+          studentParams.page,
+          studentParams.limit,
+          studentParams.search,
+          studentParams.classType,
+          studentParams.studentCategory
+        ),
+        fetchStats()
+      ]);
       return { success: true, message: res.data.message };
     } catch (err) {
       return { success: false, message: err.response?.data?.message || err.message };

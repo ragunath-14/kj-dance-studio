@@ -52,7 +52,7 @@ const StudentList = () => {
   const currentPage = students.page || 1;
 
   const metrics = useMemo(() => {
-    if (!dashboardStats || !dashboardStats.metrics) return { regular: 0, summer: 0, fitness: 0 };
+    if (!dashboardStats || !dashboardStats.metrics) return { regular: 0, summer: 0, fitness: 0, online: 0 };
     return dashboardStats.metrics.classTypes;
   }, [dashboardStats]);
 
@@ -139,13 +139,19 @@ const StudentList = () => {
               className={`tab-btn ${activeTab === 'Regular Class' ? 'active' : ''}`}
               onClick={() => setActiveTab('Regular Class')}
             >
-              Regular ({metrics.regular})
+              Regular ({metrics.regular || 0})
             </button>
             <button
               className={`tab-btn ${activeTab === 'Fitness Class' ? 'active' : ''}`}
               onClick={() => setActiveTab('Fitness Class')}
             >
-              Fitness ({metrics.fitness})
+              Fitness ({metrics.fitness || 0})
+            </button>
+            <button
+              className={`tab-btn ${activeTab === 'Online Class' ? 'active' : ''}`}
+              onClick={() => setActiveTab('Online Class')}
+            >
+              Online ({metrics.online || 0})
             </button>
           </div>
           <CategoryDropdown
