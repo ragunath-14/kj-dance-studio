@@ -32,12 +32,12 @@ const sendMessage = async (whatsappNumber, fallbackText, options = {}) => {
       return { success: false, reason: 'WhatsApp disabled via USE_META_API env flag' };
     }
 
-    const token      = process.env.META_ACCESS_TOKEN;
-    const phoneId    = process.env.META_PHONE_NUMBER_ID;
-    const apiVersion = process.env.META_API_VERSION || 'v19.0';
+    const token      = process.env.WHATSAPP_ACCESS_TOKEN;
+    const phoneId    = process.env.WHATSAPP_PHONE_NUMBER_ID;
+    const apiVersion = process.env.WHATSAPP_VERSION || 'v19.0';
 
     if (!token || !phoneId) {
-      const errMsg = 'Meta Cloud API config missing. Set META_ACCESS_TOKEN and META_PHONE_NUMBER_ID in .env';
+      const errMsg = 'WhatsApp API config missing. Set WHATSAPP_ACCESS_TOKEN and WHATSAPP_PHONE_NUMBER_ID in environment variables.';
       console.error(`❌ ${errMsg}`);
       return { success: false, reason: errMsg };
     }
@@ -119,15 +119,20 @@ const sendMessage = async (whatsappNumber, fallbackText, options = {}) => {
 
 /**
  * Sent when a student is enrolled or a registration is approved.
+ * Template body: "Your enrollment at KJ Dance Studio is confirmed, {{1}}.
+ *                 You have been registered for {{2}}. Contact us for any queries."
+ * Params: {{1}} = name, {{2}} = classType
  */
 exports.sendWelcomeMessage = async (whatsappNumber, studentName, classType, batchTiming) => {
   const name   = studentName || 'Student';
   const cls    = classType   || 'Dance';
-  const timing = batchTiming || 'TBA';
+  const timing = batchTiming || 'TBA'; // kept for callers; not in template
 
   const fallback =
-    `Hi ${name}, your enrollment at KJ Dance Studio is confirmed! ` +
-    `You are enrolled in ${cls} class. Batch timing: ${timing}. We look forward to seeing you! 💃`;
+    `Your enrollment at KJ Dance Studio is confirmed, ${name}. ` +
+    `You have been registered for ${cls}. ` +
+    (timing !== 'TBA' ? `Batch timing: ${timing}. ` : '') +
+    `Contact us for any queries. 💃`;
 
   return sendMessage(whatsappNumber, fallback, {
     templateName: 'kj_welcome',
@@ -135,9 +140,8 @@ exports.sendWelcomeMessage = async (whatsappNumber, studentName, classType, batc
     components  : [{
       type      : 'body',
       parameters: [
-        { type: 'text', text: name   },
-        { type: 'text', text: cls    },
-        { type: 'text', text: timing }
+        { type: 'text', text: name },
+        { type: 'text', text: cls  }
       ]
     }]
   });
@@ -173,6 +177,9 @@ exports.sendPendingFeesAlert = async (studentId, whatsappNumber, studentName, pe
 
 /**
  * Payment confirmation — sent immediately after a payment is recorded.
+ * Template body: "Payment confirmation: Rs.{{2}} has been received from {{1}} at KJ Dance
+ *                 Studio. This serves as your official payment receipt."
+ * Params: {{1}} = name, {{2}} = amount
  */
 exports.sendPaymentConfirmation = async (whatsappNumber, studentName, amount, purpose, date) => {
   const name          = studentName || 'Student';
@@ -181,8 +188,8 @@ exports.sendPaymentConfirmation = async (whatsappNumber, studentName, amount, pu
   const purp          = purpose || 'Monthly Fee';
 
   const fallback =
-    `Hi ${name}, we received your payment of Rs.${amt} for ${purp} on ${formattedDate} ` +
-    `at Expressionz Dance Studio. Thank you! 🎉`;
+    `Payment confirmation: Rs.${amt} has been received from ${name} at KJ Dance Studio ` +
+    `for ${purp} on ${formattedDate}. This serves as your official payment receipt. 🎉`;
 
   return sendMessage(whatsappNumber, fallback, {
     templateName: 'kj_payment',
@@ -190,10 +197,8 @@ exports.sendPaymentConfirmation = async (whatsappNumber, studentName, amount, pu
     components  : [{
       type      : 'body',
       parameters: [
-        { type: 'text', text: name          },
-        { type: 'text', text: amt           },
-        { type: 'text', text: purp          },
-        { type: 'text', text: formattedDate }
+        { type: 'text', text: name },
+        { type: 'text', text: amt  }
       ]
     }]
   });
@@ -206,43 +211,18 @@ exports.sendPaymentReceipt = exports.sendPaymentConfirmation;
 
 /**
  * Sent when a public registration form is submitted (pending approval).
+ * Uses kj_welcome template: {{1}} = name, {{2}} = classType
  */
 exports.sendRegistrationConfirmation = async (whatsappNumber, studentName, classType) => {
   const name = studentName || 'Student';
   const cls  = classType   || 'Dance';
 
   const fallback =
-    `Hi ${name}, thank you for registering with Expressionz Dance Studio! ` +
-    `Your request to join the ${cls} class has been received and is pending approval. ` +
-    `We will contact you soon! 🎉`;
+    `Your enrollment at KJ Dance Studio is confirmed, ${name}. ` +
+    `You have been registered for ${cls}. Contact us for any queries. 🎉`;
 
   return sendMessage(whatsappNumber, fallback, {
     templateName: 'kj_welcome',
-    languageCode: 'en',
-    components  : [{
-      type      : 'body',
-      parameters: [
-        { type: 'text', text: name  },
-        { type: 'text', text: cls   },
-        { type: 'text', text: 'TBA' }
-      ]
-    }]
-  });
-};
-
-/**
- * Rejoin invitation — sent to inactive students on their monthly anniversary.
- */
-exports.sendRejoinMessage = async (whatsappNumber, studentName, classType) => {
-  const name = studentName || 'Student';
-  const cls  = classType   || 'Dance';
-
-  const fallback =
-    `Hi ${name}, we miss you at KJ Dance Studio! Your account is currently inactive. ` +
-    `We would love to have you back in ${cls} class. Please contact us to rejoin! 💃`;
-
-  return sendMessage(whatsappNumber, fallback, {
-    templateName: 'kj_rejoin',
     languageCode: 'en',
     components  : [{
       type      : 'body',
@@ -255,13 +235,39 @@ exports.sendRejoinMessage = async (whatsappNumber, studentName, classType) => {
 };
 
 /**
+ * Rejoin invitation — sent to inactive students on their monthly anniversary.
+ * Template body: "Hi {{1}}, your account status at KJ Dance Studio has been updated.
+ *                 Please contact the studio for more information."
+ * Params: {{1}} = name only
+ */
+exports.sendRejoinMessage = async (whatsappNumber, studentName, classType) => {
+  const name = studentName || 'Student';
+  const cls  = classType   || 'Dance'; // kept for callers; not in template
+
+  const fallback =
+    `Hi ${name}, your account status at KJ Dance Studio has been updated. ` +
+    `We'd love to have you back in ${cls} class! Please contact the studio for more information. 💃`;
+
+  return sendMessage(whatsappNumber, fallback, {
+    templateName: 'kj_rejoin',
+    languageCode: 'en',
+    components  : [{
+      type      : 'body',
+      parameters: [
+        { type: 'text', text: name }
+      ]
+    }]
+  });
+};
+
+/**
  * Returns the current WhatsApp service status (used by /health endpoint).
  */
 exports.getStatus = () => ({
   provider  : 'Meta Cloud API',
   isReady   : process.env.USE_META_API === 'true' &&
-              !!process.env.META_ACCESS_TOKEN &&
-              !!process.env.META_PHONE_NUMBER_ID,
+              !!process.env.WHATSAPP_ACCESS_TOKEN &&
+              !!process.env.WHATSAPP_PHONE_NUMBER_ID,
   apiEnabled: process.env.USE_META_API === 'true',
   dailyLimit: null, // Meta Cloud API manages its own rate limits
 });
