@@ -8,6 +8,15 @@ const getMonthlyFee = (classType, studentCategory) => {
   return studentCategory === 'Kids' ? 1000 : 1300;
 };
 
+// ─── Category helper (authoritative — always computed server-side) ────────────
+// Kids: age 1-9  |  Adults: age 10+  |  Fitness Class always Adults
+const computeCategory = (age, classType) => {
+  if (classType === 'Fitness Class') return 'Adults';
+  const n = parseInt(age);
+  if (!age || isNaN(n)) return 'Adults';
+  return n <= 9 ? 'Kids' : 'Adults';
+};
+
 // ─── Format mongoose validation errors ───────────────────────────────────────
 const formatValidationErrors = (err) =>
   Object.values(err.errors).map((e) => e.message);
@@ -318,6 +327,9 @@ exports.createStudent = async (req, res) => {
     if (!data.studentName && data.name)     data.studentName = data.name;
     if (!data.createdAt   && data.joinDate) data.createdAt   = data.joinDate;
 
+    // Always compute category server-side from age — never trust frontend value
+    data.studentCategory = computeCategory(data.studentAge, data.classType);
+
     // Explicit required-field check (better error messages than Mongoose default)
     if (!data.studentName?.trim())
       return res.status(400).json({ message: 'Student name is required.' });
@@ -367,6 +379,14 @@ exports.createStudent = async (req, res) => {
 exports.updateStudent = async (req, res) => {
   try {
     const { id } = req.params;
+
+    // Re-compute category whenever age or classType changes
+    if (req.body.studentAge !== undefined || req.body.classType !== undefined) {
+      const current = await Student.findById(id).lean();
+      const age       = req.body.studentAge  ?? current?.studentAge;
+      const classType = req.body.classType   ?? current?.classType;
+      req.body.studentCategory = computeCategory(age, classType);
+    }
 
     // Duplicate guard: Only reject if BOTH phone and name match for a different ID
     if (req.body.phone || req.body.studentName) {

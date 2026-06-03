@@ -43,6 +43,11 @@ const StudentSchema = new mongoose.Schema({
     default: 'Dance Class'
   },
   studentAge: { type: String, trim: true },
+  studentCategory: {
+    type: String,
+    enum: { values: ['Kids', 'Adults'], message: '{VALUE} is not a valid category' },
+    default: 'Adults'
+  },
   gender: { type: String, enum: { values: ['Male', 'Female', 'Other', ''], message: '{VALUE} is not a valid gender' }, trim: true },
   bloodGroup: { type: String, trim: true },
   parentName: { type: String, trim: true },

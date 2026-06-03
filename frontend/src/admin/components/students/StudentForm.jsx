@@ -39,8 +39,11 @@ const StudentForm = ({ formData, setFormData, onSubmit, onCancel, isEditing }) =
 
   const handleFormSubmit = (e) => {
     if (!isValid) { e.preventDefault(); return; }
+    // Inject computed category directly — avoids the async setState race condition
+    // The backend will also recompute it server-side as a safety net
     setFormData(prev => ({ ...prev, studentCategory }));
-    onSubmit(e);
+    // Use setTimeout(0) to let the state flush before the parent reads formData
+    setTimeout(() => onSubmit(e), 0);
   };
 
   return (

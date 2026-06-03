@@ -8,6 +8,11 @@ const RegistrationSchema = new mongoose.Schema({
     minlength: [2, 'Name must be at least 2 characters']
   },
   studentAge:     { type: String, trim: true },
+  studentCategory: {
+    type: String,
+    enum: ['Kids', 'Adults'],
+    default: 'Adults'
+  },
   gender:         { type: String, enum: ['Male', 'Female', 'Other', ''], trim: true },
   bloodGroup:     { type: String, trim: true },
   classType: {

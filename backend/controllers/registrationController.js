@@ -2,6 +2,14 @@ const Registration = require('../models/Registration');
 const Student      = require('../models/Student');
 const whatsapp     = require('../services/whatsappService');
 
+// ─── Category helper (Kids: age 1-9, Adults: age 10+, Fitness always Adults) ───
+const computeCategory = (age, classType) => {
+  if (classType === 'Fitness Class') return 'Adults';
+  const n = parseInt(age);
+  if (!age || isNaN(n)) return 'Adults';
+  return n <= 9 ? 'Kids' : 'Adults';
+};
+
 // ─── POST /api/register  (public registration form) ─────────────────────────
 exports.createPendingRegistration = async (req, res) => {
   try {
@@ -103,6 +111,7 @@ exports.approveRegistration = async (req, res) => {
     const student = new Student({
       studentName:    registration.studentName,
       studentAge:     registration.studentAge,
+      studentCategory: computeCategory(registration.studentAge, registration.classType),
       gender:         registration.gender,
       bloodGroup:     registration.bloodGroup,
       classType:      registration.classType,
