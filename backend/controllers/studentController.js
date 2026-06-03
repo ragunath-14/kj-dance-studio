@@ -31,6 +31,7 @@ exports.getAllStudents = async (req, res) => {
     const search          = req.query.search          || '';
     const classType       = req.query.classType       || '';
     const studentCategory = req.query.studentCategory || '';
+    const classSchedule   = req.query.classSchedule   || '';
 
     let query = {};
     if (search) {
@@ -41,6 +42,7 @@ exports.getAllStudents = async (req, res) => {
     }
     if (classType)       query.classType       = classType;
     if (studentCategory) query.studentCategory = studentCategory;
+    if (classSchedule)   query.classSchedule   = classSchedule;
 
     const [students, total] = await Promise.all([
       Student.find(query)

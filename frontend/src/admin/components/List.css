@@ -880,3 +880,82 @@
     padding: 8px;
   }
 }
+
+/* ── Schedule Filter Tabs ─────────────────────────────────────────── */
+.schedule-filter-tabs {
+  display: flex;
+  background-color: var(--bg-dark);
+  padding: 5px;
+  border-radius: 12px;
+  border: 1px solid var(--border-color);
+  gap: 2px;
+  flex-shrink: 0;
+}
+
+.schedule-filter-btn {
+  padding: 7px 13px;
+  border-radius: 8px;
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  font-weight: 700;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  white-space: nowrap;
+}
+
+.schedule-filter-btn.active {
+  background-color: var(--bg-card);
+  color: #6366f1;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.08);
+}
+
+.schedule-filter-btn:hover:not(.active) {
+  color: var(--text-main);
+  background-color: rgba(0,0,0,0.03);
+}
+
+/* ── Schedule Badges ──────────────────────────────────────────────── */
+.mini-badge.schedule-badge {
+  font-size: 9px;
+  padding: 2px 7px;
+}
+
+.mini-badge.schedule-badge.weekday {
+  background-color: rgba(99, 102, 241, 0.12);
+  color: #818cf8;
+}
+
+.mini-badge.schedule-badge.weekend {
+  background-color: rgba(168, 85, 247, 0.12);
+  color: #c084fc;
+}
+
+/* ── Registration Card Schedule Tag ─────────────────────────────── */
+.detail-tag.schedule-tag {
+  background: rgba(99, 102, 241, 0.12);
+  color: #818cf8;
+  border: 1px solid rgba(99, 102, 241, 0.2);
+}
+
+/* ── Admin Form Schedule Selector ────────────────────────────────── */
+.badge-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  align-items: center;
+}
+
+@media (max-width: 768px) {
+  .schedule-filter-tabs {
+    width: 100%;
+    justify-content: stretch;
+  }
+  .schedule-filter-btn {
+    flex: 1;
+    text-align: center;
+  }
+}

@@ -56,6 +56,11 @@ const StudentSchema = new mongoose.Schema({
   location: { type: String, trim: true },
   address: { type: String, trim: true },
   batchTiming: { type: String, trim: true },
+  classSchedule: {
+    type: String,
+    enum: { values: ['Weekday', 'Weekend', 'NA'], message: '{VALUE} is not a valid class schedule' },
+    default: 'NA'
+  },
   notes: { type: String, trim: true },
   isActive: { type: Boolean, default: true, index: true },
   lastAlertSent: { type: Date },

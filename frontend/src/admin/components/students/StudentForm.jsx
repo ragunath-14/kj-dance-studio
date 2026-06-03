@@ -6,7 +6,7 @@ const computeCategory = (age, classType) => {
   if (classType === 'Fitness Class') return 'Adults';
   const n = parseInt(age);
   if (!age || isNaN(n)) return 'Adults';
-  return n > 9 ? 'Adults' : 'Kids';
+  return n <= 9 ? 'Kids' : 'Adults';
 };
 
 const StudentForm = ({ formData, setFormData, onSubmit, onCancel, isEditing }) => {
@@ -38,12 +38,12 @@ const StudentForm = ({ formData, setFormData, onSubmit, onCancel, isEditing }) =
     formData.classType;
 
   const handleFormSubmit = (e) => {
-    if (!isValid) { e.preventDefault(); return; }
-    // Inject computed category directly — avoids the async setState race condition
-    // The backend will also recompute it server-side as a safety net
-    setFormData(prev => ({ ...prev, studentCategory }));
-    // Use setTimeout(0) to let the state flush before the parent reads formData
-    setTimeout(() => onSubmit(e), 0);
+    e.preventDefault();
+    if (!isValid) return;
+    // Build the complete payload synchronously and pass it directly to the parent
+    // This avoids the async setState race condition that caused fields to disappear
+    const payload = { ...formData, studentCategory };
+    onSubmit(e, payload);
   };
 
   return (
@@ -54,7 +54,7 @@ const StudentForm = ({ formData, setFormData, onSubmit, onCancel, isEditing }) =
         <input
           type="text"
           name="studentName"
-          value={formData.studentName}
+          value={formData.studentName || ''}
           onChange={handleChange}
           placeholder="Student Name"
         />
@@ -66,7 +66,7 @@ const StudentForm = ({ formData, setFormData, onSubmit, onCancel, isEditing }) =
           <input
             type="text"
             name="phone"
-            value={formData.phone}
+            value={formData.phone || ''}
             onChange={handleChange}
             placeholder="Contact Number"
           />
@@ -134,6 +134,23 @@ const StudentForm = ({ formData, setFormData, onSubmit, onCancel, isEditing }) =
               {type}
               {type === 'Fitness Class' && <span style={{ fontSize: '11px', opacity: 0.7, marginLeft: '6px' }}>— Adults only</span>}
               {type === 'Online Class' && <span style={{ fontSize: '11px', opacity: 0.7, marginLeft: '6px' }}>— Virtual</span>}
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div className="form-group full-width">
+        <label><Calendar size={14} /> Class Schedule</label>
+        <div className="class-type-selector-admin">
+          {['Weekday', 'Weekend', 'NA'].map(schedule => (
+            <div
+              key={schedule}
+              className={`type-option-admin ${(formData.classSchedule || 'NA') === schedule ? 'selected' : ''}`}
+              onClick={() => setFormData(prev => ({ ...prev, classSchedule: schedule }))}
+            >
+              {schedule === 'NA' ? 'Not Set' : schedule}
+              {schedule === 'Weekday' && <span style={{ fontSize: '11px', opacity: 0.7, marginLeft: '6px' }}>— Mon–Fri</span>}
+              {schedule === 'Weekend' && <span style={{ fontSize: '11px', opacity: 0.7, marginLeft: '6px' }}>— Sat & Sun</span>}
             </div>
           ))}
         </div>

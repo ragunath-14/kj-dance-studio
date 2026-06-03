@@ -20,22 +20,23 @@ const StudentList = () => {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('Regular Class');
   const [activeCategory, setActiveCategory] = useState('');
+  const [activeSchedule, setActiveSchedule] = useState('');
   const [showModal, setShowModal] = useState(false);
   const [editingStudent, setEditingStudent] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [confirmState, setConfirmState] = useState({ open: false, studentId: null });
   const [historyStudent, setHistoryStudent] = useState(null);
 
-  // Server-side fetching when page, tab, or search changes
+  // Server-side fetching when page, tab, search or filter changes
   useEffect(() => {
     const timer = setTimeout(() => {
-      fetchStudents(1, 50, searchTerm, activeTab, activeCategory);
+      fetchStudents(1, 50, searchTerm, activeTab, activeCategory, activeSchedule);
     }, 300);
     return () => clearTimeout(timer);
-  }, [searchTerm, activeTab, activeCategory]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [searchTerm, activeTab, activeCategory, activeSchedule]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const onPageChange = (page) => {
-    fetchStudents(page, 50, searchTerm, activeTab, activeCategory);
+    fetchStudents(page, 50, searchTerm, activeTab, activeCategory, activeSchedule);
   };
 
   const [formData, setFormData] = useState({
@@ -43,6 +44,7 @@ const StudentList = () => {
     danceForFitness: '', studentAge: '', 
     gender: '', studentCategory: '', parentName: '',
     classType: 'Regular Class',
+    classSchedule: 'NA',
     createdAt: new Date().toISOString()
   });
 
@@ -56,16 +58,17 @@ const StudentList = () => {
     return dashboardStats.metrics.classTypes;
   }, [dashboardStats]);
 
-  const handleSubmit = async (e) => {
+  // Accept payload directly from StudentForm to avoid async setState race condition
+  const handleSubmit = async (e, payload) => {
     e.preventDefault();
-    
     const wasEditing = editingStudent;
+    const data = payload || formData;
     
     try {
       if (wasEditing) {
-        await axios.put(`${API_URL}/students/${wasEditing._id}`, formData);
+        await axios.put(`${API_URL}/students/${wasEditing._id}`, data);
       } else {
-        await axios.post(`${API_URL}/students`, formData);
+        await axios.post(`${API_URL}/students`, data);
       }
       
       await refreshData();
@@ -76,6 +79,7 @@ const StudentList = () => {
         danceForFitness: '', 
         studentAge: '', gender: '', studentCategory: '', 
         parentName: '', classType: 'Regular Class',
+        classSchedule: 'NA',
         createdAt: new Date().toISOString()
       });
     } catch (err) {
@@ -111,6 +115,7 @@ const StudentList = () => {
       studentCategory: student.studentCategory || '',
       parentName: student.parentName || '',
       classType: student.classType || 'Regular Class',
+      classSchedule: student.classSchedule || 'NA',
       createdAt: student.createdAt || new Date().toISOString()
     });
     setShowModal(true);
@@ -158,6 +163,17 @@ const StudentList = () => {
             value={activeCategory}
             onChange={setActiveCategory}
           />
+          <div className="schedule-filter-tabs">
+            {['', 'Weekday', 'Weekend'].map(s => (
+              <button
+                key={s || 'all'}
+                className={`schedule-filter-btn ${activeSchedule === s ? 'active' : ''}`}
+                onClick={() => setActiveSchedule(s)}
+              >
+                {s || 'All Schedule'}
+              </button>
+            ))}
+          </div>
         </div>
         <Button onClick={() => { 
           setFormData({ 
@@ -165,6 +181,7 @@ const StudentList = () => {
             danceForFitness: '', 
             studentAge: '', gender: '', studentCategory: '', 
             parentName: '', classType: activeTab,
+            classSchedule: activeSchedule || 'NA',
             createdAt: new Date().toISOString()
           });
           setShowModal(true); 
@@ -186,7 +203,7 @@ const StudentList = () => {
             </tr>
           </thead>
           <tbody>
-            {loading && students.data.length === 0 ? (
+            {loading && (students.data || []).length === 0 ? (
               <>
                 <SkeletonRow columns={activeTab === 'Fitness Class' ? 5 : 4} />
                 <SkeletonRow columns={activeTab === 'Fitness Class' ? 5 : 4} />
@@ -221,7 +238,7 @@ const StudentList = () => {
         totalItems={students.total || 0}
         itemsPerPage={students.limit || 50}
         onPageChange={onPageChange} 
-        onLimitChange={(limit) => fetchStudents(1, limit, searchTerm, activeTab, activeCategory)}
+        onLimitChange={(limit) => fetchStudents(1, limit, searchTerm, activeTab, activeCategory, activeSchedule)}
       />
 
       <Modal 

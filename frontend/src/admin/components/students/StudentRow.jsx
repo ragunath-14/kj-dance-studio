@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { Edit2, Trash2, CheckCircle, AlertCircle, ToggleLeft, ToggleRight, MessageCircle, History } from 'lucide-react';
+import { Edit2, Trash2, CheckCircle, AlertCircle, ToggleLeft, ToggleRight, History } from 'lucide-react';
 import Button from '../ui/Button';
 
 const StudentRow = ({ student, payments, showFitnessCol, onEdit, onDelete, onToggleStatus, onViewHistory }) => {
@@ -60,6 +60,11 @@ const StudentRow = ({ student, payments, showFitnessCol, onEdit, onDelete, onTog
               )
             ) : (
               <span className="mini-badge inactive-badge">Inactive</span>
+            )}
+            {student.classSchedule && student.classSchedule !== 'NA' && (
+              <span className={`mini-badge schedule-badge ${student.classSchedule === 'Weekday' ? 'weekday' : 'weekend'}`}>
+                {student.classSchedule}
+              </span>
             )}
           </div>
         </div>

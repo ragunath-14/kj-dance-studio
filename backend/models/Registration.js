@@ -56,6 +56,11 @@ const RegistrationSchema = new mongoose.Schema({
     index: true
   },
   batchTiming:    { type: String, trim: true },
+  classSchedule: {
+    type: String,
+    enum: ['Weekday', 'Weekend', 'NA'],
+    default: 'NA'
+  },
   notes:  { type: String, trim: true },
   status: {
     type: String,

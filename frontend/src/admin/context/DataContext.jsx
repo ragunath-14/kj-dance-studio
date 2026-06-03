@@ -47,7 +47,7 @@ export const DataProvider = ({ children }) => {
   const [notification, setNotification] = useState(null); // { message, type }
   
   // Track last used params to prevent "mixed list" on refresh
-  const [studentParams, setStudentParams] = useState({ page: 1, limit: 50, search: '', classType: 'Regular Class', studentCategory: '' });
+  const [studentParams, setStudentParams] = useState({ page: 1, limit: 50, search: '', classType: 'Regular Class', studentCategory: '', classSchedule: '' });
   const [paymentParams, setPaymentParams] = useState({ page: 1, limit: 50, search: '', studentCategory: '' });
   const [unpaidParams, setUnpaidParams]   = useState({ page: 1, limit: 50, search: '', studentCategory: '' });
 
@@ -69,10 +69,10 @@ export const DataProvider = ({ children }) => {
     }
   };
 
-  const fetchStudents = async (page = 1, limit = 50, search = '', classType = '', studentCategory = '') => {
-    setStudentParams({ page, limit, search, classType, studentCategory });
+  const fetchStudents = async (page = 1, limit = 50, search = '', classType = '', studentCategory = '', classSchedule = '') => {
+    setStudentParams({ page, limit, search, classType, studentCategory, classSchedule });
     try {
-      const res = await axios.get(`${API_URL}/students`, { params: { page, limit, search, classType, studentCategory } });
+      const res = await axios.get(`${API_URL}/students`, { params: { page, limit, search, classType, studentCategory, classSchedule } });
       setStudents(res.data);
     } catch (err) {
       console.error('Students fetch failed:', err);
@@ -132,7 +132,7 @@ export const DataProvider = ({ children }) => {
       await Promise.all([
         fetchStats(),
         fetchAllStudents(),
-        fetchStudents(studentParams.page, studentParams.limit, studentParams.search, studentParams.classType, studentParams.studentCategory),
+        fetchStudents(studentParams.page, studentParams.limit, studentParams.search, studentParams.classType, studentParams.studentCategory, studentParams.classSchedule),
         fetchPayments(paymentParams.page, paymentParams.limit, paymentParams.search, paymentParams.studentCategory),
         fetchUnpaidStudents(unpaidParams.page, unpaidParams.limit, unpaidParams.search, unpaidParams.studentCategory),
         fetchRegistrations()

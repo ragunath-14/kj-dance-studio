@@ -61,6 +61,7 @@ const Register = ({ isOpen, onClose }) => {
     studentAge: '',
     gender: '',
     classType: '',
+    classSchedule: '',
     danceForFitness: '',
     whatsappNumber: '',
     phone: '',
@@ -107,7 +108,7 @@ const Register = ({ isOpen, onClose }) => {
         setMessage({ type: 'success', text: 'Registration submitted! We will contact you soon.' });
         setFormData({
           studentName: '', studentAge: '', gender: '',
-          classType: '', danceForFitness: '', whatsappNumber: '', phone: ''
+          classType: '', classSchedule: '', danceForFitness: '', whatsappNumber: '', phone: ''
         });
         setIsSameNumber(false);
         setTimeout(onClose, 3000);
@@ -208,8 +209,25 @@ const Register = ({ isOpen, onClose }) => {
                     onClick={() => setFormData(prev => ({ ...prev, classType: type }))}
                   >
                     {type}
-                    {type === 'Fitness Class' && <span className="class-note"> — Adults only</span>}
-                    {type === 'Online Class' && <span className="class-note"> — Virtual</span>}
+                    {type === 'Fitness Class' && <span className="class-note">— Adults only</span>}
+                    {type === 'Online Class' && <span className="class-note">— Virtual</span>}
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="form-group full-width">
+              <label>Class Schedule *</label>
+              <div className="class-type-selector">
+                {['Weekday', 'Weekend'].map(schedule => (
+                  <div
+                    key={schedule}
+                    className={`type-option ${formData.classSchedule === schedule ? 'selected' : ''}`}
+                    onClick={() => setFormData(prev => ({ ...prev, classSchedule: schedule }))}
+                  >
+                    {schedule}
+                    {schedule === 'Weekday' && <span className="class-note">— Mon to Fri</span>}
+                    {schedule === 'Weekend' && <span className="class-note">— Sat & Sun</span>}
                   </div>
                 ))}
               </div>

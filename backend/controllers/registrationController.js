@@ -115,6 +115,7 @@ exports.approveRegistration = async (req, res) => {
       gender:         registration.gender,
       bloodGroup:     registration.bloodGroup,
       classType:      registration.classType,
+      classSchedule:  registration.classSchedule || 'NA',
       danceStyle:     registration.danceStyle,
       danceForFitness: registration.danceForFitness,
       whatsappNumber: registration.whatsappNumber,

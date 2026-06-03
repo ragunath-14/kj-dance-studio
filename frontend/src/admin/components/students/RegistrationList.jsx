@@ -88,6 +88,9 @@ const RegistrationList = () => {
                 {reg.classType && (
                   <div className="detail-tag">{reg.classType}</div>
                 )}
+                {reg.classSchedule && reg.classSchedule !== 'NA' && (
+                  <div className="detail-tag schedule-tag">{reg.classSchedule}</div>
+                )}
               </div>
 
               {reg.notes && (
