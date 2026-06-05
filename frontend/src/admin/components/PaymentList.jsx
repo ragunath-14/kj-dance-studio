@@ -165,7 +165,7 @@ const PaymentList = () => {
               className={`tab-btn ${activeTab === 'unpaid' ? 'active' : ''}`}
               onClick={() => setActiveTab('unpaid')}
             >
-              Unpaid ({stats?.metrics?.overdue || 0})
+              Unpaid ({serverUnpaid.total ?? stats?.metrics?.overdue ?? 0})
             </button>
             <button
               className={`tab-btn ${activeTab === 'paid' ? 'active' : ''}`}

@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useRef, useCallback } from 'react';
 import axios from 'axios';
 import { io } from 'socket.io-client';
 import API_URL from '../config';
@@ -46,60 +46,72 @@ export const DataProvider = ({ children }) => {
   const [loading, setLoading] = useState(false);
   const [notification, setNotification] = useState(null); // { message, type }
   
-  // Track last used params to prevent "mixed list" on refresh
+  // Track last used params — stored in BOTH state (for UI reactivity) and refs
+  // (for use inside socket callbacks that capture stale closures)
   const [studentParams, setStudentParams] = useState({ page: 1, limit: 50, search: '', classType: 'Regular Class', studentCategory: '', classSchedule: '' });
   const [paymentParams, setPaymentParams] = useState({ page: 1, limit: 50, search: '', studentCategory: '' });
   const [unpaidParams, setUnpaidParams]   = useState({ page: 1, limit: 50, search: '', studentCategory: '' });
 
-  const fetchStats = async () => {
+  // Refs always hold the latest param values — safe to read inside socket handlers
+  const studentParamsRef = useRef({ page: 1, limit: 50, search: '', classType: 'Regular Class', studentCategory: '', classSchedule: '' });
+  const paymentParamsRef = useRef({ page: 1, limit: 50, search: '', studentCategory: '' });
+  const unpaidParamsRef  = useRef({ page: 1, limit: 50, search: '', studentCategory: '' });
+
+  const fetchStats = useCallback(async () => {
     try {
       const res = await axios.get(`${API_URL}/dashboard/stats`);
       setStats(res.data);
     } catch (err) {
       console.error('Stats fetch failed:', err);
     }
-  };
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const fetchAllStudents = async () => {
+  const fetchAllStudents = useCallback(async () => {
     try {
       const res = await axios.get(`${API_URL}/students`, { params: { limit: 1000 } });
       setAllStudents(res.data.data);
     } catch (err) {
       console.error('All students fetch failed:', err);
     }
-  };
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const fetchStudents = async (page = 1, limit = 50, search = '', classType = '', studentCategory = '', classSchedule = '') => {
-    setStudentParams({ page, limit, search, classType, studentCategory, classSchedule });
+  const fetchStudents = useCallback(async (page = 1, limit = 50, search = '', classType = '', studentCategory = '', classSchedule = '') => {
+    const params = { page, limit, search, classType, studentCategory, classSchedule };
+    setStudentParams(params);
+    studentParamsRef.current = params; // Keep ref in sync
     try {
-      const res = await axios.get(`${API_URL}/students`, { params: { page, limit, search, classType, studentCategory, classSchedule } });
+      const res = await axios.get(`${API_URL}/students`, { params });
       setStudents(res.data);
     } catch (err) {
       console.error('Students fetch failed:', err);
     }
-  };
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const fetchPayments = async (page = 1, limit = 50, search = '', studentCategory = '') => {
-    setPaymentParams({ page, limit, search, studentCategory });
+  const fetchPayments = useCallback(async (page = 1, limit = 50, search = '', studentCategory = '') => {
+    const params = { page, limit, search, studentCategory };
+    setPaymentParams(params);
+    paymentParamsRef.current = params; // Keep ref in sync
     try {
-      const res = await axios.get(`${API_URL}/payments`, { params: { page, limit, search, studentCategory } });
+      const res = await axios.get(`${API_URL}/payments`, { params });
       setPayments(res.data);
     } catch (err) {
       console.error('Payments fetch failed:', err);
     }
-  };
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const fetchUnpaidStudents = async (page = 1, limit = 50, search = '', studentCategory = '') => {
-    setUnpaidParams({ page, limit, search, studentCategory });
+  const fetchUnpaidStudents = useCallback(async (page = 1, limit = 50, search = '', studentCategory = '') => {
+    const params = { page, limit, search, studentCategory };
+    setUnpaidParams(params);
+    unpaidParamsRef.current = params; // Keep ref in sync
     try {
-      const res = await axios.get(`${API_URL}/students/unpaid`, { params: { page, limit, search, studentCategory } });
+      const res = await axios.get(`${API_URL}/students/unpaid`, { params });
       setUnpaidStudents(res.data);
     } catch (err) {
       console.error('Unpaid fetch failed:', err);
     }
-  };
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const fetchRegistrations = async (page = 1, limit = 10) => {
+  const fetchRegistrations = useCallback(async () => {
     try {
       // Backend returns a plain array; normalize it to {data, total, page, limit}
       const res = await axios.get(`${API_URL}/registrations/pending`);
@@ -114,7 +126,7 @@ export const DataProvider = ({ children }) => {
     } catch (err) {
       console.error('Registrations fetch failed:', err);
     }
-  };
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const fetchActivity = async (page = 1, limit = 20) => {
     try {
@@ -126,21 +138,26 @@ export const DataProvider = ({ children }) => {
     }
   };
 
-  const fetchAllData = async (silent = false) => {
+  const fetchAllData = useCallback(async (silent = false) => {
+    // Always read from refs so we use the LATEST filter params,
+    // even when called from a socket event (which has a stale closure over state).
+    const sp = studentParamsRef.current;
+    const pp = paymentParamsRef.current;
+    const up = unpaidParamsRef.current;
     try {
       if (!silent) setLoading(true);
       await Promise.all([
         fetchStats(),
         fetchAllStudents(),
-        fetchStudents(studentParams.page, studentParams.limit, studentParams.search, studentParams.classType, studentParams.studentCategory, studentParams.classSchedule),
-        fetchPayments(paymentParams.page, paymentParams.limit, paymentParams.search, paymentParams.studentCategory),
-        fetchUnpaidStudents(unpaidParams.page, unpaidParams.limit, unpaidParams.search, unpaidParams.studentCategory),
+        fetchStudents(sp.page, sp.limit, sp.search, sp.classType, sp.studentCategory, sp.classSchedule),
+        fetchPayments(pp.page, pp.limit, pp.search, pp.studentCategory),
+        fetchUnpaidStudents(up.page, up.limit, up.search, up.studentCategory),
         fetchRegistrations()
       ]);
     } finally {
       if (!silent) setLoading(false);
     }
-  };
+  }, [fetchStats, fetchAllStudents, fetchStudents, fetchPayments, fetchUnpaidStudents, fetchRegistrations]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     fetchAllData();
@@ -202,7 +219,7 @@ export const DataProvider = ({ children }) => {
       socket.removeAllListeners();
       socket.disconnect();
     };
-  }, []);
+  }, [fetchAllData]); // fetchAllData is stable (useCallback) — no re-subscription risk
 
   const refreshData = () => fetchAllData();
 
@@ -236,15 +253,19 @@ export const DataProvider = ({ children }) => {
     try {
       const res = await axios.patch(`${API_URL}/students/${id}/toggle-status`);
       // Targeted refresh: only re-fetch the student list and stats to avoid
-      // a race condition that would briefly wipe out the visible student rows.
+      // a full reload. Read from refs to get the latest filter params.
+      const sp = studentParamsRef.current;
+      const up = unpaidParamsRef.current;
       await Promise.all([
         fetchStudents(
-          studentParams.page,
-          studentParams.limit,
-          studentParams.search,
-          studentParams.classType,
-          studentParams.studentCategory
+          sp.page,
+          sp.limit,
+          sp.search,
+          sp.classType,
+          sp.studentCategory,
+          sp.classSchedule  // ← was missing before, caused filter mismatch
         ),
+        fetchUnpaidStudents(up.page, up.limit, up.search, up.studentCategory),
         fetchStats()
       ]);
       return { success: true, message: res.data.message };
