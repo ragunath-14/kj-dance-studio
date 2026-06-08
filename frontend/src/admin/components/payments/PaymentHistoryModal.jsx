@@ -1,10 +1,11 @@
 import React from 'react';
+import { createPortal } from 'react-dom';
 import { X, CreditCard, Calendar, TrendingDown } from 'lucide-react';
 import axios from 'axios';
 import API_URL from '../../config';
 import Button from '../ui/Button';
 
-const PaymentHistoryModal = ({ student, onClose, onRecordPayment }) => {
+const PaymentHistoryModal = ({ student, onClose }) => {
   const [studentPayments, setStudentPayments] = React.useState([]);
   const [loading, setLoading] = React.useState(true);
 
@@ -13,10 +14,8 @@ const PaymentHistoryModal = ({ student, onClose, onRecordPayment }) => {
     const fetchHistory = async () => {
       try {
         setLoading(true);
-        const res = await axios.get(`${API_URL}/payments`, { 
-          params: { studentId: student._id, limit: 1000 } 
-        });
-        setStudentPayments(res.data.data);
+        const res = await axios.get(`${API_URL}/payments/student/${student._id}`);
+        setStudentPayments(res.data);
       } catch (err) {
         console.error('History fetch failed:', err);
       } finally {
@@ -46,7 +45,7 @@ const PaymentHistoryModal = ({ student, onClose, onRecordPayment }) => {
   const totalExpected = totalCycles * fee;
   const totalDue = Math.max(0, totalExpected - totalPaid);
 
-  return (
+  return createPortal(
     <div className="history-overlay" onClick={onClose}>
       <div className="history-modal" onClick={e => e.stopPropagation()}>
         <div className="history-header">
@@ -125,11 +124,11 @@ const PaymentHistoryModal = ({ student, onClose, onRecordPayment }) => {
         </div>
 
         <div className="history-footer">
-          <Button variant="primary" onClick={() => { onClose(); onRecordPayment(student); }}>Record Payment</Button>
           <Button variant="secondary" onClick={onClose}>Close</Button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };
 

@@ -285,7 +285,7 @@ const PaymentList = () => {
                     onDelete={handleDelete} 
                     onEdit={handleEdit}
                     onViewHistory={(studentId) => {
-                      const s = allStudents.find(st => st._id === (payment.studentId?._id || payment.studentId));
+                      const s = allStudents.find(st => String(st._id) === String(studentId));
                       if (s) setHistoryStudent(s);
                     }}
                   />

@@ -99,7 +99,7 @@ exports.getDashboardStats = async (req, res) => {
 
     // Parallel fetch — aggregate monthly-fee totals per student in one DB call
     const [students, monthlyFeePaidMap, monthRevenue, lifetimeRevenue, pendingRegistrations, recentRegistrations] = await Promise.all([
-      Student.find().select('studentName phone whatsappNumber classType isActive createdAt lastAlertSent').lean(),
+      Student.find().select('studentName phone whatsappNumber classType studentCategory isActive createdAt lastAlertSent').lean(),
       // O(M) aggregation: total Monthly Fee paid per student (all time)
       Payment.aggregate([
         { $match: { purpose: 'Monthly Fee' } },
@@ -352,7 +352,7 @@ exports.createStudent = async (req, res) => {
     const io = req.app.get('socketio');
     if (io) io.emit('dataChanged', { type: 'student', action: 'create' });
 
-    // Send WhatsApp welcome message (non-blocking, same as registration approval)
+    // Send WhatsApp welcome message on enrolment (non-blocking)
     const whatsappNum = newStudent.whatsappNumber || newStudent.phone;
     if (whatsappNum) {
       whatsapp.sendWelcomeMessage(

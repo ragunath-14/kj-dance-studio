@@ -135,7 +135,7 @@ exports.approveRegistration = async (req, res) => {
     registration.status = 'approved';
     await registration.save();
 
-    // Send a WhatsApp utility message confirming approval (non-blocking)
+    // Send WhatsApp welcome message on approval (non-blocking)
     const whatsappNum = registration.whatsappNumber || registration.phone;
     if (whatsappNum) {
       whatsapp.sendWelcomeMessage(whatsappNum, registration.studentName, registration.classType, registration.batchTiming)

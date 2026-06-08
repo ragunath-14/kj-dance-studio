@@ -599,15 +599,15 @@
 /* ── History Modal Responsive ────────────────────────────────────── */
 @media (max-width: 768px) {
   .history-overlay {
-    padding: 0;
-    align-items: flex-end;
+    padding: 16px;
+    align-items: center;
   }
 
   .history-modal {
     width: 100%;
     max-width: 100%;
-    border-radius: 24px 24px 0 0;
-    max-height: 92vh;
+    border-radius: 20px;
+    max-height: 88vh;
   }
 
   .history-header {
@@ -649,9 +649,14 @@
 }
 
 @media (max-width: 480px) {
+  .history-overlay {
+    padding: 12px;
+    align-items: center;
+  }
+
   .history-modal {
-    border-radius: 20px 20px 0 0;
-    max-height: 95vh;
+    border-radius: 16px;
+    max-height: 88vh;
   }
 
   .history-header h2 {
