@@ -29,6 +29,7 @@ const PaymentHistoryModal = ({ student, onClose }) => {
 
   const getMonthlyFee = (student) => {
     if (student?.classType === 'Fitness Class') return 2000;
+    if (student?.classType === 'Online Class')  return student?.studentCategory === 'Kids' ? 1600 : 2000;
     return student?.studentCategory === 'Kids' ? 1000 : 1300;
   };
   const today = new Date();

@@ -5,6 +5,7 @@ const whatsapp = require('../services/whatsappService');
 // ─── Fee helper ──────────────────────────────────────────────────────────────
 const getMonthlyFee = (classType, studentCategory) => {
   if (classType === 'Fitness Class') return 2000;
+  if (classType === 'Online Class')  return studentCategory === 'Kids' ? 1600 : 2000;
   return studentCategory === 'Kids' ? 1000 : 1300;
 };
 

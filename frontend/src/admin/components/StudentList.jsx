@@ -27,13 +27,18 @@ const StudentList = () => {
   const [confirmState, setConfirmState] = useState({ open: false, studentId: null });
   const [historyStudent, setHistoryStudent] = useState(null);
 
-  // Server-side fetching when page, tab, search or filter changes
+  // Debounce only search input — tab/filter changes should be instant
   useEffect(() => {
     const timer = setTimeout(() => {
       fetchStudents(1, 50, searchTerm, activeTab, activeCategory, activeSchedule);
     }, 300);
     return () => clearTimeout(timer);
-  }, [searchTerm, activeTab, activeCategory, activeSchedule]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [searchTerm]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Immediate fetch on tab or filter change (no debounce needed)
+  useEffect(() => {
+    fetchStudents(1, 50, searchTerm, activeTab, activeCategory, activeSchedule);
+  }, [activeTab, activeCategory, activeSchedule]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const onPageChange = (page) => {
     fetchStudents(page, 50, searchTerm, activeTab, activeCategory, activeSchedule);

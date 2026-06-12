@@ -86,6 +86,20 @@ The backend exposes a `/health` endpoint:
 
 ---
 
+## Fee Structure
+
+| Class Type       | Category | Monthly Fee |
+| ---------------- | -------- | ----------- |
+| Regular Class    | Kids     | ₹1,000      |
+| Regular Class    | Adults   | ₹1,300      |
+| Online Class     | Kids     | ₹1,600      |
+| Online Class     | Adults   | ₹2,000      |
+| Fitness Class    | Adults   | ₹2,000      |
+
+> **Note:** Kids = age ≤ 9 | Adults = age ≥ 10. Fitness Class is Adults-only.
+
+---
+
 ## Security & Reliability
 
 - ✅ Helmet.js protection enabled.

@@ -11,6 +11,7 @@ const StudentRow = ({ student, payments, showFitnessCol, onEdit, onDelete, onTog
     const today = new Date();
     const getMonthlyFee = (student) => {
       if (student?.classType === 'Fitness Class') return 2000;
+      if (student?.classType === 'Online Class')  return student?.studentCategory === 'Kids' ? 1600 : 2000;
       return student?.studentCategory === 'Kids' ? 1000 : 1300;
     };
 
