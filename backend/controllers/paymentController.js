@@ -9,6 +9,9 @@ const getMonthlyFee = (classType, studentCategory) => {
   return studentCategory === 'Kids' ? 1000 : 1300;
 };
 
+// ─── Month names helper ───────────────────────────────────────────────────────
+const MONTH_NAMES = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+
 // ─── GET /api/payments ───────────────────────────────────────────────────────
 // ─── GET /api/payments (Paginated) ──────────────────────────────────────────
 exports.getAllPayments = async (req, res) => {
@@ -18,6 +21,9 @@ exports.getAllPayments = async (req, res) => {
     const skip            = (page - 1) * limit;
     const search          = req.query.search          || '';
     const studentCategory = req.query.studentCategory || '';
+    // Optional month/year filter (e.g. ?filterMonth=6&filterYear=2026)
+    const filterMonth     = req.query.filterMonth !== undefined ? parseInt(req.query.filterMonth) : null;
+    const filterYear      = req.query.filterYear  !== undefined ? parseInt(req.query.filterYear)  : null;
 
     // If searching by name, resolve matching student IDs first
     let studentIdFilter = null;
@@ -30,6 +36,13 @@ exports.getAllPayments = async (req, res) => {
     }
 
     const paymentQuery = studentIdFilter !== null ? { studentId: { $in: studentIdFilter } } : {};
+
+    // Apply month/year filter if provided (for "this month paid" view)
+    if (filterMonth !== null && filterYear !== null) {
+      paymentQuery.purpose  = 'Monthly Fee';
+      paymentQuery.forMonth = filterMonth;
+      paymentQuery.forYear  = filterYear;
+    }
 
     const [payments, total] = await Promise.all([
       Payment.find(paymentQuery)
@@ -49,13 +62,59 @@ exports.getAllPayments = async (req, res) => {
 };
 
 // ─── GET /api/payments/student/:studentId ────────────────────────────────────
+// Returns full payment history + per-month breakdown for a student
 exports.getStudentPayments = async (req, res) => {
   try {
     const { studentId } = req.params;
-    const payments = await Payment.find({ studentId })
-      .sort({ date: -1 })
-      .lean();
-    res.json(payments);
+
+    const [student, payments] = await Promise.all([
+      Student.findById(studentId).lean(),
+      Payment.find({ studentId }).sort({ date: -1 }).lean()
+    ]);
+
+    if (!student) return res.status(404).json({ message: 'Student not found.' });
+
+    const today    = new Date();
+    const joinDate = new Date(student.createdAt || student.joinDate);
+    const fee      = getMonthlyFee(student.classType, student.studentCategory);
+
+    // Build per-month status from join month up to current month
+    const monthHistory = [];
+    let yr  = joinDate.getFullYear();
+    let mo  = joinDate.getMonth();
+    const curYr = today.getFullYear();
+    const curMo = today.getMonth();
+
+    // Map payments by month key for O(1) lookups
+    const payByMonth = {};
+    for (const p of payments) {
+      if (p.purpose === 'Monthly Fee' && p.forYear !== undefined && p.forMonth !== undefined) {
+        const key = `${p.forYear}-${p.forMonth}`;
+        payByMonth[key] = (payByMonth[key] || 0) + (p.amount || 0);
+      }
+    }
+
+    while (yr < curYr || (yr === curYr && mo <= curMo)) {
+      const key    = `${yr}-${mo}`;
+      const paid   = payByMonth[key] || 0;
+      let status;
+      if (paid >= fee)             status = 'paid';
+      else if (paid > 0)           status = 'partial';
+      else                         status = 'pending';
+
+      monthHistory.push({
+        year: yr, month: mo, label: `${MONTH_NAMES[mo]} ${yr}`,
+        fee, paid, due: Math.max(0, fee - paid), status
+      });
+
+      mo++;
+      if (mo > 11) { mo = 0; yr++; }
+    }
+
+    // Reverse so newest month is first
+    monthHistory.reverse();
+
+    res.json({ payments, monthHistory, student: { fee } });
   } catch (err) {
     console.error('getStudentPayments error:', err);
     res.status(500).json({ message: 'Failed to fetch student payments.' });
@@ -65,7 +124,7 @@ exports.getStudentPayments = async (req, res) => {
 // ─── POST /api/payments ──────────────────────────────────────────────────────
 exports.createPayment = async (req, res) => {
   try {
-    const { studentId, amount } = req.body;
+    const { studentId, amount, purpose } = req.body;
 
     if (!studentId)
       return res.status(400).json({ message: 'Student is required for payment.' });
@@ -76,29 +135,48 @@ exports.createPayment = async (req, res) => {
     if (!student)
       return res.status(404).json({ message: 'Student not found. Cannot record payment.' });
 
-    // --- Prevent Duplicate Payments ---
-    // Check if a payment with the same student, amount, purpose exists on the same day
-    const paymentDate = new Date(req.body.date || Date.now());
-    const startOfDay = new Date(paymentDate);
-    startOfDay.setHours(0, 0, 0, 0);
-    const endOfDay = new Date(paymentDate);
-    endOfDay.setHours(23, 59, 59, 999);
-
-    const duplicatePayment = await Payment.findOne({
-      studentId,
-      amount,
-      purpose: req.body.purpose,
-      date: { $gte: startOfDay, $lte: endOfDay }
-    });
-
-    if (duplicatePayment) {
-      return res.status(409).json({ 
-        message: 'Duplicate detected: A payment for this student with the same amount and purpose is already recorded for this date.' 
-      });
+    // Auto-populate forMonth / forYear for Monthly Fee payments
+    const paymentData = { ...req.body };
+    if (purpose === 'Monthly Fee') {
+      const payDate = new Date(req.body.date || Date.now());
+      if (paymentData.forMonth === undefined || paymentData.forMonth === null) {
+        paymentData.forMonth = payDate.getMonth();
+      }
+      if (paymentData.forYear === undefined || paymentData.forYear === null) {
+        paymentData.forYear = payDate.getFullYear();
+      }
     }
-    // ----------------------------------
 
-    const payment    = new Payment(req.body);
+    // --- Prevent Duplicate Payments for same month ---
+    if (purpose === 'Monthly Fee' && paymentData.forMonth !== undefined) {
+      const existingThisMonth = await Payment.findOne({
+        studentId,
+        purpose: 'Monthly Fee',
+        forMonth: paymentData.forMonth,
+        forYear:  paymentData.forYear
+      });
+      if (existingThisMonth) {
+        return res.status(409).json({
+          message: `A Monthly Fee payment for ${MONTH_NAMES[paymentData.forMonth]} ${paymentData.forYear} already exists for this student. Edit the existing record instead.`
+        });
+      }
+    } else {
+      // For non-monthly-fee: prevent same-day duplicate
+      const paymentDate = new Date(req.body.date || Date.now());
+      const startOfDay  = new Date(paymentDate); startOfDay.setHours(0, 0, 0, 0);
+      const endOfDay    = new Date(paymentDate); endOfDay.setHours(23, 59, 59, 999);
+      const duplicatePayment = await Payment.findOne({
+        studentId, amount, purpose: req.body.purpose,
+        date: { $gte: startOfDay, $lte: endOfDay }
+      });
+      if (duplicatePayment) {
+        return res.status(409).json({
+          message: 'Duplicate detected: A payment for this student with the same amount and purpose is already recorded for this date.'
+        });
+      }
+    }
+
+    const payment    = new Payment(paymentData);
     const newPayment = await payment.save();
 
     // Send WhatsApp Confirmation
@@ -113,7 +191,6 @@ exports.createPayment = async (req, res) => {
       ).catch(err => console.error('Failed to send payment WhatsApp:', err.message));
     }
 
-    // Return with student name populated
     await newPayment.populate('studentId', 'studentName');
     const io = req.app.get('socketio');
     if (io) io.emit('dataChanged', { type: 'payment', action: 'create' });
@@ -184,16 +261,31 @@ exports.deletePayment = async (req, res) => {
 exports.sendPendingAlerts = async (req, res) => {
   try {
     const today = new Date();
-    const [students, monthlyFeePaidMap] = await Promise.all([
-      Student.find({ isActive: { $ne: false } }).select('studentName phone whatsappNumber classType studentCategory isActive createdAt lastAlertSent').lean(),
-      Payment.aggregate([
-        { $match: { purpose: 'Monthly Fee' } },
-        { $group: { _id: '$studentId', totalPaid: { $sum: '$amount' } } }
-      ])
+    const curMo = today.getMonth();
+    const curYr = today.getFullYear();
+
+    const [students, allMonthlyFeePayments] = await Promise.all([
+      Student.find({ isActive: { $ne: false } })
+        .select('studentName phone whatsappNumber classType studentCategory isActive createdAt lastAlertSent')
+        .lean(),
+      Payment.find({ purpose: 'Monthly Fee' })
+        .select('studentId amount forMonth forYear')
+        .lean()
     ]);
 
-    // Pre-aggregate total paid per student — O(M) instead of O(N×M)
-    const paidByStudent = new Map(monthlyFeePaidMap.map(r => [r._id.toString(), r.totalPaid]));
+    // Pre-aggregate total paid per student (all time) for total-due calculation
+    const paidByStudent = new Map();
+    // Also track per-month paid amounts
+    const paidByStudentMonth = new Map(); // key: `${studentId}-${yr}-${mo}`
+    for (const p of allMonthlyFeePayments) {
+      const sid = p.studentId?.toString();
+      if (!sid) continue;
+      paidByStudent.set(sid, (paidByStudent.get(sid) || 0) + (p.amount || 0));
+      if (p.forYear !== undefined && p.forMonth !== undefined) {
+        const mk = `${sid}-${p.forYear}-${p.forMonth}`;
+        paidByStudentMonth.set(mk, (paidByStudentMonth.get(mk) || 0) + (p.amount || 0));
+      }
+    }
 
     const results = [];
 
@@ -204,7 +296,7 @@ exports.sendPendingAlerts = async (req, res) => {
         (today.getMonth()    - joinDate.getMonth()) + 1;
 
       if (today.getDate() < joinDate.getDate()) totalCycles--;
-      if (totalCycles <= 0) continue;   // Joined this month — no dues yet
+      if (totalCycles <= 0) continue;
 
       const fee          = getMonthlyFee(student.classType, student.studentCategory);
       const totalPaid    = paidByStudent.get(student._id.toString()) || 0;
@@ -218,11 +310,7 @@ exports.sendPendingAlerts = async (req, res) => {
       if (whatsappNum) {
         try {
           alertResult = await whatsapp.sendPendingFeesAlert(
-            student._id,
-            whatsappNum,
-            student.studentName,
-            pendingMonths,
-            totalDue
+            student._id, whatsappNum, student.studentName, pendingMonths, totalDue
           );
           if (alertResult.success) {
             await Student.updateOne({ _id: student._id }, { lastAlertSent: today });
@@ -258,7 +346,6 @@ exports.sendPendingAlerts = async (req, res) => {
 };
 
 // ─── POST /api/payments/send-reminder/:studentId ─────────────────────────────
-// Send a WhatsApp fee reminder to a single specific student (manual trigger)
 exports.sendStudentReminder = async (req, res) => {
   try {
     const { studentId } = req.params;
@@ -295,11 +382,7 @@ exports.sendStudentReminder = async (req, res) => {
     }
 
     const result = await whatsapp.sendPendingFeesAlert(
-      student._id,
-      whatsappNum,
-      student.studentName,
-      pendingMonths,
-      totalDue
+      student._id, whatsappNum, student.studentName, pendingMonths, totalDue
     );
 
     if (result.success) {

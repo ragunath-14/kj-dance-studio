@@ -15,6 +15,11 @@ import './List.css';
 
 import PaymentHistoryModal from './payments/PaymentHistoryModal';
 
+const NOW         = new Date();
+const CUR_MONTH   = NOW.getMonth();
+const CUR_YEAR    = NOW.getFullYear();
+const MONTH_NAMES = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+
 const PaymentList = () => {
   const { payments, unpaidStudents: serverUnpaid, allStudents, stats, loading, refreshData, fetchPayments, fetchUnpaidStudents } = useData();
   const [activeTab, setActiveTab] = useState('unpaid');
@@ -22,7 +27,8 @@ const PaymentList = () => {
   const [showModal, setShowModal] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [formData, setFormData] = useState({
-    studentId: '', amount: '', method: 'Cash', purpose: 'Monthly Fee', date: '', remainingFees: 0
+    studentId: '', amount: '', method: 'Cash', purpose: 'Monthly Fee', date: '',
+    remainingFees: 0, forMonth: CUR_MONTH, forYear: CUR_YEAR
   });
   const [currentDebt, setCurrentDebt] = useState(0);
   const [isEditing, setIsEditing] = useState(false);
@@ -30,6 +36,10 @@ const PaymentList = () => {
   const [confirmDelete, setConfirmDelete] = useState({ open: false, paymentId: null });
   const [historyStudent, setHistoryStudent] = useState(null);
   const [submitting, setSubmitting] = useState(false);
+  // For paid tab: filter by specific month (default = current month)
+  const [paidMonthFilter, setPaidMonthFilter] = useState(CUR_MONTH);
+  const [paidYearFilter,  setPaidYearFilter]  = useState(CUR_YEAR);
+  const [showAllPaid,     setShowAllPaid]     = useState(false);
 
   const getMonthlyFee = (student) => {
     if (student?.classType === 'Fitness Class') return 2000;
@@ -38,8 +48,12 @@ const PaymentList = () => {
   };
 
   const onPageChange = (page) => {
-    if (activeTab === 'paid') fetchPayments(page, 50, searchTerm, categoryFilter);
-    else fetchUnpaidStudents(page, 50, searchTerm, categoryFilter);
+    if (activeTab === 'paid') {
+      const extra = showAllPaid ? {} : { filterMonth: paidMonthFilter, filterYear: paidYearFilter };
+      fetchPayments(page, 50, searchTerm, categoryFilter, extra);
+    } else {
+      fetchUnpaidStudents(page, 50, searchTerm, categoryFilter);
+    }
   };
 
   const paginatedPayments = payments.data || [];
@@ -53,11 +67,15 @@ const PaymentList = () => {
 
   React.useEffect(() => {
     const timer = setTimeout(() => {
-      if (activeTab === 'paid') fetchPayments(1, 50, searchTerm, categoryFilter);
-      else fetchUnpaidStudents(1, 50, searchTerm, categoryFilter);
+      if (activeTab === 'paid') {
+        const extra = showAllPaid ? {} : { filterMonth: paidMonthFilter, filterYear: paidYearFilter };
+        fetchPayments(1, 50, searchTerm, categoryFilter, extra);
+      } else {
+        fetchUnpaidStudents(1, 50, searchTerm, categoryFilter);
+      }
     }, 300);
     return () => clearTimeout(timer);
-  }, [searchTerm, activeTab, categoryFilter]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [searchTerm, activeTab, categoryFilter, paidMonthFilter, paidYearFilter, showAllPaid]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -83,8 +101,12 @@ const PaymentList = () => {
   const handlePay = (student) => {
     setCurrentDebt(student.totalDue);
     setFormData({
-      studentId: student._id, amount: student.totalDue, method: 'Cash', 
-      purpose: 'Monthly Fee', date: new Date().toISOString().split('T')[0], remainingFees: 0
+      studentId: student._id, amount: student.currentMonthDue || student.totalDue,
+      method: 'Cash', purpose: 'Monthly Fee',
+      date: new Date().toISOString().split('T')[0],
+      remainingFees: 0,
+      forMonth: CUR_MONTH,
+      forYear:  CUR_YEAR
     });
     setIsEditing(false);
     setShowModal(true);
@@ -93,19 +115,25 @@ const PaymentList = () => {
   const handleQuickPay = async (student) => {
     if (submitting) return;
     
-    // Safety confirmation: show exactly which student is being paid
-    const payAmount = student.totalDue || getMonthlyFee(student);
+    // Pay the current month's due (or full outstanding if no per-month data)
+    const payAmount = student.currentMonthDue || student.totalDue || getMonthlyFee(student);
+    const monthLabel = `${MONTH_NAMES[CUR_MONTH]} ${CUR_YEAR}`;
     const confirmed = window.confirm(
-      `Confirm payment for:\n\nStudent: ${student.studentName}\nPhone: ${student.phone}\nAmount: ₹${payAmount}\n\nProceed?`
+      `Confirm payment for:\n\nStudent: ${student.studentName}\nPhone: ${student.phone}\nMonth: ${monthLabel}\nAmount: ₹${payAmount}\n\nProceed?`
     );
     if (!confirmed) return;
 
     setSubmitting(true);
     try {
       await axios.post(`${API_URL}/payments`, {
-        studentId: student._id,
-        amount: payAmount,
-        method: 'Cash', purpose: 'Monthly Fee', remainingFees: 0, date: new Date().toISOString()
+        studentId:    student._id,
+        amount:       payAmount,
+        method:       'Cash',
+        purpose:      'Monthly Fee',
+        remainingFees: Math.max(0, student.totalDue - payAmount),
+        date:         new Date().toISOString(),
+        forMonth:     CUR_MONTH,
+        forYear:      CUR_YEAR
       });
       await refreshData();
       setActiveTab('paid');
@@ -145,7 +173,7 @@ const PaymentList = () => {
     setIsEditing(false);
     setEditingId(null);
     setCurrentDebt(0);
-    setFormData({ studentId: '', amount: '', method: 'Cash', purpose: 'Monthly Fee', date: '', remainingFees: 0 });
+    setFormData({ studentId: '', amount: '', method: 'Cash', purpose: 'Monthly Fee', date: '', remainingFees: 0, forMonth: CUR_MONTH, forYear: CUR_YEAR });
   };
 
   return (
@@ -180,6 +208,37 @@ const PaymentList = () => {
             onChange={setCategoryFilter}
           />
         </div>
+          {/* Month filter — shown on paid tab */}
+          {activeTab === 'paid' && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', marginTop: '8px' }}>
+              <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Showing:</span>
+              {!showAllPaid && (
+                <>
+                  <select
+                    value={paidMonthFilter}
+                    onChange={e => setPaidMonthFilter(Number(e.target.value))}
+                    style={{ fontSize: '13px', padding: '4px 8px', borderRadius: '6px', border: '1px solid var(--border-color)', background: 'var(--surface)', color: 'var(--text-primary)' }}
+                  >
+                    {MONTH_NAMES.map((n, i) => <option key={i} value={i}>{n}</option>)}
+                  </select>
+                  <select
+                    value={paidYearFilter}
+                    onChange={e => setPaidYearFilter(Number(e.target.value))}
+                    style={{ fontSize: '13px', padding: '4px 8px', borderRadius: '6px', border: '1px solid var(--border-color)', background: 'var(--surface)', color: 'var(--text-primary)' }}
+                  >
+                    {[CUR_YEAR - 1, CUR_YEAR, CUR_YEAR + 1].map(yr => <option key={yr} value={yr}>{yr}</option>)}
+                  </select>
+                </>
+              )}
+              <button
+                onClick={() => setShowAllPaid(p => !p)}
+                style={{ fontSize: '12px', padding: '4px 10px', borderRadius: '20px', border: '1px solid var(--border-color)', background: showAllPaid ? 'var(--primary-red)' : 'transparent', color: showAllPaid ? '#fff' : 'var(--text-secondary)', cursor: 'pointer' }}
+              >
+                {showAllPaid ? 'All Time' : 'This Month'}
+              </button>
+            </div>
+          )}
+
           <div style={{ display: 'flex', gap: '8px' }}>
             <Button onClick={() => setShowModal(true)} icon={Plus}>
               Record Payment
@@ -194,7 +253,7 @@ const PaymentList = () => {
               <tr>
                 <th>Student Name</th>
                 <th>Phone</th>
-                <th>Pending</th>
+                <th>This Month</th>
                 <th>Total Due</th>
                 <th>Actions</th>
               </tr>
@@ -237,7 +296,15 @@ const PaymentList = () => {
                       </div>
                     </td>
                     <td data-label="Phone">{student.phone}</td>
-                    <td data-label="Pending"><span className="pending-badge">{student.pendingMonths} month{student.pendingMonths > 1 ? 's' : ''}</span></td>
+                    <td data-label="This Month">
+                      {student.isPartialThisMonth ? (
+                        <span style={{ fontSize: '11px', fontWeight: 700, padding: '3px 8px', borderRadius: '20px', background: 'rgba(245,158,11,0.15)', color: '#f59e0b' }}>
+                          Partial (₹{student.currentMonthPaid} paid)
+                        </span>
+                      ) : (
+                        <span className="pending-badge">{student.pendingMonths} month{student.pendingMonths > 1 ? 's' : ''}</span>
+                      )}
+                    </td>
                     <td data-label="Due" className="amount due">₹{student.totalDue}</td>
                     <td data-label="Actions">
                       <div className="action-buttons">

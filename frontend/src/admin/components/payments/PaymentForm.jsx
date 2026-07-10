@@ -1,7 +1,9 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import Button from '../ui/Button';
-import { Search, User, Clock, CreditCard } from 'lucide-react';
+import { Search, User, Clock, CreditCard, Calendar } from 'lucide-react';
 import API_URL from '../../config';
+
+const MONTH_NAMES = ['January','February','March','April','May','June','July','August','September','October','November','December'];
 
 const PaymentForm = ({ formData, setFormData, students, payments = [], currentDebt, isEditing, submitting, onSubmit, onCancel }) => {
   const initialStudentName = useMemo(() => {
@@ -204,6 +206,34 @@ const PaymentForm = ({ formData, setFormData, students, payments = [], currentDe
           />
         </div>
       </div>
+
+      {/* Month selector — only shown for Monthly Fee */}
+      {formData.purpose === 'Monthly Fee' && (
+        <div className="form-row">
+          <div className="form-group">
+            <label><Calendar size={16} /> Fee For Month</label>
+            <select
+              value={formData.forMonth ?? new Date().getMonth()}
+              onChange={(e) => setFormData({ ...formData, forMonth: Number(e.target.value) })}
+            >
+              {MONTH_NAMES.map((name, idx) => (
+                <option key={idx} value={idx}>{name}</option>
+              ))}
+            </select>
+          </div>
+          <div className="form-group">
+            <label><Calendar size={16} /> Year</label>
+            <select
+              value={formData.forYear ?? new Date().getFullYear()}
+              onChange={(e) => setFormData({ ...formData, forYear: Number(e.target.value) })}
+            >
+              {[new Date().getFullYear() - 1, new Date().getFullYear(), new Date().getFullYear() + 1].map(yr => (
+                <option key={yr} value={yr}>{yr}</option>
+              ))}
+            </select>
+          </div>
+        </div>
+      )}
 
       {localDebt > 0 && (
         <div className="partial-payment-summary">

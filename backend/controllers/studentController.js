@@ -218,40 +218,79 @@ exports.getDashboardStats = async (req, res) => {
 };
 
 // ─── GET /api/students/unpaid (Paginated) ───────────────────────────────────
+// A student is considered "unpaid for this month" if their forMonth/forYear payment
+// for the current month is missing OR the amount paid is less than their monthly fee.
 exports.getUnpaidStudents = async (req, res) => {
   try {
     const today           = new Date();
+    const curMo           = today.getMonth();
+    const curYr           = today.getFullYear();
     const search          = req.query.search          || '';
     const studentCategory = req.query.studentCategory || '';
 
     const dbQuery = { isActive: { $ne: false } };
     if (studentCategory) dbQuery.studentCategory = studentCategory;
 
-    const [students, monthlyFeePaidMap] = await Promise.all([
+    const [students, allMonthlyPayments] = await Promise.all([
       Student.find(dbQuery)
         .select('studentName phone whatsappNumber classType studentCategory isActive createdAt lastAlertSent')
         .lean(),
-      Payment.aggregate([
-        { $match: { purpose: 'Monthly Fee' } },
-        { $group: { _id: '$studentId', totalPaid: { $sum: '$amount' } } }
-      ])
+      // Fetch all monthly fee payments — we need both all-time totals and per-month totals
+      Payment.find({ purpose: 'Monthly Fee' })
+        .select('studentId amount forMonth forYear')
+        .lean()
     ]);
 
-    const paymentsByStudent = new Map(monthlyFeePaidMap.map(r => [r._id.toString(), r.totalPaid]));
+    // Build per-student all-time paid map AND per-student-month paid map
+    const allTimePaid    = new Map(); // studentId -> total paid (all months)
+    const monthPaid      = new Map(); // `${studentId}-${yr}-${mo}` -> paid this month
+
+    for (const p of allMonthlyPayments) {
+      const sid = p.studentId?.toString();
+      if (!sid) continue;
+      allTimePaid.set(sid, (allTimePaid.get(sid) || 0) + (p.amount || 0));
+      if (p.forYear !== undefined && p.forMonth !== undefined) {
+        const mk = `${sid}-${p.forYear}-${p.forMonth}`;
+        monthPaid.set(mk, (monthPaid.get(mk) || 0) + (p.amount || 0));
+      }
+    }
 
     let unpaid = students.map(student => {
+      const sid      = student._id.toString();
       const joinDate = new Date(student.createdAt || student.joinDate);
-      let totalCycles = (today.getFullYear() - joinDate.getFullYear()) * 12 + (today.getMonth() - joinDate.getMonth()) + 1;
+
+      // Student joined after current month started — no dues yet this month
+      if (joinDate.getFullYear() > curYr || (joinDate.getFullYear() === curYr && joinDate.getMonth() > curMo)) {
+        return null;
+      }
+
+      // How many months have elapsed (including this month)
+      let totalCycles = (curYr - joinDate.getFullYear()) * 12 + (curMo - joinDate.getMonth()) + 1;
       if (today.getDate() < joinDate.getDate()) totalCycles--;
       if (totalCycles <= 0) return null;
 
-      const fee           = getMonthlyFee(student.classType, student.studentCategory);
-      const totalPaid     = paymentsByStudent.get(student._id.toString()) || 0;
-      const totalDue      = Math.max(0, (totalCycles * fee) - totalPaid);
-      const pendingMonths = Math.ceil(totalDue / fee);
-      if (pendingMonths <= 0) return null;
+      const fee = getMonthlyFee(student.classType, student.studentCategory);
 
-      return { ...student, totalDue, pendingMonths };
+      // Total outstanding across ALL months
+      const totalPaid = allTimePaid.get(sid) || 0;
+      const totalDue  = Math.max(0, totalCycles * fee - totalPaid);
+      if (totalDue <= 0) return null; // fully paid across all months
+
+      // Current month specific: how much has been paid for THIS month?
+      const curMonthKey  = `${sid}-${curYr}-${curMo}`;
+      const paidThisMo   = monthPaid.get(curMonthKey) || 0;
+      const dueThisMo    = Math.max(0, fee - paidThisMo);
+
+      const pendingMonths = Math.ceil(totalDue / fee);
+
+      return {
+        ...student,
+        totalDue,
+        pendingMonths,
+        currentMonthDue:  dueThisMo,
+        currentMonthPaid: paidThisMo,
+        isPartialThisMonth: paidThisMo > 0 && paidThisMo < fee
+      };
     })
     .filter(Boolean)
     .sort((a, b) => b.totalDue - a.totalDue);

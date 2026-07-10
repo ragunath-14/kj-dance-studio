@@ -87,10 +87,10 @@ export const DataProvider = ({ children }) => {
     }
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const fetchPayments = useCallback(async (page = 1, limit = 50, search = '', studentCategory = '') => {
-    const params = { page, limit, search, studentCategory };
-    setPaymentParams(params);
-    paymentParamsRef.current = params; // Keep ref in sync
+  const fetchPayments = useCallback(async (page = 1, limit = 50, search = '', studentCategory = '', extraParams = {}) => {
+    const params = { page, limit, search, studentCategory, ...extraParams };
+    setPaymentParams({ page, limit, search, studentCategory });
+    paymentParamsRef.current = { page, limit, search, studentCategory }; // Keep ref in sync
     try {
       const res = await axios.get(`${API_URL}/payments`, { params });
       setPayments(res.data);
