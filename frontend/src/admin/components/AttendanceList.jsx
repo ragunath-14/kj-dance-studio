@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
-import { CalendarDays, Check, X, ListChecks } from 'lucide-react';
+import { CalendarDays, Check, X, ListChecks, Search } from 'lucide-react';
 import API_URL from '../config';
 import SkeletonRow from './ui/SkeletonRow';
+import CategoryDropdown from './ui/CategoryDropdown';
 import './List.css';
 import './AttendanceList.css';
 
@@ -16,6 +17,9 @@ const monthNames = [
 const AttendanceList = () => {
   const [view, setView] = useState('mark'); // 'mark' | 'history'
   const [activeTab, setActiveTab] = useState('');
+  const [activeCategory, setActiveCategory] = useState('');
+  const [activeSchedule, setActiveSchedule] = useState('');
+  const [searchTerm, setSearchTerm] = useState('');
   const [date, setDate] = useState(todayStr());
   const [roster, setRoster] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -31,7 +35,7 @@ const AttendanceList = () => {
     setLoading(true);
     try {
       const res = await axios.get(`${API_URL}/attendance`, {
-        params: { date, classType: activeTab }
+        params: { date, classType: activeTab, studentCategory: activeCategory, classSchedule: activeSchedule, search: searchTerm }
       });
       setRoster(res.data.data || []);
     } catch (err) {
@@ -39,13 +43,13 @@ const AttendanceList = () => {
     } finally {
       setLoading(false);
     }
-  }, [date, activeTab]);
+  }, [date, activeTab, activeCategory, activeSchedule, searchTerm]);
 
   const fetchRegister = useCallback(async () => {
     setHistoryLoading(true);
     try {
       const res = await axios.get(`${API_URL}/attendance/register`, {
-        params: { month: historyMonth, year: historyYear, classType: activeTab }
+        params: { month: historyMonth, year: historyYear, classType: activeTab, studentCategory: activeCategory, classSchedule: activeSchedule, search: searchTerm }
       });
       setRegister({ daysInMonth: res.data.daysInMonth || 31, data: res.data.data || [] });
     } catch (err) {
@@ -53,15 +57,23 @@ const AttendanceList = () => {
     } finally {
       setHistoryLoading(false);
     }
-  }, [historyMonth, historyYear, activeTab]);
+  }, [historyMonth, historyYear, activeTab, activeCategory, activeSchedule, searchTerm]);
+
+  // Debounce only search input — tab/filter changes fetch instantly
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (view === 'mark') fetchRoster(); else fetchRegister();
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [searchTerm]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (view === 'mark') fetchRoster();
-  }, [view, fetchRoster]);
+  }, [view, date, activeTab, activeCategory, activeSchedule]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (view === 'history') fetchRegister();
-  }, [view, fetchRegister]);
+  }, [view, historyMonth, historyYear, activeTab, activeCategory, activeSchedule]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleMark = async (studentId, status) => {
     setMarking(studentId);
@@ -84,6 +96,15 @@ const AttendanceList = () => {
     <div className="attendance-list animate-fade-in">
       <div className="list-header">
         <div className="header-left-group">
+          <div className="search-box">
+            <Search size={18} />
+            <input
+              type="text"
+              placeholder="Search students..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+          </div>
           <div className="tabs">
             <button className={`tab-btn ${view === 'mark' ? 'active' : ''}`} onClick={() => setView('mark')}>
               Mark Attendance
@@ -100,6 +121,21 @@ const AttendanceList = () => {
                 onClick={() => setActiveTab(ct)}
               >
                 {ct || 'All Classes'}
+              </button>
+            ))}
+          </div>
+          <CategoryDropdown
+            value={activeCategory}
+            onChange={setActiveCategory}
+          />
+          <div className="schedule-filter-tabs">
+            {['', 'Weekday', 'Weekend'].map(s => (
+              <button
+                key={s || 'all'}
+                className={`schedule-filter-btn ${activeSchedule === s ? 'active' : ''}`}
+                onClick={() => setActiveSchedule(s)}
+              >
+                {s || 'All Schedule'}
               </button>
             ))}
           </div>

@@ -8,7 +8,7 @@ const normalizeDate = (dateStr) => {
   return d;
 };
 
-// ─── GET /api/attendance?date=YYYY-MM-DD&classType=&studentCategory= ─────────
+// ─── GET /api/attendance?date=&classType=&studentCategory=&classSchedule=&search= ─
 // Returns the active student roster in alphabetical order, merged with that
 // day's attendance marks (status is null when not yet marked).
 exports.getAttendanceByDate = async (req, res) => {
@@ -20,6 +20,13 @@ exports.getAttendanceByDate = async (req, res) => {
     const query = { isActive: { $ne: false } };
     if (req.query.classType)       query.classType       = req.query.classType;
     if (req.query.studentCategory) query.studentCategory = req.query.studentCategory;
+    if (req.query.classSchedule)   query.classSchedule   = req.query.classSchedule;
+    if (req.query.search) {
+      query.$or = [
+        { studentName: { $regex: req.query.search, $options: 'i' } },
+        { phone:       { $regex: req.query.search, $options: 'i' } }
+      ];
+    }
 
     const [students, records] = await Promise.all([
       Student.find(query)
@@ -77,7 +84,7 @@ exports.markAttendance = async (req, res) => {
   }
 };
 
-// ─── GET /api/attendance/register?month=&year=&classType= ────────────────────
+// ─── GET /api/attendance/register?month=&year=&classType=&studentCategory=&classSchedule=&search= ─
 // Day-by-day attendance detail for every active student in the given month,
 // alphabetical order. Each month is independent — "Mark Attendance" only ever
 // shows the selected date, so the register is what surfaces past months here
@@ -92,7 +99,15 @@ exports.getAttendanceRegister = async (req, res) => {
     const daysInMonth = new Date(year, month + 1, 0).getDate();
 
     const query = { isActive: { $ne: false } };
-    if (req.query.classType) query.classType = req.query.classType;
+    if (req.query.classType)       query.classType       = req.query.classType;
+    if (req.query.studentCategory) query.studentCategory = req.query.studentCategory;
+    if (req.query.classSchedule)   query.classSchedule   = req.query.classSchedule;
+    if (req.query.search) {
+      query.$or = [
+        { studentName: { $regex: req.query.search, $options: 'i' } },
+        { phone:       { $regex: req.query.search, $options: 'i' } }
+      ];
+    }
 
     const [students, records] = await Promise.all([
       Student.find(query)
