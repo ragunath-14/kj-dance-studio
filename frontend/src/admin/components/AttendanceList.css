@@ -1,0 +1,105 @@
+/* ── Attendance ─────────────────────────────────────────────────── */
+.attendance-date-picker {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background-color: var(--bg-dark);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  padding: 8px 14px;
+  color: var(--text-muted);
+  flex-shrink: 0;
+}
+
+.attendance-date-picker input[type="date"],
+.attendance-date-picker select {
+  background: transparent;
+  border: none;
+  outline: none;
+  color: var(--text-main);
+  font-weight: 700;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.attendance-summary-pills {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.attendance-summary-pills .mini-badge {
+  font-size: 11px;
+  padding: 6px 12px;
+}
+
+.attendance-table th:nth-child(1) { width: 28%; min-width: 160px; }
+.attendance-table th:nth-child(2) { width: 22%; min-width: 140px; }
+.attendance-table th:nth-child(3) { width: 20%; min-width: 130px; }
+.attendance-table th:last-child   { width: 30%; min-width: 220px; }
+
+.attendance-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.attendance-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  border-radius: 10px;
+  border: 1px solid var(--border-color);
+  background-color: var(--bg-dark);
+  color: var(--text-muted);
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.18s ease;
+}
+
+.attendance-btn:hover:not(:disabled) {
+  border-color: var(--primary-color);
+  color: var(--text-main);
+}
+
+.attendance-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.attendance-btn.present.active {
+  background-color: rgba(16, 185, 129, 0.12);
+  border-color: var(--success);
+  color: var(--success);
+}
+
+.attendance-btn.absent.active {
+  background-color: rgba(239, 68, 68, 0.12);
+  border-color: var(--error);
+  color: var(--error);
+}
+
+/* ── History register (day-by-day grid) ────────────────────────── */
+.attendance-register.data-table {
+  min-width: 100%;
+}
+
+.attendance-register th:nth-child(1) { width: auto; min-width: 150px; }
+
+.day-col {
+  width: 32px;
+  min-width: 32px;
+  text-align: center !important;
+  padding: 10px 4px !important;
+}
+
+.day-cell {
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.day-cell.present { color: var(--success); background-color: rgba(16, 185, 129, 0.06); }
+.day-cell.absent  { color: var(--error);   background-color: rgba(239, 68, 68, 0.06); }
+.day-cell.unmarked { color: var(--text-muted); opacity: 0.4; }

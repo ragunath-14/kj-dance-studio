@@ -29,6 +29,7 @@ require('dotenv').config();
 const studentRoutes          = require('./routes/studentRoutes');
 const paymentRoutes          = require('./routes/paymentRoutes');
 const registrationRoutes     = require('./routes/registrationRoutes');
+const attendanceRoutes       = require('./routes/attendanceRoutes');
 const authRoutes             = require('./routes/authRoutes');
 const registrationController = require('./controllers/registrationController');
 const studentController      = require('./controllers/studentController');
@@ -148,6 +149,7 @@ app.get('/api/dashboard/stats', verifyAdminToken, studentController.getDashboard
 app.use('/api/students',     verifyAdminToken, studentRoutes);
 app.use('/api/payments',     verifyAdminToken, paymentRoutes);
 app.use('/api/registrations',verifyAdminToken, registrationRoutes);
+app.use('/api/attendance',   verifyAdminToken, attendanceRoutes);
 
 // ── Admin Tools ──────────────────────────────────────────────────────────────
 // Manually trigger the fee-alert scheduler (useful for testing)

@@ -7,6 +7,7 @@ import Layout from './components/Layout';
 import Dashboard from './components/Dashboard';
 import StudentList from './components/StudentList';
 import PaymentList from './components/PaymentList';
+import AttendanceList from './components/AttendanceList';
 import RegistrationList from './components/students/RegistrationList';
 import Login from './pages/Login';
 import API_URL from './config';
@@ -81,6 +82,7 @@ function AdminRoot() {
                 <Routes>
                   <Route path="/" element={<Dashboard />} />
                   <Route path="students" element={<StudentList />} />
+                  <Route path="attendance" element={<AttendanceList />} />
                   <Route path="payments" element={<PaymentList />} />
                   <Route path="registrations" element={<RegistrationList />} />
                   <Route path="*" element={<Navigate to="/admin" replace />} />
