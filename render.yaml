@@ -25,7 +25,7 @@ services:
       - key: STUDIO_URL
         sync: false
       - key: USE_META_API
-        value: "false"
+        value: "true"
       - key: WHATSAPP_ACCESS_TOKEN
         sync: false
       - key: WHATSAPP_PHONE_NUMBER_ID
