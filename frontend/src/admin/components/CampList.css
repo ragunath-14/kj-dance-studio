@@ -4,6 +4,41 @@
   color: var(--warning);
 }
 
+.mini-badge.camp-accepted {
+  background-color: rgba(59, 130, 246, 0.12);
+  color: #3b82f6;
+}
+
+.camp-accept-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  border-radius: 10px;
+  border: 1px solid #3b82f6;
+  background: rgba(59, 130, 246, 0.08);
+  color: #3b82f6;
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.2s ease;
+}
+
+.camp-accept-btn:hover:not(:disabled) {
+  background: #3b82f6;
+  color: #fff;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 14px -2px rgba(59, 130, 246, 0.35);
+}
+
+.camp-accept-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
 .camp-convert-btn {
   display: flex;
   align-items: center;
@@ -106,5 +141,6 @@
 }
 
 @media (max-width: 480px) {
-  .camp-convert-btn { justify-content: center; width: 100%; }
+  .camp-convert-btn,
+  .camp-accept-btn { justify-content: center; width: 100%; }
 }

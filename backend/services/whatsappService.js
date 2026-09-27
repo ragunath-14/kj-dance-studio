@@ -235,6 +235,15 @@ exports.sendRegistrationConfirmation = async (whatsappNumber, studentName, class
 };
 
 /**
+ * Sent when the admin accepts a summer-camp registration (before any class/
+ * batch is assigned — that only happens later if/when they convert to a
+ * regular student). Reuses the approved kj_welcome template — same as
+ * sendWelcomeMessage — with "Summer Camp" in place of a class name.
+ */
+exports.sendCampConfirmation = async (whatsappNumber, studentName) =>
+  exports.sendWelcomeMessage(whatsappNumber, studentName, 'Summer Camp');
+
+/**
  * Rejoin invitation — sent to inactive students on their monthly anniversary.
  * Template body: "Hi {{1}}, your account status at KJ Dance Studio has been updated.
  *                 Please contact the studio for more information."

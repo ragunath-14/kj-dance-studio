@@ -96,14 +96,46 @@ exports.getCampRegistrations = async (req, res) => {
       CampRegistration.aggregate([{ $group: { _id: '$status', n: { $sum: 1 } } }])
     ]);
 
-    const counts = { registered: 0, converted: 0 };
+    const counts = { registered: 0, accepted: 0, converted: 0 };
     grouped.forEach(g => { counts[g._id] = g.n; });
-    counts.total = counts.registered + counts.converted;
+    counts.total = counts.registered + counts.accepted + counts.converted;
 
     res.json({ data, total, page, limit, totalPages: Math.ceil(total / limit), counts });
   } catch (err) {
     console.error('getCampRegistrations error:', err);
     res.status(500).json({ message: 'Failed to fetch camp registrations.' });
+  }
+};
+
+// ─── POST /api/camp/:id/accept ────────────────────────────────────────────────
+// Confirms a camp seat and sends the camp-confirmation WhatsApp message.
+// Does not create a Student or start billing — that only happens on convert.
+exports.acceptCampRegistration = async (req, res) => {
+  try {
+    const camp = await CampRegistration.findById(req.params.id);
+    if (!camp) return res.status(404).json({ message: 'Camp registration not found.' });
+    if (camp.status !== 'registered')
+      return res.status(400).json({ message: `This registration is already ${camp.status}.` });
+
+    camp.status     = 'accepted';
+    camp.acceptedAt = new Date();
+    await camp.save();
+
+    const whatsappNum = camp.whatsappNumber || camp.phone;
+    if (whatsappNum) {
+      whatsapp.sendCampConfirmation(whatsappNum, camp.studentName)
+        .catch((e) => console.error('WhatsApp camp confirmation error:', e));
+    }
+
+    const io = req.app.get('socketio');
+    if (io) io.emit('dataChanged', { type: 'camp', action: 'accept' });
+
+    res.json({ message: 'Camp registration accepted.', data: camp });
+  } catch (err) {
+    if (err.name === 'CastError')
+      return res.status(400).json({ message: 'Invalid registration ID format.' });
+    console.error('acceptCampRegistration error:', err);
+    res.status(500).json({ message: 'Server error. Could not accept registration.' });
   }
 };
 

@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import axios from 'axios';
 import { Navigate } from 'react-router-dom';
-import { Search, Trash2, UserCheck, CheckCircle } from 'lucide-react';
+import { Search, Trash2, UserCheck, CheckCircle, Send } from 'lucide-react';
 import API_URL from '../config';
 import { useData } from '../context/DataContext';
 import Modal from './ui/Modal';
@@ -28,12 +28,13 @@ const CampRegistrations = () => {
   const [category, setCategory] = useState('');
   const [page, setPage] = useState(1);
   const [limit, setLimit] = useState(50);
-  const [list, setList] = useState({ data: [], total: 0, counts: { registered: 0, converted: 0, total: 0 } });
+  const [list, setList] = useState({ data: [], total: 0, counts: { registered: 0, accepted: 0, converted: 0, total: 0 } });
   const [loading, setLoading] = useState(false);
   const [feedback, setFeedback] = useState({ message: '', type: '' });
   const [convertTarget, setConvertTarget] = useState(null);
   const [convertForm, setConvertForm] = useState(DEFAULT_CONVERT);
   const [converting, setConverting] = useState(false);
+  const [acceptingId, setAcceptingId] = useState(null);
   const [deleteConfirm, setDeleteConfirm] = useState({ open: false, id: null });
   const latestRequest = useRef(0);
 
@@ -95,6 +96,19 @@ const CampRegistrations = () => {
     }
   };
 
+  const handleAccept = async (reg) => {
+    setAcceptingId(reg._id);
+    try {
+      await axios.post(`${API_URL}/camp/${reg._id}/accept`);
+      showFeedback(`${reg.studentName}'s camp seat is confirmed — WhatsApp message sent.`, 'success');
+    } catch (err) {
+      showFeedback(err.response?.data?.message || 'Failed to accept registration.');
+    } finally {
+      setAcceptingId(null);
+      fetchCamp();
+    }
+  };
+
   const executeDelete = async () => {
     const id = deleteConfirm.id;
     setDeleteConfirm({ open: false, id: null });
@@ -106,10 +120,11 @@ const CampRegistrations = () => {
     }
   };
 
-  const counts = list.counts || { registered: 0, converted: 0, total: 0 };
+  const counts = list.counts || { registered: 0, accepted: 0, converted: 0, total: 0 };
   const statusTabs = [
     { value: '',           label: `All (${counts.total})` },
     { value: 'registered', label: `Registered (${counts.registered})` },
+    { value: 'accepted',   label: `Accepted (${counts.accepted})` },
     { value: 'converted',  label: `Converted (${counts.converted})` },
   ];
 
@@ -184,6 +199,8 @@ const CampRegistrations = () => {
                       <div className="badge-row">
                         {reg.status === 'converted' ? (
                           <span className="mini-badge paid"><CheckCircle size={12} /> Converted</span>
+                        ) : reg.status === 'accepted' ? (
+                          <span className="mini-badge camp-accepted"><CheckCircle size={12} /> Accepted</span>
                         ) : (
                           <span className="mini-badge camp-registered">Registered</span>
                         )}
@@ -209,11 +226,21 @@ const CampRegistrations = () => {
                   </td>
                   <td data-label="Actions">
                     <div className="action-buttons">
-                      {reg.status === 'registered' ? (
+                      {reg.status === 'registered' && (
+                        <button
+                          className="camp-accept-btn"
+                          onClick={() => handleAccept(reg)}
+                          disabled={acceptingId === reg._id}
+                        >
+                          <Send size={15} /> {acceptingId === reg._id ? 'Accepting...' : 'Accept'}
+                        </button>
+                      )}
+                      {reg.status === 'accepted' && (
                         <button className="camp-convert-btn" onClick={() => openConvert(reg)}>
                           <UserCheck size={15} /> Convert to Student
                         </button>
-                      ) : (
+                      )}
+                      {reg.status === 'converted' && (
                         <span className="text-muted">Now a student</span>
                       )}
                       <div className="icon-actions-group">

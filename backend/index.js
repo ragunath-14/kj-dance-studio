@@ -127,6 +127,9 @@ app.post('/api/test-whatsapp', verifyAdminToken, async (req, res) => {
       case 'registration_received':
         result = await whatsapp.sendRegistrationConfirmation(phone, name || 'Student', 'Regular Class');
         break;
+      case 'camp_confirmation':
+        result = await whatsapp.sendCampConfirmation(phone, name || 'Student');
+        break;
       default:
         result = await whatsapp.sendWelcomeMessage(phone, name || 'Student', 'Regular Class', 'TBA');
     }

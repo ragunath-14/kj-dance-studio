@@ -32,10 +32,11 @@ const CampRegistrationSchema = new mongoose.Schema({
   whatsappNumber: { type: String, trim: true },
   status: {
     type: String,
-    enum: ['registered', 'converted'],
+    enum: ['registered', 'accepted', 'converted'],
     default: 'registered',
     index: true
   },
+  acceptedAt:         { type: Date },
   convertedStudentId: { type: mongoose.Schema.Types.ObjectId, ref: 'Student' },
   convertedAt:        { type: Date },
   createdAt:          { type: Date, default: Date.now, index: true }
