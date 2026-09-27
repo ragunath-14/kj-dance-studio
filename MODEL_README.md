@@ -124,6 +124,8 @@ Public:
 ```txt
 GET  /health
 POST /api/register
+POST /api/camp/register          (403 while camp registration is switched off)
+GET  /api/settings/public        ({ campEnabled } — landing page reads this)
 GET  /api/students/:id/public-dues
 ```
 
@@ -139,6 +141,7 @@ Protected admin APIs:
 /api/students
 /api/payments
 /api/registrations
+/api/camp
 ```
 
 Useful specific routes:
@@ -150,6 +153,10 @@ PATCH  /api/students/:id/toggle-status
 GET    /api/registrations/pending
 POST   /api/registrations/:id/approve
 POST   /api/registrations/:id/reject
+PUT    /api/settings/camp              body { enabled: boolean } — camp master switch
+GET    /api/camp?search=&studentCategory=&status=&page=&limit=
+POST   /api/camp/:id/convert           body { classType, classSchedule } — camp signup -> Student
+DELETE /api/camp/:id
 POST   /api/payments/send-pending-alerts
 POST   /api/payments/send-reminder/:studentId
 POST   /api/admin/trigger-fee-alerts

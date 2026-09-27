@@ -30,9 +30,12 @@ const studentRoutes          = require('./routes/studentRoutes');
 const paymentRoutes          = require('./routes/paymentRoutes');
 const registrationRoutes     = require('./routes/registrationRoutes');
 const attendanceRoutes       = require('./routes/attendanceRoutes');
+const campRoutes             = require('./routes/campRoutes');
 const authRoutes             = require('./routes/authRoutes');
 const registrationController = require('./controllers/registrationController');
 const studentController      = require('./controllers/studentController');
+const campController         = require('./controllers/campController');
+const settingsController     = require('./controllers/settingsController');
 const Student                = require('./models/Student');
 const { verifyAdminToken }   = require('./middleware/auth');
 const { startScheduler, runPendingFeeAlerts } = require('./scheduler');
@@ -99,6 +102,9 @@ app.get('/health', (req, res) => {
 // Student registration form (public — rate limited)
 app.post('/api/register', registrationLimiter, registrationController.createPendingRegistration);
 
+// Summer camp registration (public — rate limited, rejected while camp is switched off)
+app.post('/api/camp/register', registrationLimiter, campController.createCampRegistration);
+
 // Public dues check (used by student payment portal, no auth needed)
 app.get('/api/students/:id/public-dues', studentController.getStudentDues);
 
@@ -145,11 +151,17 @@ app.post('/api/admin/login', (req, res) => {
 
 // ── Protected API Routes ─────────────────────────────────────────────────────
 app.use('/api', apiLimiter);
+
+// Public studio switches (landing page reads this to show/hide the camp section)
+app.get('/api/settings/public', settingsController.getPublicSettings);
+app.put('/api/settings/camp', verifyAdminToken, settingsController.setCampEnabled);
+
 app.get('/api/dashboard/stats', verifyAdminToken, studentController.getDashboardStats);
 app.use('/api/students',     verifyAdminToken, studentRoutes);
 app.use('/api/payments',     verifyAdminToken, paymentRoutes);
 app.use('/api/registrations',verifyAdminToken, registrationRoutes);
 app.use('/api/attendance',   verifyAdminToken, attendanceRoutes);
+app.use('/api/camp',         verifyAdminToken, campRoutes);
 
 // ── Admin Tools ──────────────────────────────────────────────────────────────
 // Manually trigger the fee-alert scheduler (useful for testing)

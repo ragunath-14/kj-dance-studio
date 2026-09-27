@@ -81,6 +81,39 @@
   scrollbar-color: var(--primary-red) #111;
 }
 
+/* ── Class / Summer Camp switch (only rendered while camp is enabled) ── */
+.register-mode-tabs {
+  display: flex;
+  gap: 8px;
+  padding: 12px 32px;
+  background: #080808;
+  border-bottom: 1px solid #1a1a1a;
+  flex-shrink: 0;
+}
+
+.register-mode-tab {
+  flex: 1;
+  height: 40px;
+  background: #111;
+  border: 1px solid #222;
+  border-radius: 12px;
+  color: #666;
+  font-size: 12px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.register-mode-tab:hover { border-color: #444; color: #aaa; }
+
+.register-mode-tab.active {
+  background: rgba(237, 28, 36, 0.08);
+  border-color: var(--primary-red);
+  color: #fff;
+}
+
 .registration-tabs {
   display: flex;
   justify-content: center;
@@ -535,6 +568,8 @@
   .register-header p  { font-size: 10px; }
 
   .registration-tabs { padding: 12px 20px; gap: 20px; }
+
+  .register-mode-tabs { padding: 10px 20px; }
 
   .register-form { padding: 20px; }
 

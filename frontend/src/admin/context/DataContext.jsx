@@ -45,7 +45,11 @@ export const DataProvider = ({ children }) => {
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(false);
   const [notification, setNotification] = useState(null); // { message, type }
-  
+  // Studio-wide switches. `loaded` lets route guards wait instead of redirecting on first paint.
+  const [settings, setSettings] = useState({ campEnabled: false, loaded: false });
+  // Bumped on every server-side change so self-fetching pages (e.g. Camp) can refresh live
+  const [dataVersion, setDataVersion] = useState(0);
+
   // Track last used params — stored in BOTH state (for UI reactivity) and refs
   // (for use inside socket callbacks that capture stale closures)
   const [studentParams, setStudentParams] = useState({ page: 1, limit: 50, search: '', classType: 'Regular Class', studentCategory: '', classSchedule: '' });
@@ -128,6 +132,17 @@ export const DataProvider = ({ children }) => {
     }
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
+  const fetchSettings = useCallback(async (attempt = 1) => {
+    try {
+      const res = await axios.get(`${API_URL}/settings/public`);
+      setSettings({ campEnabled: !!res.data.campEnabled, loaded: true });
+    } catch (err) {
+      console.error('Settings fetch failed:', err);
+      // Until settings load, the Camp page waits and the camp switch stays disabled — so retry a few times
+      if (attempt < 4) setTimeout(() => fetchSettings(attempt + 1), attempt * 3000);
+    }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
   const fetchActivity = async (page = 1, limit = 20) => {
     try {
       const res = await axios.get(`${API_URL}/students/activity`, { params: { page, limit } });
@@ -161,6 +176,7 @@ export const DataProvider = ({ children }) => {
 
   useEffect(() => {
     fetchAllData();
+    fetchSettings(); // settings rarely change — loaded once here, then only on 'settings' events
 
     // Derive the socket server URL:
     // - In dev: Vite proxies /socket.io → localhost:5001, so use window.location.origin
@@ -204,9 +220,18 @@ export const DataProvider = ({ children }) => {
 
     socket.on('dataChanged', (payload) => {
       fetchAllData(true);
+      setDataVersion(v => v + 1);
+      if (payload && payload.type === 'settings') fetchSettings();
       if (payload && payload.type === 'registration') {
         setNotification({
           message: `New Enquiry: ${payload.name || 'A student'} has just registered!`,
+          type: 'info'
+        });
+        setTimeout(() => setNotification(null), 5000);
+      }
+      if (payload && payload.type === 'camp' && payload.name) {
+        setNotification({
+          message: `New Camp Registration: ${payload.name} has just signed up!`,
           type: 'info'
         });
         setTimeout(() => setNotification(null), 5000);
@@ -219,7 +244,7 @@ export const DataProvider = ({ children }) => {
       socket.removeAllListeners();
       socket.disconnect();
     };
-  }, [fetchAllData]); // fetchAllData is stable (useCallback) — no re-subscription risk
+  }, [fetchAllData, fetchSettings]); // both are stable (useCallback) — no re-subscription risk
 
   const refreshData = () => fetchAllData();
 
@@ -246,6 +271,17 @@ export const DataProvider = ({ children }) => {
       return { success: true };
     } catch (err) {
       return { success: false, message: err.message };
+    }
+  };
+
+  // Master switch: ON shows camp registration on the landing page + the Camp module here
+  const setCampEnabled = async (enabled) => {
+    try {
+      const res = await axios.put(`${API_URL}/settings/camp`, { enabled });
+      setSettings({ campEnabled: !!res.data.campEnabled, loaded: true });
+      return { success: true };
+    } catch (err) {
+      return { success: false, message: err.response?.data?.message || err.message };
     }
   };
 
@@ -285,6 +321,9 @@ export const DataProvider = ({ children }) => {
       loading, 
       notification,
       setNotification,
+      settings,
+      dataVersion,
+      setCampEnabled,
       refreshData,
       fetchStudents,
       fetchPayments,

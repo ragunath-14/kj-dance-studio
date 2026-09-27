@@ -55,7 +55,8 @@ const computeCategory = (age, classType) => {
 };
 
 /* ─── Main Component ─────────────────────────────────────────────────────── */
-const Register = ({ isOpen, onClose }) => {
+const Register = ({ isOpen, onClose, campEnabled = false, initialMode = 'class' }) => {
+  const [mode, setMode] = useState('class'); // 'class' | 'camp'
   const [formData, setFormData] = useState({
     studentName: '',
     studentAge: '',
@@ -69,6 +70,19 @@ const Register = ({ isOpen, onClose }) => {
   const [isSameNumber, setIsSameNumber] = useState(false);
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState({ type: '', text: '' });
+
+  // Each time the modal opens, start on the tab the opener asked for
+  useEffect(() => {
+    if (isOpen) setMode(initialMode);
+  }, [isOpen, initialMode]);
+
+  // Camp mode only exists while the admin has camp registration switched on
+  const isCamp = campEnabled && mode === 'camp';
+
+  const switchMode = (next) => {
+    setMode(next);
+    setMessage({ type: '', text: '' });
+  };
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -89,12 +103,13 @@ const Register = ({ isOpen, onClose }) => {
     if (next) setFormData(prev => ({ ...prev, whatsappNumber: prev.phone }));
   };
 
-  const studentCategory = computeCategory(formData.studentAge, formData.classType);
+  const studentCategory = computeCategory(formData.studentAge, isCamp ? '' : formData.classType);
 
+  // Camp sign-ups have no class type / schedule — just the basic contact details
   const isValid =
     formData.studentName?.trim() &&
     formData.phone?.trim() &&
-    formData.classType;
+    (isCamp || formData.classType);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -103,9 +118,22 @@ const Register = ({ isOpen, onClose }) => {
     setLoading(true);
     setMessage({ type: '', text: '' });
     try {
-      const res = await axios.post('/api/register', { ...formData, studentCategory });
+      const res = isCamp
+        ? await axios.post('/api/camp/register', {
+            studentName: formData.studentName,
+            studentAge: formData.studentAge,
+            gender: formData.gender,
+            whatsappNumber: formData.whatsappNumber,
+            phone: formData.phone,
+          })
+        : await axios.post('/api/register', { ...formData, studentCategory });
       if (res.data.success) {
-        setMessage({ type: 'success', text: 'Registration submitted! We will contact you soon.' });
+        setMessage({
+          type: 'success',
+          text: isCamp
+            ? 'Camp registration submitted! We will contact you soon.'
+            : 'Registration submitted! We will contact you soon.'
+        });
         setFormData({
           studentName: '', studentAge: '', gender: '',
           classType: '', classSchedule: '', danceForFitness: '', whatsappNumber: '', phone: ''
@@ -137,9 +165,28 @@ const Register = ({ isOpen, onClose }) => {
         <button className="close-btn" onClick={onClose}>&times;</button>
 
         <div className="register-header">
-          <h2>Student Registration</h2>
-          <p>Join the KJ Dance Studio family today!</p>
+          <h2>{isCamp ? 'Summer Camp Registration' : 'Student Registration'}</h2>
+          <p>{isCamp ? 'Reserve your spot at the KJ Dance Studio summer camp!' : 'Join the KJ Dance Studio family today!'}</p>
         </div>
+
+        {campEnabled && (
+          <div className="register-mode-tabs">
+            <button
+              type="button"
+              className={`register-mode-tab ${!isCamp ? 'active' : ''}`}
+              onClick={() => switchMode('class')}
+            >
+              Class Registration
+            </button>
+            <button
+              type="button"
+              className={`register-mode-tab ${isCamp ? 'active' : ''}`}
+              onClick={() => switchMode('camp')}
+            >
+              Summer Camp
+            </button>
+          </div>
+        )}
 
         {message.text && (
           <div className={`message-banner ${message.type}`}>
@@ -181,7 +228,7 @@ const Register = ({ isOpen, onClose }) => {
               <label><Calendar size={12} /> Age</label>
               <div style={{ position: 'relative' }}>
                 <input type="number" name="studentAge" value={formData.studentAge} onChange={handleChange} placeholder="Age" min="1" max="99" />
-                {formData.studentAge && formData.classType && (
+                {formData.studentAge && (isCamp || formData.classType) && (
                   <span className="category-auto-badge">
                     {studentCategory}
                   </span>
@@ -199,45 +246,49 @@ const Register = ({ isOpen, onClose }) => {
               />
             </div>
 
-            <div className="form-group full-width">
-              <label>Dance Class *</label>
-              <div className="class-type-selector">
-                {['Regular Class', 'Fitness Class', 'Online Class'].map(type => (
-                  <div
-                    key={type}
-                    className={`type-option ${formData.classType === type ? 'selected' : ''}`}
-                    onClick={() => setFormData(prev => ({ ...prev, classType: type }))}
-                  >
-                    {type}
-                    {type === 'Fitness Class' && <span className="class-note">— Adults only</span>}
-                    {type === 'Online Class' && <span className="class-note">— Virtual</span>}
+            {!isCamp && (
+              <>
+                <div className="form-group full-width">
+                  <label>Dance Class *</label>
+                  <div className="class-type-selector">
+                    {['Regular Class', 'Fitness Class', 'Online Class'].map(type => (
+                      <div
+                        key={type}
+                        className={`type-option ${formData.classType === type ? 'selected' : ''}`}
+                        onClick={() => setFormData(prev => ({ ...prev, classType: type }))}
+                      >
+                        {type}
+                        {type === 'Fitness Class' && <span className="class-note">— Adults only</span>}
+                        {type === 'Online Class' && <span className="class-note">— Virtual</span>}
+                      </div>
+                    ))}
                   </div>
-                ))}
-              </div>
-            </div>
+                </div>
 
-            <div className="form-group full-width">
-              <label>Class Schedule *</label>
-              <div className="class-type-selector">
-                {['Weekday', 'Weekend'].map(schedule => (
-                  <div
-                    key={schedule}
-                    className={`type-option ${formData.classSchedule === schedule ? 'selected' : ''}`}
-                    onClick={() => setFormData(prev => ({ ...prev, classSchedule: schedule }))}
-                  >
-                    {schedule}
-                    {schedule === 'Weekday' && <span className="class-note">— Mon to Fri</span>}
-                    {schedule === 'Weekend' && <span className="class-note">— Sat & Sun</span>}
+                <div className="form-group full-width">
+                  <label>Class Schedule *</label>
+                  <div className="class-type-selector">
+                    {['Weekday', 'Weekend'].map(schedule => (
+                      <div
+                        key={schedule}
+                        className={`type-option ${formData.classSchedule === schedule ? 'selected' : ''}`}
+                        onClick={() => setFormData(prev => ({ ...prev, classSchedule: schedule }))}
+                      >
+                        {schedule}
+                        {schedule === 'Weekday' && <span className="class-note">— Mon to Fri</span>}
+                        {schedule === 'Weekend' && <span className="class-note">— Sat & Sun</span>}
+                      </div>
+                    ))}
                   </div>
-                ))}
-              </div>
-            </div>
+                </div>
+              </>
+            )}
 
           </div>
 
           <div className="form-footer">
             <button type="submit" className="btn-primary" disabled={loading || !isValid}>
-              {loading ? 'Submitting...' : 'Submit Registration'}
+              {loading ? 'Submitting...' : isCamp ? 'Register for Camp' : 'Submit Registration'}
             </button>
           </div>
         </form>

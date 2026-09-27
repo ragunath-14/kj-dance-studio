@@ -9,6 +9,7 @@ import StudentList from './components/StudentList';
 import PaymentList from './components/PaymentList';
 import AttendanceList from './components/AttendanceList';
 import RegistrationList from './components/students/RegistrationList';
+import CampList from './components/CampList';
 import Login from './pages/Login';
 import API_URL from './config';
 import './Admin.css';
@@ -85,6 +86,7 @@ function AdminRoot() {
                   <Route path="attendance" element={<AttendanceList />} />
                   <Route path="payments" element={<PaymentList />} />
                   <Route path="registrations" element={<RegistrationList />} />
+                  <Route path="camp" element={<CampList />} />
                   <Route path="*" element={<Navigate to="/admin" replace />} />
                 </Routes>
               </Layout>

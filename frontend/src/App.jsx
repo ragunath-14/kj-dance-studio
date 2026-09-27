@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Routes, Route, useNavigate, Navigate } from 'react-router-dom';
-import { Users, Heart, Building2, Music, Gift, Zap, GraduationCap, Home, Laptop, MapPin, Trophy, Video, Clock, BookOpen, Star, Phone, Menu, X, Sun, Moon, Calendar, Dumbbell, Baby, UserCheck, Wind, Droplets, Wifi, Camera, Car, Volume2, Shirt, BatteryCharging, ShieldCheck, Sofa, CheckCircle2 } from 'lucide-react';
+import axios from 'axios';
+import { Tent, Users, Heart, Building2, Music, Gift, Zap, GraduationCap, Home, Laptop, MapPin, Trophy, Video, Clock, BookOpen, Star, Phone, Menu, X, Sun, Moon, Calendar, Dumbbell, Baby, UserCheck, Wind, Droplets, Wifi, Camera, Car, Volume2, Shirt, BatteryCharging, ShieldCheck, Sofa, CheckCircle2 } from 'lucide-react';
 
 const InstagramIcon = ({ size = 24 }) => (
   <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -192,6 +193,23 @@ const ScheduleSection = ({ onRegister }) => {
   );
 };
 
+/* ─── Summer Camp Section (rendered only while the admin has camp enabled) ── */
+const CampSection = ({ onRegister }) => (
+  <section id="camp" className="section-padding camp-section">
+    <div className="container">
+      <div className="camp-banner">
+        <div className="camp-banner-icon"><Tent size={40} /></div>
+        <div className="camp-banner-text">
+          <span className="camp-banner-tag">Registrations Open</span>
+          <h2 className="camp-title">Summer <span>Camp</span></h2>
+          <p>A fun-filled summer of dance, music and new friends at KJ Dance Studio. Reserve your spot today and we'll contact you with the camp details.</p>
+        </div>
+        <button className="camp-cta" onClick={onRegister}>Register for Camp</button>
+      </div>
+    </div>
+  </section>
+);
+
 /* ─── Facilities Section ─────────────────────────────────────── */
 const FacilitiesSection = () => {
   const facilities = [
@@ -354,7 +372,7 @@ const ServicesSection = () => {
   );
 };
 
-const LandingPage = ({ setIsRegisterOpen }) => {
+const LandingPage = ({ setIsRegisterOpen, campEnabled, onCampRegister }) => {
   const [isScrolled, setIsScrolled] = useState(false);
   const navigate = useNavigate();
 
@@ -392,6 +410,7 @@ const LandingPage = ({ setIsRegisterOpen }) => {
             <li><a href="#about" onClick={() => setIsMenuOpen(false)}>About</a></li>
             <li><a href="#classes" onClick={() => setIsMenuOpen(false)}>Classes</a></li>
             <li><a href="#schedule" onClick={() => setIsMenuOpen(false)}>Schedule</a></li>
+            {campEnabled && <li><a href="#camp" onClick={() => setIsMenuOpen(false)}>Summer Camp</a></li>}
             <li><a href="#facilities" onClick={() => setIsMenuOpen(false)}>Facilities</a></li>
             <li><a href="#services" onClick={() => setIsMenuOpen(false)}>Services</a></li>
             <li><a href="#contact" onClick={() => setIsMenuOpen(false)}>Contact</a></li>
@@ -559,6 +578,7 @@ const LandingPage = ({ setIsRegisterOpen }) => {
 
 
       <ScheduleSection onRegister={() => setIsRegisterOpen(true)} />
+      {campEnabled && <CampSection onRegister={onCampRegister} />}
       <FacilitiesSection />
       <ServicesSection />
       
@@ -660,11 +680,30 @@ const LandingPage = ({ setIsRegisterOpen }) => {
 
 function App() {
   const [isRegisterOpen, setIsRegisterOpen] = useState(false);
+  const [registerMode, setRegisterMode] = useState('class'); // which tab the modal opens on
+  const [campEnabled, setCampEnabled] = useState(false);
+
+  // Admin's camp switch decides whether any camp UI is shown; fails closed if the API is down
+  useEffect(() => {
+    axios.get('/api/settings/public')
+      .then(res => setCampEnabled(!!res.data.campEnabled))
+      .catch(() => setCampEnabled(false));
+  }, []);
+
+  const openCampRegister = () => {
+    setRegisterMode('camp');
+    setIsRegisterOpen(true);
+  };
+
+  const closeRegister = () => {
+    setIsRegisterOpen(false);
+    setRegisterMode('class'); // "Join Now" buttons always reopen on the class tab
+  };
 
   return (
     <div className="app-root">
       <Routes>
-        <Route path="/" element={<LandingPage setIsRegisterOpen={setIsRegisterOpen} />} />
+        <Route path="/" element={<LandingPage setIsRegisterOpen={setIsRegisterOpen} campEnabled={campEnabled} onCampRegister={openCampRegister} />} />
         <Route path="/admin/*" element={<AdminRoot />} />
         
         {/* Redirect legacy paths for smoother transition */}
@@ -673,7 +712,7 @@ function App() {
         <Route path="/registrations" element={<Navigate to="/admin/registrations" replace />} />
         <Route path="/dashboard" element={<Navigate to="/admin" replace />} />
       </Routes>
-      <Register isOpen={isRegisterOpen} onClose={() => setIsRegisterOpen(false)} />
+      <Register isOpen={isRegisterOpen} onClose={closeRegister} campEnabled={campEnabled} initialMode={registerMode} />
     </div>
   );
 }

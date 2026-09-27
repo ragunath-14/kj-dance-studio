@@ -1,17 +1,30 @@
 import React, { useMemo, useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Users, CreditCard, TrendingUp, AlertCircle, Calendar, Music, UserPlus, Clock } from 'lucide-react';
+import { Users, CreditCard, TrendingUp, AlertCircle, Calendar, Music, UserPlus, Clock, Tent } from 'lucide-react';
 import { useData } from '../context/DataContext';
 import Modal from './ui/Modal';
 import Pagination from './Pagination';
 import './Dashboard.css';
 
 const Dashboard = () => {
-  const { stats, loading, fetchActivity } = useData();
+  const { stats, loading, fetchActivity, settings, setCampEnabled } = useData();
   const navigate = useNavigate();
   const [showActivityModal, setShowActivityModal] = useState(false);
   const [activityData, setActivityData] = useState({ data: [], total: 0, page: 1, limit: 10 });
   const [activityLoading, setActivityLoading] = useState(false);
+  const [campBusy, setCampBusy] = useState(false);
+  const [campError, setCampError] = useState('');
+
+  const handleCampToggle = async () => {
+    setCampBusy(true);
+    setCampError('');
+    const result = await setCampEnabled(!settings.campEnabled);
+    setCampBusy(false);
+    if (!result.success) {
+      setCampError(result.message || 'Could not update camp registration.');
+      setTimeout(() => setCampError(''), 4000);
+    }
+  };
 
   const loadActivity = async (page = 1) => {
     setActivityLoading(true);
@@ -85,9 +98,37 @@ const Dashboard = () => {
         </button>
       </div>
 
+      {/* Lives on the Dashboard (not inside the Camp module) so it stays reachable while camp is OFF */}
+      <div className={`camp-toggle-card ${settings.campEnabled ? 'on' : 'off'}`}>
+        <div className="camp-toggle-icon"><Tent size={22} /></div>
+        <div className="camp-toggle-text">
+          <h3>Summer Camp Registration</h3>
+          <p>
+            {settings.campEnabled
+              ? 'ON — visible on the landing page and register form, and the Summer Camp module is active.'
+              : 'OFF — hidden from the landing page and register form, and the Summer Camp module is turned off. Existing camp registrations are kept.'}
+          </p>
+          {campError && <span className="camp-toggle-error">{campError}</span>}
+        </div>
+        <div className="camp-toggle-control">
+          <span className="camp-toggle-state">{settings.campEnabled ? 'ON' : 'OFF'}</span>
+          <button
+            type="button"
+            role="switch"
+            aria-checked={settings.campEnabled}
+            aria-label="Toggle summer camp registration"
+            className="camp-switch"
+            onClick={handleCampToggle}
+            disabled={campBusy || !settings.loaded}
+          >
+            <span className="camp-switch-knob" />
+          </button>
+        </div>
+      </div>
+
       <div className="stats-grid">
-        <StatCard 
-          label="Active Students" 
+        <StatCard
+          label="Active Students"
           value={metrics.total} 
           icon={<Users />} 
           color="#ED1C24" 

@@ -1,16 +1,18 @@
 import React from 'react';
 import { NavLink } from 'react-router-dom';
-import { LayoutDashboard, Users, CreditCard, UserPlus, ClipboardCheck, Menu, ChevronRight } from 'lucide-react';
+import { LayoutDashboard, Users, CreditCard, UserPlus, ClipboardCheck, Tent, Menu, ChevronRight } from 'lucide-react';
 import { useData } from '../context/DataContext';
 import logo from '../../assets/logo.png';
 import './Sidebar.css';
 
 const Sidebar = ({ isOpen, onClose, isExpanded, onToggleExpand }) => {
-  const { registrations } = useData();
+  const { registrations, settings } = useData();
 
   const navLinks = [
     { to: '/admin', icon: LayoutDashboard, label: 'Dashboard' },
     { to: '/admin/registrations', icon: UserPlus, label: 'New Joiners', badge: registrations.data?.length ?? 0 },
+    // Camp module only exists while the admin has camp registration switched on
+    ...(settings.campEnabled ? [{ to: '/admin/camp', icon: Tent, label: 'Summer Camp' }] : []),
     { to: '/admin/students', icon: Users, label: 'Students' },
     { to: '/admin/attendance', icon: ClipboardCheck, label: 'Attendance' },
     { to: '/admin/payments', icon: CreditCard, label: 'Payments' },

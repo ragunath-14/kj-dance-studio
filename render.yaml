@@ -1,0 +1,40 @@
+services:
+  - type: web
+    name: kj-dance-studio
+    runtime: node
+    plan: free
+    region: singapore
+    rootDir: backend
+    buildCommand: node build-prod.js
+    startCommand: node index.js
+    healthCheckPath: /health
+    autoDeploy: true
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: TZ
+        value: Asia/Kolkata
+      - key: MONGODB_URI
+        sync: false
+      - key: ADMIN_PASSWORD
+        sync: false
+      - key: JWT_SECRET
+        generateValue: true
+      - key: ALLOWED_ORIGINS
+        sync: false
+      - key: STUDIO_URL
+        sync: false
+      - key: USE_META_API
+        value: "false"
+      - key: WHATSAPP_ACCESS_TOKEN
+        sync: false
+      - key: WHATSAPP_PHONE_NUMBER_ID
+        sync: false
+      - key: WHATSAPP_WABA_ID
+        sync: false
+      - key: WHATSAPP_VERSION
+        value: v19.0
+      - key: WEBHOOK_VERIFY_TOKEN
+        generateValue: true
+      - key: WHATSAPP_SCHEDULE_TIME
+        value: "0 9 * * *"
