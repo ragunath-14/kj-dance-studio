@@ -1,4 +1,5 @@
 const axios = require('axios');
+const { withGroupLinks } = require('../utils/groupLinks');
 
 // ── Global Message Queue ─────────────────────────────────────────────────────
 // Ensures all notifications are sent in an orderly sequence with a small
@@ -136,11 +137,13 @@ const sendMessage = async (whatsappNumber, fallbackText, options = {}) => {
  * Sent when a student is enrolled or a registration is approved.
  * Template body: "Your enrollment at KJ Dance Studio is confirmed, {{1}}.
  *                 You have been registered for {{2}}. Contact us for any queries."
- * Params: {{1}} = name, {{2}} = classType
+ * Params: {{1}} = name, {{2}} = class names, each followed by its WhatsApp group invite link, e.g.
+ *         "Karate Class (join your class WhatsApp group: https://chat.whatsapp.com/...)".
+ *         The link rides inside {{2}}, so the approved template does not change.
  */
 exports.sendWelcomeMessage = async (whatsappNumber, studentName, classType, batchTiming) => {
   const name   = studentName || 'Student';
-  const cls    = classType   || 'Dance';
+  const cls    = withGroupLinks(classType || 'Dance');
   const timing = batchTiming || 'TBA'; // kept for callers; not in template
 
   const fallback =

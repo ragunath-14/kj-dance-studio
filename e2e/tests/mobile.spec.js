@@ -134,7 +134,7 @@ test.describe('phone: Refer & Save', () => {
     await page.locator('#referral').getByPlaceholder('Your registered phone number').fill(s.phone);
     await page.locator('#referral').getByRole('button', { name: 'Find my account' }).click();
     await page.locator('#referral').getByRole('button', { name: 'Generate Referral Code' }).click();
-    await expect(page.locator('.referral-code strong')).toHaveText(/^KJ[A-HJ-NP-Z2-9]{6}$/);
+    await expect(page.locator('.referral-code strong')).toHaveText(/^KJ[A-Z]{4}[2-9]{2}$/);
     await expect(page.getByRole('button', { name: /Share on WhatsApp/ })).toBeInViewport({ ratio: 0.9 }).catch(() => {});
     await noSideScroll(page);
   });

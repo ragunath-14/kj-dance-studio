@@ -37,7 +37,21 @@ test.describe('templates', () => {
     assert.equal(r.success, true);
     assert.equal(sent.length, 1);
     assert.equal(sent[0].payload.template.name, 'kj_welcome');
-    assert.deepEqual(params(sent[0]), ['Asha', 'Karate Class + Zumba Class']);
+    assert.deepEqual(params(sent[0]), ['Asha', 'Karate Class (join your class WhatsApp group: https://chat.whatsapp.com/Bcpoq6CxodK8blwdQ9FS3o) + Zumba Class (join your class WhatsApp group: https://chat.whatsapp.com/KrSaMAfrTOT8ulC4zM4zKq)']);
+  });
+  test('welcome: each class gets its own group link, classes without a group stay as they are', async () => {
+    await whatsapp.sendWelcomeMessage('9876543210', 'Asha', 'Silambam Class + Art & Craft Class + Regular Class');
+    const cls = params(sent[0])[1];
+    assert.ok(cls.includes('Silambam Class (join your class WhatsApp group: https://chat.whatsapp.com/JXcZmiSn7cC2RqNNNBGs4h)'));
+    assert.ok(cls.includes('Art & Craft Class (join your class WhatsApp group: https://chat.whatsapp.com/KVBcH5NPqv7L5VT7GKNiro)'));
+    assert.ok(cls.endsWith(' + Regular Class'));
+    assert.equal(sent[0].payload.template.name, 'kj_welcome');          // still the same approved template
+    assert.equal(sent[0].payload.template.components[0].parameters.length, 2);
+  });
+  test('welcome text is one line (WhatsApp rejects line breaks inside a template variable)', async () => {
+    await whatsapp.sendWelcomeMessage('9876543210', 'Asha', 'Karate Class + Zumba Class + Silambam Class + Art & Craft Class');
+    assert.ok(!params(sent[0])[1].includes(String.fromCharCode(10)) && !params(sent[0])[1].includes(String.fromCharCode(9)));
+    assert.ok(!/ {4,}/.test(params(sent[0])[1]));
   });
   test('welcome falls back to sensible defaults', async () => {
     await whatsapp.sendWelcomeMessage('9876543210');

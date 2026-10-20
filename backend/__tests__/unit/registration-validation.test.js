@@ -73,14 +73,14 @@ test.describe('order and multiple mistakes', () => {
 
 test.describe('referral code typed but not complete', () => {
   test('nothing typed = nothing to say', () => assert.equal(V.incompleteReferralProblem(''), null));
-  test('a complete code is fine here (the server decides if it works)', () => assert.equal(V.incompleteReferralProblem('KJ7QH4MZ'), null));
+  test('a complete code is fine here (the server decides if it works)', () => assert.equal(V.incompleteReferralProblem('KJARUN47'), null));
   test('a short code says how many characters were typed and gives an example', () => {
     const p = V.incompleteReferralProblem('KJ7QH');
     assert.equal(p.reason, 'incomplete');
     assert.match(p.message, /8 letters and numbers/);
     assert.match(p.message, /you typed 5/i);
     assert.ok(p.steps.length >= 2);
-    assert.match(p.steps.join(' '), /KJ7QH4MZ/);
+    assert.match(p.steps.join(' '), /KJARUN47/);
   });
   test('dashes and spaces do not count as characters', () => assert.equal(V.incompleteReferralProblem('KJ-7QH4 MZ'), null));
 });

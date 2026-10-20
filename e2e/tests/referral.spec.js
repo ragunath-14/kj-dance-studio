@@ -46,7 +46,7 @@ test.describe('Refer & Save section', () => {
     await expect(card).toContainText('Active student');
     await card.getByRole('button', { name: 'Generate Referral Code' }).click();
     const code = card.locator('.referral-code strong');
-    await expect(code).toHaveText(/^KJ[A-HJ-NP-Z2-9]{6}$/);
+    await expect(code).toHaveText(/^KJ[A-Z]{4}[2-9]{2}$/);
     await expect(card).toContainText('0');
     await expect(card).toContainText('friends joined');
   });
@@ -143,7 +143,7 @@ test.describe('making a new code on the website', () => {
     await expect(referral(page).locator('.referral-renewed')).toContainText(`old code ${oldCode} has expired`);
     const newCode = await referral(page).locator('.referral-code strong').textContent();
     expect(newCode).not.toBe(oldCode);
-    expect(newCode).toMatch(/^KJ[A-HJ-NP-Z2-9]{6}$/);
+    expect(newCode).toMatch(/^KJ[A-Z]{4}[2-9]{2}$/);
     await expect(referral(page).locator('.referral-code-date')).toContainText('Created on');
     expect((await api.get(`/referral/check/${oldCode}`, { auth: false })).body.reason).toBe('expired');
     expect((await api.get(`/referral/check/${newCode}`, { auth: false })).body.valid).toBe(true);
@@ -249,5 +249,46 @@ test.describe('the whole referral journey', () => {
     await lookup(page, owner.phone);
     await expect(referral(page).locator('.referral-stats')).toContainText('2');
     await expect(referral(page).locator('.referral-stats')).toContainText('20% off');
+  });
+});
+
+test.describe('suggestions while typing the number', () => {
+  const rnd = () => '5' + String(Math.floor(Math.random() * 1e9)).padStart(9, '0');
+  const box = (page) => referral(page).getByPlaceholder('Your registered phone number');
+
+  test('typing part of a number shows the student (short name, masked number) — and never the full number', async ({ page }) => {
+    const phone = rnd();
+    await addStudent({ studentName: 'Meena Kumari Sundar', phone });
+    await page.goto('/#referral');
+    await box(page).fill(phone.slice(0, 3));
+    await expect(page.locator('.referral-suggestions')).toHaveCount(0);            // too few digits: nothing yet
+    await box(page).fill(phone.slice(0, 6));
+    const hint = page.locator('.referral-suggestion', { hasText: 'Meena K. S.' });
+    await expect(hint).toBeVisible();
+    await expect(hint).toContainText('Contact number');
+    await expect(hint).toContainText(`${phone.slice(0, 2)}••••${phone.slice(6)}`);
+    await expect(page.locator('.referral-suggestions')).not.toContainText('Sundar');
+    await expect(page.locator('.referral-suggestions')).not.toContainText(phone);
+  });
+
+  test('a student with a different WhatsApp number is found by either number', async ({ page }) => {
+    const phone = rnd(); const whatsapp = '7' + rnd().slice(1);
+    const s = await addStudent({ studentName: uniqueName('Two Nums'), phone, whatsappNumber: whatsapp });
+    await page.goto('/#referral');
+    await box(page).fill(whatsapp.slice(0, 6));
+    const hint = page.locator('.referral-suggestion', { hasText: s.studentName.split(' ')[0] });
+    await expect(hint).toContainText('WhatsApp number');
+    await expect(hint).toContainText('two numbers');
+    await box(page).fill(whatsapp);
+    await referral(page).getByRole('button', { name: 'Find my account' }).click();
+    await expect(referral(page).locator('.referral-card h3')).toHaveText(s.studentName);
+    await expect(page.locator('.referral-suggestions')).toHaveCount(0);            // the list is gone once the account is shown
+  });
+
+  test('the generated code is made from the name, like KJARUN47', async ({ page }) => {
+    const s = await addStudent({ studentName: 'Arun Kumar', phone: rnd() });
+    await lookup(page, s.phone);
+    await referral(page).getByRole('button', { name: 'Generate Referral Code' }).click();
+    await expect(page.locator('.referral-code strong')).toHaveText(/^KJARUN[2-9]{2}$/);
   });
 });

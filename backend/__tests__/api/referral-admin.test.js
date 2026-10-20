@@ -103,7 +103,7 @@ test.describe('generate and regenerate by the admin', () => {
     const s = await F.addStudent(api, { studentName: nm('Admin gen') });
     const r = await api.post(`/referrals/${s._id}/generate`);
     assert.equal(r.status, 201);
-    assert.match(r.body.referralCode, /^KJ[A-HJ-NP-Z2-9]{6}$/);
+    assert.match(r.body.referralCode, /^KJ[A-Z]{4}[2-9]{2}$/);
     assert.equal((await api.get(`/referral/check/${r.body.referralCode}`, pub)).body.valid, true);
   });
   test('generating again is refused and points at Regenerate', async () => {

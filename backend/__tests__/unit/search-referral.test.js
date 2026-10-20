@@ -59,7 +59,7 @@ test.describe('safe search text', () => {
 test.describe('referral helpers', () => {
   test('normalizeCode ignores case, spaces and dashes', () => {
     assert.equal(referral.normalizeCode('kj-ab 12cd'), 'KJAB12CD');
-    assert.equal(referral.normalizeCode('  KJ7QH4MZ '), 'KJ7QH4MZ');
+    assert.equal(referral.normalizeCode('  KJARUN47 '), 'KJARUN47');
     assert.equal(referral.normalizeCode(null), '');
     assert.equal(referral.normalizeCode(undefined), '');
   });
@@ -86,7 +86,7 @@ test.describe('referral helpers', () => {
   });
   test('generateUniqueCode: KJ + 6 unambiguous characters', async () => {
     const Student = { exists: async () => false };
-    for (let i = 0; i < 200; i++) assert.match(await referral.generateUniqueCode(Student), /^KJ[A-HJ-NP-Z2-9]{6}$/);
+    for (let i = 0; i < 200; i++) assert.match(await referral.generateUniqueCode(Student), /^KJ[A-Z]{4}[2-9]{2}$/);
   });
   test('a new code never repeats a current OR an expired (history) code', async () => {
     let seenQuery = null;
@@ -110,5 +110,41 @@ test.describe('referral helpers', () => {
     const seen = new Set();
     for (let i = 0; i < 500; i++) seen.add(await referral.generateUniqueCode({ exists: async () => false }));
     assert.equal(seen.size, 500);
+  });
+});
+
+test.describe('name-based codes and number suggestions', () => {
+  test('nameLetters: first 4 letters of the first name, padded or random when the name is short or not English', () => {
+    assert.equal(referral.nameLetters('Arun Kumar'), 'ARUN');
+    assert.equal(referral.nameLetters('  priya  '), 'PRIY');
+    assert.match(referral.nameLetters('Jo'), /^JO[A-Z]{2}$/);
+    assert.equal(referral.nameLetters('Jo Li'), 'JOLI');            // short first name: continues with the next word
+    assert.match(referral.nameLetters('அருண்'), /^[A-Z]{4}$/);
+    assert.match(referral.nameLetters(''), /^[A-Z]{4}$/);
+  });
+  test('generateUniqueCode(name): KJ + name letters + 2 digits (no 0 or 1)', async () => {
+    const Student = { exists: async () => false };
+    for (let i = 0; i < 100; i++) assert.match(await referral.generateUniqueCode(Student, 'Arun Kumar'), /^KJARUN[2-9]{2}$/);
+  });
+  test('a taken code is skipped, and a crowded name falls back to other letters', async () => {
+    const taken = new Set();
+    const Student = { exists: async (q) => taken.has(q.$or[0].referralCode) };
+    for (let i = 0; i < 64; i++) {                                    // all 64 digit pairs for "ARUN" in use
+      const c = await referral.generateUniqueCode(Student, 'Arun');
+      assert.match(c, /^KJ[A-Z]{4}[2-9]{2}$/);
+      assert.equal(taken.has(c), false);
+      taken.add(c);
+    }
+  });
+  test('maskPhone hides the middle digits and shortName keeps only the first name in full', () => {
+    assert.equal(referral.maskPhone('+91 98765 43210'), '98••••3210');
+    assert.equal(referral.maskPhone('123'), '');
+    assert.equal(referral.shortName('Arun Kumar Sharma'), 'Arun K. S.');
+    assert.equal(referral.shortName('Arun'), 'Arun');
+  });
+  test('phonePrefixRegex matches numbers that START with the typed digits in any format', () => {
+    const re = referral.phonePrefixRegex('98765');
+    for (const stored of ['9876543210', '+91 98765 43210', '919876543210', '98 765-43210', '+91-9876543210']) assert.ok(re.test(stored), stored);
+    for (const other of ['1987654321', '87654 98765', '9876', '']) assert.equal(re.test(other), false, other);
   });
 });

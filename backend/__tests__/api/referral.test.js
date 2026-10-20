@@ -73,11 +73,115 @@ test.describe('look up a student by phone number', () => {
   });
 });
 
+test.describe('a student with a different contact and WhatsApp number', () => {
+  const wa = () => `8${F.tag}${String(++n).padStart(4, '0')}`;
+  test('either number finds the student and either number can create the code', async () => {
+    const whatsapp = wa();
+    const s = await F.addStudent(api, { studentName: nm('Two Numbers'), whatsappNumber: whatsapp });
+    assert.equal((await lookup(s.phone)).body.students[0].id, s._id);
+    assert.equal((await lookup(whatsapp)).body.students[0].id, s._id);
+    const code = (await generate(s._id, whatsapp)).body.referralCode;
+    assert.equal((await generate(s._id, s.phone)).body.referralCode, code);
+  });
+  test('a friend using the owner\'s WhatsApp number as phone or WhatsApp is refused as "own number"', async () => {
+    const whatsapp = wa();
+    const { code } = await newCode({ whatsappNumber: whatsapp });
+    const asPhone = await register(nm('Fr1'), whatsapp, code);
+    assert.equal(asPhone.status, 400);
+    assert.equal(asPhone.body.reason, 'own_phone');
+    const asWhatsapp = await register(nm('Fr2'), F.uniquePhone(), code, { whatsappNumber: whatsapp });
+    assert.equal(asWhatsapp.status, 400);
+    assert.equal(asWhatsapp.body.reason, 'own_phone');
+  });
+});
+
+test.describe('suggestions while typing a number', () => {
+  const suggest = (phone) => api.post('/referral/suggest', { phone }, pub);
+  const rnd = () => '5' + String(Math.floor(Math.random() * 1e9)).padStart(9, '0');   // its own prefix, so other students do not crowd it out
+  test('fewer than 5 digits: nothing is shown', async () => {
+    const s = await F.addStudent(api, { studentName: nm('Sug short') });
+    assert.deepEqual((await suggest(s.phone.slice(0, 4))).body.suggestions, []);
+  });
+  test('5 to 9 digits: the student appears with a short name and a masked number, never the full number', async () => {
+    const s = await F.addStudent(api, { studentName: `Meena Kumari Sundar${F.tag}`, phone: rnd() });
+    const r = await suggest(s.phone.slice(0, 6));
+    const hit = r.body.suggestions.find(x => x.name.startsWith('Meena K. S.'));
+    assert.ok(hit, JSON.stringify(r.body));
+    assert.equal(hit.matched, 'contact');
+    assert.match(hit.maskedPhone, /^\d{2}••••\d{4}$/);
+    assert.ok(!JSON.stringify(r.body).includes(s.phone));
+    assert.ok(!JSON.stringify(r.body).includes(`Sundar${F.tag}`));
+  });
+  test('a full 10 digits gives no suggestions (the normal lookup takes over)', async () => {
+    const s = await F.addStudent(api, { studentName: nm('Sug full') });
+    assert.deepEqual((await suggest(s.phone)).body.suggestions, []);
+  });
+  test('the WhatsApp number is matched too, and the student is told they have two numbers', async () => {
+    const whatsapp = '7' + rnd().slice(1);
+    const s = await F.addStudent(api, { studentName: nm('Sug wa'), whatsappNumber: whatsapp });
+    const hit = (await suggest(whatsapp.slice(0, 6))).body.suggestions.find(x => x.name.startsWith('Sug'));
+    assert.ok(hit);
+    assert.equal(hit.matched, 'whatsapp');
+    assert.equal(hit.otherNumber, true);
+    assert.equal((await lookup(whatsapp)).body.students[0].id, s._id);
+  });
+  test('a 10-digit number that starts with 91 is not mistaken for a country code', async () => {
+    const s = await F.addStudent(api, { studentName: nm('Sug 91'), phone: '91' + rnd().slice(2) });
+    assert.deepEqual((await suggest(s.phone)).body.suggestions, []);
+    assert.ok((await suggest(s.phone.slice(0, 6))).body.suggestions.some(x => x.name.startsWith('Sug')));
+  });
+  test('+91 and spaces are ignored', async () => {
+    const s = await F.addStudent(api, { studentName: nm('Sug fmt'), phone: rnd() });
+    const typed = `+91 ${s.phone.slice(0, 5)} ${s.phone.slice(5, 8)}`;
+    assert.ok((await suggest(typed)).body.suggestions.some(x => x.name.startsWith('Sug')));
+  });
+  test('inactive students are not suggested', async () => {
+    const s = await F.addStudent(api, { studentName: nm('Sug off'), phone: rnd() });
+    await api.patch(`/students/${s._id}/toggle-status`);
+    assert.ok(!(await suggest(s.phone.slice(0, 7))).body.suggestions.some(x => x.name.startsWith('Sug')));
+  });
+  test('at most 5 suggestions, and junk input is harmless', async () => {
+    assert.ok((await suggest('9')).body.suggestions.length === 0);
+    assert.ok((await suggest('99999')).body.suggestions.length <= 5);
+    assert.equal((await suggest('((((*[')).status, 200);
+    assert.equal((await api.post('/referral/suggest', {}, pub)).status, 200);
+  });
+});
+
+test.describe('easy-to-read codes', () => {
+  test('the code is KJ + the first letters of the name + 2 digits', async () => {
+    const s = await F.addStudent(api, { studentName: 'Arun Kumar' });
+    const code = (await generate(s._id, s.phone)).body.referralCode;
+    assert.match(code, /^KJARUN[2-9]{2}$/);
+  });
+  test('two students with the same name get different codes', async () => {
+    const a = await F.addStudent(api, { studentName: 'Priya' });
+    const b = await F.addStudent(api, { studentName: 'Priya' });
+    const ca = (await generate(a._id, a.phone)).body.referralCode;
+    const cb = (await generate(b._id, b.phone)).body.referralCode;
+    assert.match(ca, /^KJPRIY[2-9]{2}$/);
+    assert.match(cb, /^KJPRIY[2-9]{2}$/);
+    assert.notEqual(ca, cb);
+  });
+  test('a name in Tamil letters still gets a valid code', async () => {
+    const s = await F.addStudent(api, { studentName: 'அருண் குமார்' });
+    assert.match((await generate(s._id, s.phone)).body.referralCode, /^KJ[A-Z]{4}[2-9]{2}$/);
+  });
+  test('a regenerated code keeps the name but changes the digits, and the old code is reserved', async () => {
+    const s = await F.addStudent(api, { studentName: 'Divya' });
+    const first = (await generate(s._id, s.phone)).body.referralCode;
+    const second = (await api.post('/referral/regenerate', { studentId: s._id, phone: s.phone }, pub)).body.referralCode;
+    assert.match(second, /^KJDIVY[2-9]{2}$/);
+    assert.notEqual(second, first);
+    assert.equal((await check(first)).body.reason, 'expired');
+  });
+});
+
 test.describe('generate a code', () => {
-  test('creates KJ + 6 characters and returns the same code when asked again', async () => {
+  test('creates KJ + 4 letters + 2 digits and returns the same code when asked again', async () => {
     const s = await F.addStudent(api, { studentName: nm('Gen') });
     const first = (await generate(s._id, s.phone)).body.referralCode;
-    assert.match(first, /^KJ[A-HJ-NP-Z2-9]{6}$/);
+    assert.match(first, /^KJ[A-Z]{4}[2-9]{2}$/);
     assert.equal((await generate(s._id, s.phone)).body.referralCode, first);
   });
   test('every student gets a different code', async () => {
@@ -291,7 +395,7 @@ test.describe('regenerate: the old code expires, a new one is issued', () => {
     const { owner, code } = await newCode();
     const r = await api.post('/referral/regenerate', { studentId: owner._id, phone: owner.phone }, pub);
     assert.equal(r.status, 200);
-    assert.match(r.body.referralCode, /^KJ[A-HJ-NP-Z2-9]{6}$/);
+    assert.match(r.body.referralCode, /^KJ[A-Z]{4}[2-9]{2}$/);
     assert.notEqual(r.body.referralCode, code);
     assert.equal(r.body.previousCode, code);
     assert.equal((await check(code)).body.reason, 'expired');

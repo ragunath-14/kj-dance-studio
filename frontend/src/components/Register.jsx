@@ -591,14 +591,14 @@ const Register = ({ isOpen, onClose, campEnabled = false, initialMode = 'class',
                     value={formData.referralCode}
                     onChange={(e) => { setFormData(prev => ({ ...prev, referralCode: e.target.value.toUpperCase() })); clearServerError('referralCode'); }}
                     onBlur={onReferralBlur}
-                    placeholder="e.g. KJ7QH4MZ"
+                    placeholder="e.g. KJARUN47"
                     autoCapitalize="characters"
                     autoComplete="off"
                     maxLength={14}
                     aria-describedby="ref-status"
                   />
                   <div id="ref-status">
-                    {refCheck.state === 'typing' && <p className="ref-status ref-status--checking">Codes have {REFERRAL_CODE_LENGTH} characters, like KJ7QH4MZ.</p>}
+                    {refCheck.state === 'typing' && <p className="ref-status ref-status--checking">Codes have {REFERRAL_CODE_LENGTH} characters, like KJARUN47.</p>}
                     {refCheck.state === 'checking' && <p className="ref-status ref-status--checking">Checking the code…</p>}
                     {refCheck.state === 'valid' && <p className="ref-status ref-status--valid">✓ Code accepted — referred by {refCheck.referrerName}</p>}
                     {refCheck.state === 'invalid' && (

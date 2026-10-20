@@ -80,7 +80,7 @@ test.describe('the Referrals page', () => {
     await expect(page.locator('.referral-admin-notice.success')).toContainText(`created for ${s.studentName}`);
     await expect(rowFor(page, s.studentName)).toHaveCount(0);                      // it has moved to "With code"
     await tab(page, 'With code').click();
-    await expect(rowFor(page, s.studentName).locator('code')).toHaveText(/^KJ[A-HJ-NP-Z2-9]{6}$/);
+    await expect(rowFor(page, s.studentName).locator('code')).toHaveText(/^KJ[A-Z]{4}[2-9]{2}$/);
   });
 
   test('the copy button copies the code', async ({ page, context }) => {

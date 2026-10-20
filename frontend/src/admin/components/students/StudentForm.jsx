@@ -296,7 +296,7 @@ const StudentForm = ({ formData, setFormData, onSubmit, onCancel, isEditing }) =
               name="referralCode"
               value={formData.referralCode || ''}
               onChange={(e) => setFormData(prev => ({ ...prev, referralCode: e.target.value.toUpperCase() }))}
-              placeholder="e.g. KJ7QH4MZ"
+              placeholder="e.g. KJARUN47"
               autoComplete="off"
               maxLength={14}
             />

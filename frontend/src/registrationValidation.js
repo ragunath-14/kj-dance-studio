@@ -56,7 +56,7 @@ export function incompleteReferralProblem(code) {
     reason: 'incomplete',
     title: 'The code is not complete',
     message: `A referral code has ${REFERRAL_CODE_LENGTH} letters and numbers and starts with KJ. You typed ${cleaned.length}.`,
-    steps: ['Type the whole code, for example KJ7QH4MZ.', 'Ask your friend to send it again with the Copy or WhatsApp button on our website.', 'No code? You can leave the box empty and register without it.']
+    steps: ['Type the whole code, for example KJARUN47.', 'Ask your friend to send it again with the Copy or WhatsApp button on our website.', 'No code? You can leave the box empty and register without it.']
   };
 }
 

@@ -1,11 +1,11 @@
 const Student      = require('../models/Student');
 const Registration = require('../models/Registration');
 const Payment      = require('../models/Payment');
-const { normalizeCode, last10, phoneRegex, samePhone, generateUniqueCode } = require('../utils/referral');
+const { normalizeCode, last10, phoneRegex, phonePrefixRegex, samePhone, generateUniqueCode, maskPhone, shortName } = require('../utils/referral');
 const { getTotalCycles, getDiscountTiming, REFERRAL_PERCENT, getReferralPercentForCycle } = require('../utils/fees');
 
 const MONTH_NAMES = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-const CODE_LENGTH = 8; // "KJ" + 6 characters
+const CODE_LENGTH = 8; // "KJ" + 4 letters of the name + 2 digits, e.g. KJARUN47
 
 const classesOf = (s) => [s.classType, ...(s.extraClasses || []).map(e => e.classType)].filter(Boolean);
 
@@ -21,13 +21,13 @@ const cycleLabel = (joinDate, cycle) => {
 const PROBLEMS = {
   incomplete: {
     title: 'The code is not complete',
-    message: 'A referral code has 8 letters and numbers, and always starts with KJ.',
-    steps: ['Type the whole code, for example KJ7QH4MZ.', 'Ask your friend to send it again with the Copy or WhatsApp button on our website.', 'No code? You can leave the box empty and register without it.']
+    message: 'A referral code has 8 letters and numbers: KJ, then 4 letters, then 2 digits.',
+    steps: ['Type the whole code, for example KJARUN47.', 'Ask your friend to send it again with the Copy or WhatsApp button on our website.', 'No code? You can leave the box empty and register without it.']
   },
   unknown: {
     title: 'We could not find this code',
     message: 'No student has a referral code like this.',
-    steps: ['Check for typing mistakes. The letters I, L, O and the numbers 0 and 1 are never used in codes.', 'Ask your friend to copy the code from the Refer & Save part of our website and send it to you.', 'No code? You can leave the box empty and register without it.']
+    steps: ['Check for typing mistakes. A code looks like KJARUN47: KJ, then 4 letters from the student\'s name, then 2 digits.', 'Ask your friend to copy the code from the Refer & Save part of our website and send it to you.', 'No code? You can leave the box empty and register without it.']
   },
   expired: {
     title: 'This code has expired',
@@ -110,6 +110,40 @@ exports.lookup = async (req, res) => {
   }
 };
 
+// ─── POST /api/referral/suggest  { phone } ─────────────────────────────────────
+// Public. Called while the visitor is still typing (5 to 9 digits). Returns up to 5 active students whose
+// contact number OR WhatsApp number starts with these digits, so people can see they are on the right track.
+// Only a short name and a masked number come back: the visitor still has to type their own full number.
+exports.suggest = async (req, res) => {
+  try {
+    const typed = String(req.body?.phone || '').trim();
+    let digits = typed.replace(/\D/g, '');
+    // "+91 ..." or "91" followed by more than 10 digits = country code. A plain 10-digit number starting 91 is not.
+    if (digits.startsWith('91') && (typed.startsWith('+') || digits.length > 10)) digits = digits.slice(2);
+    if (digits.length < 5 || digits.length > 9) return res.json({ success: true, suggestions: [] });
+
+    const re = phonePrefixRegex(digits);
+    const students = await Student.find({ isActive: { $ne: false }, $or: [{ phone: re }, { whatsappNumber: re }] })
+      .select('studentName classType extraClasses phone whatsappNumber').limit(5).lean();
+
+    const suggestions = students.map(s => {
+      const byPhone = re.test(s.phone || '');
+      const hasOther = !!s.whatsappNumber && last10(s.whatsappNumber) !== last10(s.phone);
+      return {
+        name: shortName(s.studentName),
+        classes: classesOf(s),
+        matched: byPhone ? 'contact' : 'whatsapp',            // which of the two numbers matched
+        maskedPhone: maskPhone(byPhone ? s.phone : s.whatsappNumber),
+        otherNumber: hasOther                                   // the student has a different contact and WhatsApp number
+      };
+    });
+    res.json({ success: true, suggestions });
+  } catch (err) {
+    console.error('referral suggest error:', err);
+    res.json({ success: true, suggestions: [] });
+  }
+};
+
 // The student proves who they are with a phone number that belongs to their record.
 const loadStudentForPhone = async (studentId, phone) => {
   let student = null;
@@ -124,7 +158,7 @@ const loadStudentForPhone = async (studentId, phone) => {
 // Creates the first code for a student who has none. Safe if two requests race: the unique index decides.
 const createFirstCode = async (student) => {
   for (let attempt = 0; attempt < 5 && !student.referralCode; attempt++) {
-    const code = await generateUniqueCode(Student);
+    const code = await generateUniqueCode(Student, student.studentName);
     try {
       const updated = await Student.findOneAndUpdate(
         { _id: student._id, referralCode: { $exists: false } },
@@ -147,7 +181,7 @@ const createFirstCode = async (student) => {
 const replaceCode = async (student, by) => {
   const previous = student.referralCode;
   for (let attempt = 0; attempt < 5; attempt++) {
-    const code = await generateUniqueCode(Student);
+    const code = await generateUniqueCode(Student, student.studentName);
     try {
       const now = new Date();
       const updated = await Student.findOneAndUpdate(
@@ -274,7 +308,8 @@ exports.grantReward = async (registration, newStudent) => {
     return { result: 'skipped', note: 'A student cannot refer themselves.' };
   if (referrer.isActive === false)
     return { result: 'skipped', note: `${referrer.studentName} is inactive, so no reward was given.` };
-  if (samePhone(newStudent.phone, referrer.phone) || samePhone(newStudent.phone, referrer.whatsappNumber))
+  if (samePhone(newStudent.phone, referrer.phone) || samePhone(newStudent.phone, referrer.whatsappNumber) ||
+      samePhone(newStudent.whatsappNumber, referrer.phone) || samePhone(newStudent.whatsappNumber, referrer.whatsappNumber))
     return { result: 'skipped', note: 'Same phone number as the referrer, so no reward was given.' };
 
   const payments = await Payment.find({ studentId: referrer._id, purpose: 'Monthly Fee' }).lean();

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { Gift, Search, Copy, Check, Share2, UserCheck, RefreshCw } from 'lucide-react';
 import './ReferralSection.css';
@@ -15,7 +15,25 @@ const ReferralSection = ({ onRegister }) => {
   const [confirmFor, setConfirmFor] = useState(null);   // student who is about to replace their code
   const [renewed, setRenewed] = useState({});             // id -> { oldCode, newCode } shown after a replacement
 
+  const [suggestions, setSuggestions] = useState([]);
+
   const digits = phone.replace(/\D/g, '').slice(-10);
+
+  // While the visitor types 5-9 digits, show which students match (contact OR WhatsApp number)
+  useEffect(() => {
+    const typed = phone.replace(/\D/g, '');
+    if (typed.length < 5 || typed.length > 12 || state.status === 'done') { setSuggestions([]); return undefined; }
+    let cancelled = false;
+    const timer = setTimeout(async () => {
+      try {
+        const res = await axios.post('/api/referral/suggest', { phone });
+        if (!cancelled) setSuggestions(res.data.suggestions || []);
+      } catch {
+        if (!cancelled) setSuggestions([]);
+      }
+    }, 300);
+    return () => { cancelled = true; clearTimeout(timer); };
+  }, [phone, state.status]);
 
   const find = async (e) => {
     e?.preventDefault();
@@ -105,7 +123,7 @@ const ReferralSection = ({ onRegister }) => {
               inputMode="numeric"
               placeholder="Your registered phone number"
               value={phone}
-              onChange={(e) => setPhone(e.target.value)}
+              onChange={(e) => { setPhone(e.target.value); if (state.status === 'done') setState({ status: 'idle', students: [], pending: false, error: '' }); }}
               maxLength={16}
             />
           </div>
@@ -113,6 +131,25 @@ const ReferralSection = ({ onRegister }) => {
             {state.status === 'loading' ? 'Searching…' : 'Find my account'}
           </button>
         </form>
+
+        {suggestions.length > 0 && digits.length < 10 && (
+          <div className="referral-suggestions" role="status" aria-live="polite">
+            <p className="referral-suggestions-title">Is this you? Keep typing your full 10-digit number.</p>
+            {suggestions.map((s, i) => (
+              <div className="referral-suggestion" key={i}>
+                <UserCheck size={18} />
+                <div>
+                  <b>{s.name}</b>
+                  <span>{s.classes.join(' · ')}</span>
+                  <small>
+                    {s.matched === 'whatsapp' ? 'WhatsApp number' : 'Contact number'} {s.maskedPhone}
+                    {s.otherNumber ? ' · this student has two numbers, either one works' : ''}
+                  </small>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
 
         {state.error && <p className="referral-error">{state.error}</p>}
 
