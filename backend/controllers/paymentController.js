@@ -108,6 +108,39 @@ exports.getStudentPayments = async (req, res) => {
   }
 };
 
+// ─── WhatsApp after a payment ────────────────────────────────────────────────
+// What the student still owes on monthly fees right now: same oldest-month-first rule as the unpaid list.
+const outstandingFor = async (student) => {
+  const plain     = typeof student.toObject === 'function' ? student.toObject() : student;
+  const payments  = await Payment.find({ studentId: plain._id, purpose: 'Monthly Fee' }).select('amount').lean();
+  const totalPaid = payments.reduce((sum, p) => sum + (p.amount || 0), 0);
+  const cycles    = Math.max(0, getTotalCycles(new Date(plain.createdAt || plain.joinDate)));
+  const { rows }  = getMonthlyBreakdown(plain, cycles, totalPaid);
+  const owing     = rows.filter(r => r.due > 0);
+  return { totalDue: owing.reduce((sum, r) => sum + r.due, 0), pendingMonths: owing.length };
+};
+
+// 1) the receipt for what was just paid (a full OR a part payment), then
+// 2) if money is still owed, the fee reminder with the remaining amount — in that order.
+// Never throws: a WhatsApp problem must not fail the payment that was already saved.
+const sendPaymentMessages = async (student, { amount, purpose, date }) => {
+  const whatsappNum = student.whatsappNumber || student.phone;
+  if (!whatsappNum) return;
+  try {
+    const receipt = await whatsapp.sendPaymentConfirmation(whatsappNum, student.studentName, amount, purpose, date);
+    if (!receipt?.success) console.error(`Payment receipt not sent to ${student.studentName}: ${receipt?.reason}`);
+
+    if (purpose !== 'Monthly Fee') return;
+    const { totalDue, pendingMonths } = await outstandingFor(student);
+    if (totalDue <= 0) return;
+    const reminder = await whatsapp.sendPendingFeesAlert(student._id, whatsappNum, student.studentName, pendingMonths, totalDue);
+    if (reminder?.success) await Student.updateOne({ _id: student._id }, { lastAlertSent: new Date() });   // the 5-day reminder restarts from now
+    else console.error(`Remaining-balance reminder not sent to ${student.studentName}: ${reminder?.reason}`);
+  } catch (err) {
+    console.error('Failed to send payment WhatsApp:', err.message);
+  }
+};
+
 // ─── POST /api/payments ──────────────────────────────────────────────────────
 exports.createPayment = async (req, res) => {
   try {
@@ -174,17 +207,8 @@ exports.createPayment = async (req, res) => {
     const payment    = new Payment(paymentData);
     const newPayment = await payment.save();
 
-    // Send WhatsApp Confirmation
-    const whatsappNum = student.whatsappNumber || student.phone;
-    if (whatsappNum) {
-      whatsapp.sendPaymentConfirmation(
-        whatsappNum,
-        student.studentName,
-        amount,
-        req.body.purpose,
-        new Date(payment.date || Date.now()).toLocaleDateString('en-IN')
-      ).catch(err => console.error('Failed to send payment WhatsApp:', err.message));
-    }
+    // WhatsApp: receipt for this payment, then the remaining balance (if any). Not awaited: the response does not wait for Meta.
+    sendPaymentMessages(student, { amount, purpose: req.body.purpose, date: new Date(payment.date || Date.now()).toLocaleDateString('en-IN') });
 
     await newPayment.populate('studentId', 'studentName');
     const io = req.app.get('socketio');
