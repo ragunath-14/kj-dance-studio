@@ -968,6 +968,14 @@
   line-height: 1.1;
 }
 
+.fee-bar strong.fee-bar__prompt {
+  color: #FBBF24;
+  font-size: 15px;
+  font-weight: 800;
+  text-align: right;
+  white-space: nowrap;
+}
+
 .form-hint {
   flex-basis: 100%;
   margin: 0;

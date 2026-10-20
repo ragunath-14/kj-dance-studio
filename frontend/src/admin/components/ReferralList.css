@@ -118,6 +118,9 @@
 .referral-status--rejected { background: rgba(239, 68, 68, 0.15);  color: var(--error); }
 
 @media (max-width: 768px) {
-  .referral-details-table { display: block; overflow-x: auto; }
+  .referral-details-table { display: block; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  .referral-details-table td:nth-child(n+2), .referral-details-table th { white-space: nowrap; }
+  .referral-details-table td:first-child { min-width: 130px; }
+  .referral-admin-help { font-size: 0.85rem; padding: 12px; }
   .referral-admin-btn { height: 40px; }
 }

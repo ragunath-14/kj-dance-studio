@@ -381,6 +381,20 @@
   .footer-right {
     justify-content: stretch;
   }
+
+  /* Full-width, thumb-sized buttons; Save above Cancel so the main action is reached first */
+  .modal-footer { flex-direction: column-reverse; }
+  .footer-left button, .footer-right button { width: 100%; min-height: 46px; }
+}
+
+/* A long form (Add Student with offer + referral) keeps Save/Cancel in view while scrolling */
+@media (max-width: 768px) {
+  .modal-content > form > .modal-footer {
+    position: sticky;
+    bottom: -20px;
+    z-index: 5;
+    margin: 0 -20px -20px;
+  }
 }
 
 

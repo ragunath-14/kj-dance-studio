@@ -1055,6 +1055,13 @@
   }
 }
 
+/* On phones the three buttons are smaller and tucked in, so they cover less of the page */
+@media (max-width: 480px) {
+  .contact-fab-group { bottom: 14px; right: 10px; gap: 8px; }
+  .fab-item { width: 40px; height: 40px; }
+  .fab-item svg { width: 20px; height: 20px; }
+}
+
 /* ═══════════════════════════════════════════════════════════════
    SCHEDULE SECTION
    ═══════════════════════════════════════════════════════════════ */

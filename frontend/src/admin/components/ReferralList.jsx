@@ -116,8 +116,11 @@ const ReferralList = () => {
       </div>
 
       <p className="referral-admin-help">
-        <Gift size={16} /> Each student gets one code. A friend who registers with it earns the student <b>{result.percent || 10}% off one monthly bill</b> —
-        but only once <b>you accept</b> the friend. <b>Regenerate</b> expires the old code at once and makes a new one.
+        <Gift size={16} />
+        <span>
+          Each student gets one code. A friend who registers with it earns the student <b>{result.percent || 10}% off one monthly bill</b> —
+          but only once <b>you accept</b> the friend. <b>Regenerate</b> expires the old code at once and makes a new one.
+        </span>
       </p>
 
       {notice && <div className={`referral-admin-notice ${notice.type}`}>{notice.type === 'success' ? '✅' : '❌'} {notice.text}</div>}

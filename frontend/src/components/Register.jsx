@@ -657,7 +657,7 @@ const Register = ({ isOpen, onClose, campEnabled = false, initialMode = 'class',
             {!isCamp && (
               <div className="fee-bar">
                 <span>{entries.length > 1 ? `${entries.length} classes · per month` : 'Fee per month'}</span>
-                <strong>{entries.length === 0 ? '—' : priceKnown ? formatRupees(totalFee) : 'Choose Zumba plan'}</strong>
+                <strong className={entries.length > 0 && !priceKnown ? 'fee-bar__prompt' : undefined}>{entries.length === 0 ? '—' : priceKnown ? formatRupees(totalFee) : 'Choose Zumba plan'}</strong>
               </div>
             )}
             <button type="submit" className="btn-primary" disabled={loading}>
