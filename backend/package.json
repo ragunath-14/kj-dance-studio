@@ -6,9 +6,11 @@
     "start": "node index.js",
     "dev": "nodemon index.js",
     "dev:win": "set NODE_ENV=development && nodemon index.js",
-    "test": "node __tests__/unit_tests.js",
+    "test": "node --test --test-concurrency=2 \"__tests__/unit/**/*.test.js\" \"__tests__/api/**/*.test.js\"",
     "build": "node build-prod.js",
-    "start:prod": "node index.js"
+    "start:prod": "node index.js",
+    "test:unit": "node --test \"__tests__/unit/**/*.test.js\"",
+    "test:api": "node --test --test-concurrency=2 \"__tests__/api/**/*.test.js\""
   },
   "dependencies": {
     "axios": "^1.15.0",
