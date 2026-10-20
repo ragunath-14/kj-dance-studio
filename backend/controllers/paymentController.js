@@ -1,48 +1,49 @@
 const Payment  = require('../models/Payment');
 const Student  = require('../models/Student');
 const whatsapp = require('../services/whatsappService');
-
-// ─── Fee helper ──────────────────────────────────────────────────────────────
-const getMonthlyFee = (classType, studentCategory) => {
-  if (classType === 'Fitness Class') return 2000;
-  if (classType === 'Online Class')  return studentCategory === 'Kids' ? 1600 : 2000;
-  return studentCategory === 'Kids' ? 1000 : 1300;
-};
+const { studentSearchClauses } = require('../utils/search');
+const { getNetFee, getBaseFee, getFeeForCycle, getExpectedTotal, getPendingMonths, getTotalCycles, getMonthlyBreakdown, getCycleMonth } = require('../utils/fees');
 
 // ─── Month names helper ───────────────────────────────────────────────────────
 const MONTH_NAMES = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 
 // ─── GET /api/payments ───────────────────────────────────────────────────────
+// Builds the Mongo query for the Paid tab from the request's filters (also used for the tab count)
+const buildPaymentQuery = async (q) => {
+  const search          = q.search          || '';
+  const studentCategory = q.studentCategory || '';
+  // Optional month/year filter (e.g. ?filterMonth=6&filterYear=2026)
+  const filterMonth     = q.filterMonth !== undefined ? parseInt(q.filterMonth) : null;
+  const filterYear      = q.filterYear  !== undefined ? parseInt(q.filterYear)  : null;
+
+  // If searching by name or filtering by category, resolve matching student IDs first
+  let studentIdFilter = null;
+  if (search.trim() || studentCategory) {
+    const studentQuery = {};
+    if (search.trim())   studentQuery.$or = studentSearchClauses(search);
+    if (studentCategory) studentQuery.studentCategory = studentCategory;
+    const matchingStudents = await Student.find(studentQuery).select('_id').lean();
+    studentIdFilter = matchingStudents.map(s => s._id);
+  }
+
+  const paymentQuery = studentIdFilter !== null ? { studentId: { $in: studentIdFilter } } : {};
+
+  // Apply month/year filter if provided (for "this month paid" view)
+  if (!Number.isNaN(filterMonth) && !Number.isNaN(filterYear) && filterMonth !== null && filterYear !== null) {
+    paymentQuery.purpose  = 'Monthly Fee';
+    paymentQuery.forMonth = filterMonth;
+    paymentQuery.forYear  = filterYear;
+  }
+  return paymentQuery;
+};
+
 // ─── GET /api/payments (Paginated) ──────────────────────────────────────────
 exports.getAllPayments = async (req, res) => {
   try {
-    const page            = parseInt(req.query.page)  || 1;
-    const limit           = parseInt(req.query.limit) || 50;
-    const skip            = (page - 1) * limit;
-    const search          = req.query.search          || '';
-    const studentCategory = req.query.studentCategory || '';
-    // Optional month/year filter (e.g. ?filterMonth=6&filterYear=2026)
-    const filterMonth     = req.query.filterMonth !== undefined ? parseInt(req.query.filterMonth) : null;
-    const filterYear      = req.query.filterYear  !== undefined ? parseInt(req.query.filterYear)  : null;
-
-    // If searching by name, resolve matching student IDs first
-    let studentIdFilter = null;
-    if (search || studentCategory) {
-      const studentQuery = {};
-      if (search)          studentQuery.$or = [{ studentName: { $regex: search, $options: 'i' } }, { phone: { $regex: search, $options: 'i' } }];
-      if (studentCategory) studentQuery.studentCategory = studentCategory;
-      const matchingStudents = await Student.find(studentQuery).select('_id').lean();
-      studentIdFilter = matchingStudents.map(s => s._id);
-    }
-
-    const paymentQuery = studentIdFilter !== null ? { studentId: { $in: studentIdFilter } } : {};
-
-    // Apply month/year filter if provided (for "this month paid" view)
-    if (filterMonth !== null && filterYear !== null) {
-      paymentQuery.purpose  = 'Monthly Fee';
-      paymentQuery.forMonth = filterMonth;
-      paymentQuery.forYear  = filterYear;
-    }
+    const page  = parseInt(req.query.page)  || 1;
+    const limit = parseInt(req.query.limit) || 50;
+    const skip  = (page - 1) * limit;
+    const paymentQuery = await buildPaymentQuery(req.query);
 
     const [payments, total] = await Promise.all([
       Payment.find(paymentQuery)
@@ -76,45 +77,31 @@ exports.getStudentPayments = async (req, res) => {
 
     const today    = new Date();
     const joinDate = new Date(student.createdAt || student.joinDate);
-    const fee      = getMonthlyFee(student.classType, student.studentCategory);
+    const netFee   = getNetFee(student); // current monthly fee after any offer
 
-    // Build per-month status from join month up to current month
-    const monthHistory = [];
-    let yr  = joinDate.getFullYear();
-    let mo  = joinDate.getMonth();
-    const curYr = today.getFullYear();
-    const curMo = today.getMonth();
+    // Same rule as the Unpaid list: money received covers the OLDEST unpaid month first, so this
+    // history always adds up to the same total as "billed - paid".
+    const totalPaid = payments.filter(p => p.purpose === 'Monthly Fee').reduce((sum, p) => sum + (p.amount || 0), 0);
+    const cyclesDue = Math.max(0, getTotalCycles(joinDate, today));
+    const { rows, credit } = getMonthlyBreakdown(student, cyclesDue, totalPaid);
 
-    // Map payments by month key for O(1) lookups
-    const payByMonth = {};
-    for (const p of payments) {
-      if (p.purpose === 'Monthly Fee' && p.forYear !== undefined && p.forMonth !== undefined) {
-        const key = `${p.forYear}-${p.forMonth}`;
-        payByMonth[key] = (payByMonth[key] || 0) + (p.amount || 0);
-      }
-    }
+    const labelOf = (cycle) => { const { month, year } = getCycleMonth(joinDate, cycle); return { year, month, label: `${MONTH_NAMES[month]} ${year}` }; };
+    const monthHistory = rows.map(r => ({ ...labelOf(r.cycle), fee: r.fee, paid: r.paid, due: r.due, status: r.status }));
 
-    while (yr < curYr || (yr === curYr && mo <= curMo)) {
-      const key    = `${yr}-${mo}`;
-      const paid   = payByMonth[key] || 0;
-      let status;
-      if (paid >= fee)             status = 'paid';
-      else if (paid > 0)           status = 'partial';
-      else                         status = 'pending';
-
-      monthHistory.push({
-        year: yr, month: mo, label: `${MONTH_NAMES[mo]} ${yr}`,
-        fee, paid, due: Math.max(0, fee - paid), status
-      });
-
-      mo++;
-      if (mo > 11) { mo = 0; yr++; }
+    // Paid ahead: leftover money that fully covers the next month(s), up to the current calendar month
+    const todayIdx = (today.getFullYear() - joinDate.getFullYear()) * 12 + (today.getMonth() - joinDate.getMonth());
+    let remaining = credit;
+    for (let idx = cyclesDue; idx <= todayIdx; idx++) {
+      const fee = getFeeForCycle(student, idx);
+      if (fee <= 0 || remaining < fee) break;
+      remaining -= fee;
+      monthHistory.push({ ...labelOf(idx), fee, paid: fee, due: 0, status: 'paid' });
     }
 
     // Reverse so newest month is first
     monthHistory.reverse();
 
-    res.json({ payments, monthHistory, student: { fee } });
+    res.json({ payments, monthHistory, student: { fee: netFee, baseFee: getBaseFee(student) } });
   } catch (err) {
     console.error('getStudentPayments error:', err);
     res.status(500).json({ message: 'Failed to fetch student payments.' });
@@ -149,16 +136,24 @@ exports.createPayment = async (req, res) => {
 
     // --- Prevent Duplicate Payments for same month ---
     if (purpose === 'Monthly Fee' && paymentData.forMonth !== undefined) {
-      const existingThisMonth = await Payment.findOne({
+      // A month can take more than one payment (a part-payment now, the balance later) — it is only
+      // refused once that month's fee has been paid in full.
+      const sameMonth = await Payment.find({
         studentId,
         purpose: 'Monthly Fee',
         forMonth: paymentData.forMonth,
         forYear:  paymentData.forYear
-      });
-      if (existingThisMonth) {
-        return res.status(409).json({
-          message: `A Monthly Fee payment for ${MONTH_NAMES[paymentData.forMonth]} ${paymentData.forYear} already exists for this student. Edit the existing record instead.`
-        });
+      }).lean();
+      if (sameMonth.length) {
+        const joined = new Date(student.createdAt || student.joinDate);
+        const cycle  = Math.max(0, (paymentData.forYear - joined.getFullYear()) * 12 + (paymentData.forMonth - joined.getMonth()));
+        const monthFee = getFeeForCycle(student.toObject(), cycle);
+        const alreadyPaid = sameMonth.reduce((sum, p) => sum + (p.amount || 0), 0);
+        if (alreadyPaid >= monthFee) {
+          return res.status(409).json({
+            message: `${MONTH_NAMES[paymentData.forMonth]} ${paymentData.forYear} is already paid in full for this student (₹${alreadyPaid} of ₹${monthFee}).`
+          });
+        }
       }
     } else {
       // For non-monthly-fee: prevent same-day duplicate
@@ -266,7 +261,7 @@ exports.sendPendingAlerts = async (req, res) => {
 
     const [students, allMonthlyFeePayments] = await Promise.all([
       Student.find({ isActive: { $ne: false } })
-        .select('studentName phone whatsappNumber classType studentCategory isActive createdAt lastAlertSent')
+        .select('studentName phone whatsappNumber classType feePlan extraClasses discounts referralRewards studentCategory isActive createdAt lastAlertSent')
         .lean(),
       Payment.find({ purpose: 'Monthly Fee' })
         .select('studentId amount forMonth forYear')
@@ -298,12 +293,12 @@ exports.sendPendingAlerts = async (req, res) => {
       if (today.getDate() < joinDate.getDate()) totalCycles--;
       if (totalCycles <= 0) continue;
 
-      const fee          = getMonthlyFee(student.classType, student.studentCategory);
+      const fee          = getNetFee(student);
       const totalPaid    = paidByStudent.get(student._id.toString()) || 0;
-      const totalDue     = Math.max(0, totalCycles * fee - totalPaid);
+      const totalDue     = Math.max(0, getExpectedTotal(student, totalCycles) - totalPaid);
       if (totalDue <= 0) continue;
 
-      const pendingMonths = Math.ceil(totalDue / fee);
+      const pendingMonths = getPendingMonths(student, totalCycles, totalPaid);
       const whatsappNum   = student.whatsappNumber || student.phone;
 
       let alertResult = { success: false, reason: 'no_number' };
@@ -368,9 +363,9 @@ exports.sendStudentReminder = async (req, res) => {
       return res.json({ success: false, message: 'No dues yet — student joined this month.' });
     }
 
-    const fee           = getMonthlyFee(student.classType, student.studentCategory);
-    const totalDue      = Math.max(0, totalCycles * fee - totalPaid);
-    const pendingMonths = Math.ceil(totalDue / fee);
+    const fee           = getNetFee(student);
+    const totalDue      = Math.max(0, getExpectedTotal(student, totalCycles) - totalPaid);
+    const pendingMonths = getPendingMonths(student, totalCycles, totalPaid);
 
     if (totalDue <= 0) {
       return res.json({ success: false, message: 'Student has no outstanding dues.' });
@@ -401,5 +396,73 @@ exports.sendStudentReminder = async (req, res) => {
   } catch (err) {
     console.error('sendStudentReminder error:', err);
     res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+// ─── GET /api/payments/counts?search=&studentCategory=&filterMonth=&filterYear= ───
+// Numbers for the Paid / Unpaid tab buttons, independent of which tab is open:
+//   unpaid = students who still owe money (same list as the Unpaid tab)
+//   paid   = payment records the Paid tab shows for the chosen month (or all time)
+// Both follow the search box and the Kids/Adults filter.
+exports.getPaymentCounts = async (req, res) => {
+  try {
+    const { buildUnpaidList } = require('./studentController');
+    const [unpaid, paymentQuery] = await Promise.all([
+      buildUnpaidList({ search: req.query.search || '', studentCategory: req.query.studentCategory || '' }),
+      buildPaymentQuery(req.query)
+    ]);
+    res.json({ unpaid: unpaid.length, paid: await Payment.countDocuments(paymentQuery) });
+  } catch (err) {
+    console.error('getPaymentCounts error:', err);
+    res.status(500).json({ message: 'Could not count payments.' });
+  }
+};
+
+// ─── POST /api/payments/clear-dues/:studentId ────────────────────────────────
+// "Clear All": records the student's ENTIRE outstanding balance in one go, one payment per unpaid
+// month (oldest first) so the month-by-month history shows each month settled. Body: { method?, date? }
+exports.clearDues = async (req, res) => {
+  try {
+    const { studentId } = req.params;
+    const student = await Student.findById(studentId);
+    if (!student) return res.status(404).json({ success: false, message: 'Student not found.' });
+    if (student.isActive === false) return res.status(400).json({ success: false, message: 'Student is inactive.' });
+
+    const today    = new Date();
+    const existing = await Payment.find({ studentId, purpose: 'Monthly Fee' }).lean();
+    const totalPaid = existing.reduce((sum, p) => sum + (p.amount || 0), 0);
+    const joinDate = new Date(student.createdAt || student.joinDate);
+    const cycles   = getTotalCycles(joinDate, today);
+    const plain    = student.toObject();
+    const { rows } = getMonthlyBreakdown(plain, Math.max(0, cycles), totalPaid);
+    const owing    = rows.filter(r => r.due > 0);
+
+    if (!owing.length)
+      return res.status(400).json({ success: false, message: 'This student has no outstanding dues.' });
+
+    const date = req.body?.date ? new Date(req.body.date) : new Date();
+    const docs = owing.map(r => {
+      const { month, year } = getCycleMonth(joinDate, r.cycle);
+      return { studentId, amount: r.due, method: req.body?.method || 'Cash', purpose: 'Monthly Fee', remainingFees: 0, date, forMonth: month, forYear: year };
+    });
+    const created = await Payment.insertMany(docs);
+    const total   = docs.reduce((sum, d) => sum + d.amount, 0);
+
+    // One confirmation message for the whole amount (not one per month)
+    const whatsappNum = student.whatsappNumber || student.phone;
+    if (whatsappNum) {
+      whatsapp.sendPaymentConfirmation(whatsappNum, student.studentName, total, 'Monthly Fee', date.toLocaleDateString('en-IN'))
+        .catch(err => console.error('Failed to send payment WhatsApp:', err.message));
+    }
+    await Student.updateOne({ _id: student._id }, { $unset: { lastAlertSent: '' } });
+
+    const io = req.app.get('socketio');
+    if (io) io.emit('dataChanged', { type: 'payment', action: 'create' });
+
+    res.status(201).json({ success: true, totalCleared: total, months: created.length, payments: created });
+  } catch (err) {
+    if (err.name === 'CastError') return res.status(400).json({ success: false, message: 'Invalid student ID format.' });
+    console.error('clearDues error:', err);
+    res.status(500).json({ success: false, message: 'Server error. Could not clear the dues.' });
   }
 };

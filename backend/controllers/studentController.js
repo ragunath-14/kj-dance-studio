@@ -1,13 +1,9 @@
 const Student  = require('../models/Student');
 const Payment  = require('../models/Payment');
 const whatsapp = require('../services/whatsappService');
-
-// ─── Fee helper ──────────────────────────────────────────────────────────────
-const getMonthlyFee = (classType, studentCategory) => {
-  if (classType === 'Fitness Class') return 2000;
-  if (classType === 'Online Class')  return studentCategory === 'Kids' ? 1600 : 2000;
-  return studentCategory === 'Kids' ? 1000 : 1300;
-};
+const referral = require('./referralController');
+const { studentSearchClauses, studentMatcher } = require('../utils/search');
+const { getNetFee, getPendingMonths, getMonthlyBreakdown, getCycleMonth, getFeeForCycle, getExpectedTotal, getTotalCycles, getDiscountTiming, withDiscount, parseDiscountInput, validateClasses, getBaseFee, getClassEntries } = require('../utils/fees');
 
 // ─── Category helper (authoritative — always computed server-side) ────────────
 // Kids: age 1-9  |  Adults: age 10+  |  Fitness Class always Adults
@@ -23,6 +19,11 @@ const formatValidationErrors = (err) =>
   Object.values(err.errors).map((e) => e.message);
 
 // ─── GET /api/students ───────────────────────────────────────────────────────
+// Keeps only the fields we expect on each extra class
+const cleanExtraClasses = (list) => Array.isArray(list)
+  ? list.map(e => ({ classType: e?.classType, feePlan: e?.feePlan || '', batchTiming: e?.batchTiming || '' }))
+  : [];
+
 // ─── GET /api/students (Paginated) ──────────────────────────────────────────
 exports.getAllStudents = async (req, res) => {
   try {
@@ -35,13 +36,9 @@ exports.getAllStudents = async (req, res) => {
     const classSchedule   = req.query.classSchedule   || '';
 
     let query = {};
-    if (search) {
-      query.$or = [
-        { studentName: { $regex: search, $options: 'i' } },
-        { phone:       { $regex: search, $options: 'i' } }
-      ];
-    }
-    if (classType)       query.classType       = classType;
+    if (search.trim()) query.$or = studentSearchClauses(search);
+    // A student belongs to a class tab if it is their first class or one of their extra classes
+    if (classType)       query.$and = [{ $or: [{ classType }, { 'extraClasses.classType': classType }] }];
     if (studentCategory) query.studentCategory = studentCategory;
     if (classSchedule)   query.classSchedule   = classSchedule;
 
@@ -100,7 +97,7 @@ exports.getDashboardStats = async (req, res) => {
 
     // Parallel fetch — aggregate monthly-fee totals per student in one DB call
     const [students, monthlyFeePaidMap, monthRevenue, lifetimeRevenue, pendingRegistrations, recentRegistrations] = await Promise.all([
-      Student.find().select('studentName phone whatsappNumber classType studentCategory isActive createdAt lastAlertSent').lean(),
+      Student.find().select('studentName phone whatsappNumber classType feePlan extraClasses discounts referralRewards studentCategory isActive createdAt lastAlertSent').lean(),
       // O(M) aggregation: total Monthly Fee paid per student (all time)
       Payment.aggregate([
         { $match: { purpose: 'Monthly Fee' } },
@@ -133,6 +130,7 @@ exports.getDashboardStats = async (req, res) => {
     const paidMap = new Map(monthlyFeePaidMap.map(r => [r._id.toString(), r.totalPaid]));
 
     const activeStudents = students.filter(s => s.isActive !== false);
+    const takes = (type) => activeStudents.filter(s => s.classType === type || (s.extraClasses || []).some(e => e.classType === type)).length;
 
 
 
@@ -171,12 +169,12 @@ exports.getDashboardStats = async (req, res) => {
         if (today.getDate() < joinDate.getDate()) totalCycles--;
         if (totalCycles <= 0) return null;
 
-        const fee       = getMonthlyFee(student.classType, student.studentCategory);
+        const fee       = getNetFee(student);
         const totalPaid = paidMap.get(student._id.toString()) || 0;
-        const totalDue  = Math.max(0, totalCycles * fee - totalPaid);
+        const totalDue  = Math.max(0, getExpectedTotal(student, totalCycles) - totalPaid);
         if (totalDue <= 0) return null;
 
-        const pendingMonths = Math.ceil(totalDue / fee);
+        const pendingMonths = getPendingMonths(student, totalCycles, totalPaid);
         return {
           _id:           student._id,
           studentName:   student.studentName,
@@ -201,10 +199,15 @@ exports.getDashboardStats = async (req, res) => {
         overdue:       overdueStudents.length,
         pending:       pendingRegistrations.length,
         classTypes: {
-          dance:   activeStudents.filter(s => s.classType === 'Dance Class').length,
-          regular: activeStudents.filter(s => s.classType === 'Regular Class').length,
-          fitness: activeStudents.filter(s => s.classType === 'Fitness Class').length,
-          online:  activeStudents.filter(s => s.classType === 'Online Class').length,
+          // counts every active student taking the class, as first or extra class
+          dance:   takes('Dance Class'),
+          regular: takes('Regular Class'),
+          fitness: takes('Fitness Class'),
+          online:  takes('Online Class'),
+          karate:   takes('Karate Class'),
+          zumba:    takes('Zumba Class'),
+          silambam: takes('Silambam Class'),
+          artCraft: takes('Art & Craft Class'),
         }
       },
       overdueStudents,
@@ -220,20 +223,18 @@ exports.getDashboardStats = async (req, res) => {
 // ─── GET /api/students/unpaid (Paginated) ───────────────────────────────────
 // A student is considered "unpaid for this month" if their forMonth/forYear payment
 // for the current month is missing OR the amount paid is less than their monthly fee.
-exports.getUnpaidStudents = async (req, res) => {
-  try {
+// Students with money owing, newest-biggest first. Shared by the Unpaid tab and the tab counts.
+const buildUnpaidList = async ({ search = '', studentCategory = '' } = {}) => {
+  {
     const today           = new Date();
     const curMo           = today.getMonth();
     const curYr           = today.getFullYear();
-    const search          = req.query.search          || '';
-    const studentCategory = req.query.studentCategory || '';
-
     const dbQuery = { isActive: { $ne: false } };
     if (studentCategory) dbQuery.studentCategory = studentCategory;
 
     const [students, allMonthlyPayments] = await Promise.all([
       Student.find(dbQuery)
-        .select('studentName phone whatsappNumber classType studentCategory isActive createdAt lastAlertSent')
+        .select('studentName phone whatsappNumber classType feePlan extraClasses discounts referralRewards studentCategory isActive createdAt lastAlertSent')
         .lean(),
       // Fetch all monthly fee payments — we need both all-time totals and per-month totals
       Payment.find({ purpose: 'Monthly Fee' })
@@ -241,18 +242,11 @@ exports.getUnpaidStudents = async (req, res) => {
         .lean()
     ]);
 
-    // Build per-student all-time paid map AND per-student-month paid map
-    const allTimePaid    = new Map(); // studentId -> total paid (all months)
-    const monthPaid      = new Map(); // `${studentId}-${yr}-${mo}` -> paid this month
-
+    // Total paid per student (all Monthly Fee payments)
+    const allTimePaid = new Map(); // studentId -> total paid
     for (const p of allMonthlyPayments) {
       const sid = p.studentId?.toString();
-      if (!sid) continue;
-      allTimePaid.set(sid, (allTimePaid.get(sid) || 0) + (p.amount || 0));
-      if (p.forYear !== undefined && p.forMonth !== undefined) {
-        const mk = `${sid}-${p.forYear}-${p.forMonth}`;
-        monthPaid.set(mk, (monthPaid.get(mk) || 0) + (p.amount || 0));
-      }
+      if (sid) allTimePaid.set(sid, (allTimePaid.get(sid) || 0) + (p.amount || 0));
     }
 
     let unpaid = students.map(student => {
@@ -269,36 +263,40 @@ exports.getUnpaidStudents = async (req, res) => {
       if (today.getDate() < joinDate.getDate()) totalCycles--;
       if (totalCycles <= 0) return null;
 
-      const fee = getMonthlyFee(student.classType, student.studentCategory);
-
       // Total outstanding across ALL months
       const totalPaid = allTimePaid.get(sid) || 0;
-      const totalDue  = Math.max(0, totalCycles * fee - totalPaid);
+      const totalDue  = Math.max(0, getExpectedTotal(student, totalCycles) - totalPaid);
       if (totalDue <= 0) return null; // fully paid across all months
 
-      // Current month specific: how much has been paid for THIS month?
-      const curMonthKey  = `${sid}-${curYr}-${curMo}`;
-      const paidThisMo   = monthPaid.get(curMonthKey) || 0;
-      const dueThisMo    = Math.max(0, fee - paidThisMo);
-
-      const pendingMonths = Math.ceil(totalDue / fee);
+      // Month by month, oldest first: the latest bill is "this month", the first unpaid one is what to collect next
+      const { rows } = getMonthlyBreakdown(student, totalCycles, totalPaid);
+      const current  = rows[rows.length - 1];
+      const oldest   = rows.find(r => r.due > 0);
+      const oldestAt = getCycleMonth(joinDate, oldest.cycle);
 
       return {
         ...student,
         totalDue,
-        pendingMonths,
-        currentMonthDue:  dueThisMo,
-        currentMonthPaid: paidThisMo,
-        isPartialThisMonth: paidThisMo > 0 && paidThisMo < fee
+        pendingMonths: getPendingMonths(student, totalCycles, totalPaid),
+        currentMonthDue:  current.due,
+        currentMonthPaid: current.paid,
+        isPartialThisMonth: current.status === 'partial',
+        // the oldest month still owing (what the Pay button should record), and how much of it
+        oldestPending: { month: oldestAt.month, year: oldestAt.year, due: oldest.due }
       };
     })
     .filter(Boolean)
     .sort((a, b) => b.totalDue - a.totalDue);
 
-    if (search) {
-      const re = new RegExp(search, 'i');
-      unpaid = unpaid.filter(s => re.test(s.studentName) || re.test(s.phone));
-    }
+    if (search && String(search).trim()) unpaid = unpaid.filter(studentMatcher(search));
+    return unpaid;
+  }
+};
+exports.buildUnpaidList = buildUnpaidList;
+
+exports.getUnpaidStudents = async (req, res) => {
+  try {
+    const unpaid = await buildUnpaidList({ search: req.query.search || '', studentCategory: req.query.studentCategory || '' });
 
     const page  = parseInt(req.query.page)  || 1;
     const limit = parseInt(req.query.limit) || 50;
@@ -340,9 +338,9 @@ exports.getStudentDues = async (req, res) => {
     }).lean();
 
     const totalPaid = payments.reduce((sum, p) => sum + (p.amount || 0), 0);
-    const fee = getMonthlyFee(student.classType);
-    const totalDue = Math.max(0, (totalCycles * fee) - totalPaid);
-    const pendingMonths = Math.ceil(totalDue / fee);
+    const fee = getNetFee(student);
+    const totalDue = Math.max(0, getExpectedTotal(student, totalCycles) - totalPaid);
+    const pendingMonths = getPendingMonths(student, totalCycles, totalPaid);
 
     res.json({
       studentName: student.studentName,
@@ -372,6 +370,18 @@ exports.createStudent = async (req, res) => {
     // Always compute category server-side from age — never trust frontend value
     data.studentCategory = computeCategory(data.studentAge, data.classType);
 
+    // Offer and referral code typed by the admin on the Add Student form (kept apart from the guarded fields)
+    const offerInput  = parseDiscountInput({ discountPercent: data.discountPercent, discountAmount: data.discountAmount });
+    const referralIn  = data.referralCode;
+    delete data.discountPercent; delete data.discountAmount;
+
+    // Offers on an existing student only go through PUT /:id/discount; codes and rewards are never taken from the body
+    delete data.discounts; delete data.referralCode; delete data.referralRewards;
+    if (offerInput.error) return res.status(400).json({ message: offerInput.error });
+    data.extraClasses = cleanExtraClasses(data.extraClasses);
+    const classError = validateClasses(data.classType, data.feePlan, data.extraClasses);
+    if (classError) return res.status(400).json({ message: classError });
+
     // Explicit required-field check (better error messages than Mongoose default)
     if (!data.studentName?.trim())
       return res.status(400).json({ message: 'Student name is required.' });
@@ -386,8 +396,32 @@ exports.createStudent = async (req, res) => {
     if (existing)
       return res.status(409).json({ message: 'A student with this exact name and phone number is already registered.' });
 
-    const student    = new Student(data);
+    // Referral code (optional): same rules as the public registration form
+    const ref = await referral.validateForRegistration({
+      code: referralIn, phone: data.phone, whatsappNumber: data.whatsappNumber, studentName: data.studentName
+    });
+    if (ref.error) return res.status(400).json({ message: ref.error, field: 'referralCode', reason: ref.reason, title: ref.title, steps: ref.steps });
+
+    const student = new Student(data);
+
+    // Offer: starts on the current bill (the joining month's bill for a new student; for a back-dated
+    // join date only the current bill, so earlier months keep the fee they were billed at)
+    if (offerInput.percent > 0 || offerInput.amount > 0) {
+      const { fromCycle } = getDiscountTiming(student.toObject(), []);
+      student.discounts = withDiscount([], fromCycle, offerInput.percent, offerInput.amount);
+    }
     const newStudent = await student.save();
+
+    // The referrer earns their reward now that this student has been added
+    let referralOutcome = null;
+    if (ref.code) {
+      try {
+        referralOutcome = await referral.grantReward({ referralCode: ref.code }, newStudent);
+      } catch (refErr) {
+        console.error('Referral reward error (student was still added):', refErr);
+        referralOutcome = { result: 'skipped', note: 'The referral reward could not be applied.' };
+      }
+    }
 
     const io = req.app.get('socketio');
     if (io) io.emit('dataChanged', { type: 'student', action: 'create' });
@@ -398,12 +432,12 @@ exports.createStudent = async (req, res) => {
       whatsapp.sendWelcomeMessage(
         whatsappNum,
         newStudent.studentName,
-        newStudent.classType,
+        [newStudent.classType, ...(newStudent.extraClasses || []).map(e => e.classType)].join(' + '),
         newStudent.batchTiming
       ).catch((e) => console.error('WhatsApp welcome error (createStudent):', e));
     }
 
-    res.status(201).json(newStudent);
+    res.status(201).json({ ...newStudent.toObject(), referralOutcome });
   } catch (err) {
     if (err.name === 'ValidationError') {
       console.warn('⚠️ createStudent validation failed:', err.message);
@@ -421,6 +455,22 @@ exports.createStudent = async (req, res) => {
 exports.updateStudent = async (req, res) => {
   try {
     const { id } = req.params;
+
+    // Offers only go through PUT /:id/discount
+    delete req.body.discounts; delete req.body.referralCode; delete req.body.referralRewards;
+
+    // Class selection rules (e.g. Zumba needs a plan) apply to the merged result
+    if (req.body.classType !== undefined || req.body.feePlan !== undefined || req.body.extraClasses !== undefined) {
+      const existing = await Student.findById(id).lean();
+      if (!existing) return res.status(404).json({ message: 'Student not found.' });
+      if (req.body.extraClasses !== undefined) req.body.extraClasses = cleanExtraClasses(req.body.extraClasses);
+      const classError = validateClasses(
+        req.body.classType ?? existing.classType,
+        req.body.feePlan ?? existing.feePlan,
+        req.body.extraClasses ?? existing.extraClasses
+      );
+      if (classError) return res.status(400).json({ message: classError });
+    }
 
     // Re-compute category whenever age or classType changes
     if (req.body.studentAge !== undefined || req.body.classType !== undefined) {
@@ -584,3 +634,81 @@ exports.getActivityLog = async (req, res) => {
   }
 };
 
+
+// ─── GET /api/students/:id/offer-timing ─────────────────────────────────────
+// Tells the admin screen whether an offer given now lands on the current bill or from next month.
+exports.getOfferTiming = async (req, res) => {
+  try {
+    const student = await Student.findById(req.params.id).lean();
+    if (!student) return res.status(404).json({ message: 'Student not found.' });
+    const payments = await Payment.find({ studentId: student._id, purpose: 'Monthly Fee' }).lean();
+    res.json({ appliesFrom: getDiscountTiming(student, payments).appliesFrom });
+  } catch (err) {
+    if (err.name === 'CastError') return res.status(400).json({ message: 'Invalid student ID format.' });
+    res.status(500).json({ message: err.message });
+  }
+};
+
+// ─── PUT /api/students/:id/discount ──────────────────────────────────────────
+// Body: { discountPercent, discountAmount }. Sets the offer for this student's monthly fee.
+//  • current bill still unpaid  → the offer applies to the current bill
+//  • current bill already paid  → the offer starts with next month's bill
+// Earlier bills keep the fee they were issued at. Sending 0 / 0 removes the offer.
+exports.setStudentDiscount = async (req, res) => {
+  try {
+    const parsed = parseDiscountInput(req.body);
+    if (parsed.error) return res.status(400).json({ message: parsed.error });
+
+    const student = await Student.findById(req.params.id);
+    if (!student) return res.status(404).json({ message: 'Student not found.' });
+
+    const payments = await Payment.find({ studentId: student._id, purpose: 'Monthly Fee' }).lean();
+    const { fromCycle, appliesFrom } = getDiscountTiming(student.toObject(), payments);
+
+    student.discounts = withDiscount(student.toObject().discounts, fromCycle, parsed.percent, parsed.amount);
+    await student.save();
+
+    const io = req.app.get('socketio');
+    if (io) io.emit('dataChanged', { type: 'student', action: 'update' });
+
+    res.json({
+      message: parsed.percent > 0 || parsed.amount > 0 ? 'Offer saved.' : 'Offer removed.',
+      student,
+      baseFee: getBaseFee(student.toObject()),
+      netFee:  getNetFee(student.toObject()),
+      appliesFrom
+    });
+  } catch (err) {
+    if (err.name === 'CastError') return res.status(400).json({ message: 'Invalid student ID format.' });
+    console.error('setStudentDiscount error:', err);
+    res.status(500).json({ message: err.message });
+  }
+};
+
+// ─── GET /api/students/counts?search=&studentCategory=&classSchedule= ─────────────
+// Numbers for the Students tab buttons. They use the SAME filters as the list (search, Kids/Adults,
+// Weekday/Weekend) and count every student the list would show for that tab — active and inactive —
+// so "All" and the class tabs always agree with what is on screen. A student who takes a class as
+// an extra class is counted in that class's tab too.
+exports.getStudentCounts = async (req, res) => {
+  try {
+    const search          = req.query.search          || '';
+    const studentCategory = req.query.studentCategory || '';
+    const classSchedule   = req.query.classSchedule   || '';
+
+    const query = {};
+    if (search.trim())   query.$or = studentSearchClauses(search);
+    if (studentCategory) query.studentCategory = studentCategory;
+    if (classSchedule)   query.classSchedule   = classSchedule;
+
+    const students = await Student.find(query).select('classType extraClasses').lean();
+    const counts = { all: students.length };
+    for (const type of ['Regular Class', 'Fitness Class', 'Online Class', 'Karate Class', 'Zumba Class', 'Silambam Class', 'Art & Craft Class']) {
+      counts[type] = students.filter(s => s.classType === type || (s.extraClasses || []).some(e => e.classType === type)).length;
+    }
+    res.json(counts);
+  } catch (err) {
+    console.error('getStudentCounts error:', err);
+    res.status(500).json({ message: 'Could not count students.' });
+  }
+};

@@ -11,6 +11,23 @@ let messageQueue = Promise.resolve();
 const TEMPLATE_UNAVAILABLE_CODES = [132001, 132000];
 
 /**
+ * Turns whatever was typed into the digits WhatsApp needs (country code included):
+ *   "98765 43210"     -> 919876543210   (10 digits, no country code: India)
+ *   "+91 98765 43210" -> 919876543210
+ *   "+65 9868 0813"   -> 6598680813     (a "+" means the country code is already there — never add 91)
+ *   "0098765..." / "09876543210" -> handled too
+ */
+const normalizeNumber = (value) => {
+  const raw = String(value || '').trim();
+  let digits = raw.replace(/\D/g, '');
+  if (raw.startsWith('+')) return digits;                        // explicit country code: keep as is
+  if (digits.startsWith('00')) return digits.slice(2);           // 00 + country code
+  if (digits.length === 11 && digits.startsWith('0')) digits = digits.slice(1); // trunk 0 before a 10-digit number
+  if (digits.length === 10) return '91' + digits;
+  return digits;
+};
+
+/**
  * Core send function — Meta Cloud API only.
  *
  * Tries an approved template first. If the template is PENDING or not found
@@ -42,9 +59,7 @@ const sendMessage = async (whatsappNumber, fallbackText, options = {}) => {
       return { success: false, reason: errMsg };
     }
 
-    // Normalise number — digits only; prepend India (+91) for 10-digit numbers
-    let cleanedNumber = whatsappNumber.replace(/\D/g, '');
-    if (cleanedNumber.length === 10) cleanedNumber = '91' + cleanedNumber;
+    const cleanedNumber = normalizeNumber(whatsappNumber);
 
     const url     = `https://graph.facebook.com/${apiVersion}/${phoneId}/messages`;
     const headers = {
@@ -64,7 +79,7 @@ const sendMessage = async (whatsappNumber, fallbackText, options = {}) => {
         if (options.components) payload.template.components = options.components;
       } else {
         payload.type = 'text';
-        payload.text = { body: fallbackText || 'Hello from Expressionz Dance Studio!' };
+        payload.text = { body: fallbackText || 'Hello from KJ Dance Studio!' };
       }
       return payload;
     };
@@ -159,7 +174,7 @@ exports.sendPendingFeesAlert = async (studentId, whatsappNumber, studentName, pe
 
   const fallback =
     `Hi ${name}, this is a reminder that your fee of Rs.${due} is pending ` +
-    `for ${months} month(s) at Expressionz Dance Studio. Please clear it soon. 🙏`;
+    `for ${months} month(s) at KJ Dance Studio. Please clear it soon. 🙏`;
 
   return sendMessage(whatsappNumber, fallback, {
     templateName: 'fee_remainder',
@@ -272,6 +287,8 @@ exports.sendRejoinMessage = async (whatsappNumber, studentName, classType) => {
 /**
  * Returns the current WhatsApp service status (used by /health endpoint).
  */
+exports.normalizeNumber = normalizeNumber;
+
 exports.getStatus = () => ({
   provider  : 'Meta Cloud API',
   isReady   : process.env.USE_META_API === 'true' &&

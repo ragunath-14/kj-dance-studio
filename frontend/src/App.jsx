@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Routes, Route, useNavigate, Navigate } from 'react-router-dom';
 import axios from 'axios';
-import { Tent, Users, Heart, Building2, Music, Gift, Zap, GraduationCap, Home, Laptop, MapPin, Trophy, Video, Clock, BookOpen, Star, Phone, Menu, X, Sun, Moon, Calendar, Dumbbell, Baby, UserCheck, Wind, Droplets, Wifi, Camera, Car, Volume2, Shirt, BatteryCharging, ShieldCheck, Sofa, CheckCircle2 } from 'lucide-react';
+import { Shield, Flame, Palette, Music2, Tent, Users, Heart, Building2, Music, Gift, Zap, GraduationCap, Home, Laptop, MapPin, Trophy, Video, Clock, BookOpen, Star, Phone, Menu, X, Sun, Moon, Calendar, Dumbbell, Baby, UserCheck, Wind, Droplets, Wifi, Camera, Car, Volume2, Shirt, BatteryCharging, ShieldCheck, Sofa, CheckCircle2 } from 'lucide-react';
 
 const InstagramIcon = ({ size = 24 }) => (
   <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -19,6 +19,8 @@ const YoutubeIcon = ({ size = 24 }) => (
 );
 import './App.css';
 import Register from './components/Register';
+import ReferralSection from './components/ReferralSection';
+import { SPECIAL_CLASSES } from './classCatalog';
 import AdminRoot from './admin/AdminRoot';
 import logo from './assets/logo.png';
 import heroBg from './assets/hero-bg.png';
@@ -26,6 +28,16 @@ import salsaImg from './assets/salsa.png';
 import hiphopImg from './assets/hiphop.png';
 import contemporaryImg from './assets/contemporary.png';
 import bollywoodImg from './assets/bollywood.png';
+
+/* ─── Karate / Zumba / Silambam / Art & Craft (details live in classCatalog.js) ─── */
+const NEW_CLASS_STYLE = {
+  'Karate Class':      { icon: Shield,  accent: '#ED1C24', bg: 'rgba(237,28,36,0.08)',  tag: 'Martial Art',   slot: 'slot-karate' },
+  'Zumba Class':       { icon: Music2,  accent: '#EC4899', bg: 'rgba(236,72,153,0.08)', tag: 'Dance Fitness', slot: 'slot-zumba' },
+  'Silambam Class':    { icon: Flame,   accent: '#F59E0B', bg: 'rgba(245,158,11,0.08)', tag: 'Traditional',   slot: 'slot-silambam' },
+  'Art & Craft Class': { icon: Palette, accent: '#3B82F6', bg: 'rgba(59,130,246,0.08)', tag: 'Creative',      slot: 'slot-art' },
+};
+const NEW_CLASS_TYPES = Object.keys(SPECIAL_CLASSES);
+const DAY_NAMES = { Mon: 'Monday', Tue: 'Tuesday', Wed: 'Wednesday', Thu: 'Thursday', Fri: 'Friday', Sat: 'Saturday', Sun: 'Sunday' };
 
 /* ─── Schedule Section ───────────────────────────────────────────── */
 const ScheduleSection = ({ onRegister }) => {
@@ -153,12 +165,72 @@ const ScheduleSection = ({ onRegister }) => {
               <button
                 className="sc-cta"
                 style={{ background: cat.accent, boxShadow: `0 6px 20px ${cat.accent}40` }}
-                onClick={onRegister}
+                onClick={() => onRegister()}
               >
                 Join This Class
               </button>
             </div>
           ))}
+        </div>
+
+        {/* Karate / Zumba / Silambam / Art & Craft */}
+        <h3 className="schedule-subhead">Karate, Zumba, Silambam &amp; Art Classes</h3>
+        <div className="schedule-grid schedule-grid--four">
+          {NEW_CLASS_TYPES.map((type) => {
+            const c = SPECIAL_CLASSES[type];
+            const st = NEW_CLASS_STYLE[type];
+            return (
+              <div key={type} className="schedule-card" style={{ '--card-accent': st.accent, '--card-accent-bg': st.bg }}>
+                <div className="sc-header">
+                  <div className="sc-icon" style={{ background: st.bg, color: st.accent }}>
+                    <st.icon size={26} />
+                  </div>
+                  <div>
+                    <h3 className="sc-title">{c.short === 'Art & Craft' ? 'Drawing & Art and Craft' : `${c.short} Class`}</h3>
+                    <p className="sc-fee" style={{ color: st.accent }}>{c.feeText}</p>
+                  </div>
+                </div>
+
+                <div className="sc-batches">
+                  {c.schedule.map((batch, bi) => (
+                    <div key={bi} className="sc-batch">
+                      <div className="sc-batch-top">
+                        <span className="sc-batch-name"><Clock size={13} style={{ color: st.accent }} />{batch.name}</span>
+                        <span className="sc-tag" style={{ background: `${st.accent}20`, color: st.accent }}>{st.tag}</span>
+                      </div>
+                      <div className="sc-days">
+                        {['Mon','Tue','Wed','Thu','Fri','Sat','Sun'].map(d => (
+                          <span
+                            key={d}
+                            className={`sc-day ${batch.days.includes(d) ? 'active' : ''}`}
+                            style={batch.days.includes(d) ? { background: st.accent } : {}}
+                          >{d}</span>
+                        ))}
+                      </div>
+                      <div className="sc-time">
+                        <Clock size={14} />
+                        <strong>{batch.time}</strong>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                {c.plans && (
+                  <p className="sc-plans">
+                    {c.plans.map(pl => `${pl.label.replace(' / week', '')}: ₹${pl.fee}`).join('  ·  ')}
+                  </p>
+                )}
+
+                <button
+                  className="sc-cta"
+                  style={{ background: st.accent, boxShadow: `0 6px 20px ${st.accent}40` }}
+                  onClick={() => onRegister(type)}
+                >
+                  Join This Class
+                </button>
+              </div>
+            );
+          })}
         </div>
 
         {/* Weekly overview strip */}
@@ -173,14 +245,28 @@ const ScheduleSection = ({ onRegister }) => {
               { day: 'Friday',    slots: ['Fitness 6–7 AM', 'Kids 6–7 PM'] },
               { day: 'Saturday',  slots: ['Fitness 6–7 AM', 'Kids 4:30–6 PM', 'Adults 6–7:30 PM'] },
               { day: 'Sunday',    slots: ['Kids 4:30–6 PM', 'Adults 6–7:30 PM'] },
-            ].map(({ day, slots }) => (
+            ].map(({ day, slots }) => ({
+              day,
+              slots: [
+                ...slots,
+                ...NEW_CLASS_TYPES.flatMap(type =>
+                  SPECIAL_CLASSES[type].schedule
+                    .filter(b => b.days.some(d => DAY_NAMES[d] === day))
+                    .map(b => `${SPECIAL_CLASSES[type].short.split(' ')[0]} ${b.short}`)
+                ),
+              ],
+            })).map(({ day, slots }) => (
               <div key={day} className="weekly-row">
                 <span className="weekly-day">{day}</span>
                 <div className="weekly-slots">
                   {slots.map((s, i) => (
                     <span key={i} className={`weekly-slot ${
-                      s.startsWith('Fitness') ? 'slot-fitness' :
-                      s.startsWith('Kids')    ? 'slot-kids'    : 'slot-adults'
+                      s.startsWith('Fitness')   ? 'slot-fitness'   :
+                      s.startsWith('Kids')      ? 'slot-kids'      :
+                      s.startsWith('Karate')    ? 'slot-karate'    :
+                      s.startsWith('Zumba')     ? 'slot-zumba'     :
+                      s.startsWith('Silambam')  ? 'slot-silambam'  :
+                      s.startsWith('Art')       ? 'slot-art'       : 'slot-adults'
                     }`}>{s}</span>
                   ))}
                 </div>
@@ -372,7 +458,8 @@ const ServicesSection = () => {
   );
 };
 
-const LandingPage = ({ setIsRegisterOpen, campEnabled, onCampRegister }) => {
+const LandingPage = ({ setIsRegisterOpen, campEnabled, onCampRegister, onJoinClass }) => {
+  const onRegister = (type) => (type ? onJoinClass(type) : setIsRegisterOpen(true));
   const [isScrolled, setIsScrolled] = useState(false);
   const navigate = useNavigate();
 
@@ -410,6 +497,7 @@ const LandingPage = ({ setIsRegisterOpen, campEnabled, onCampRegister }) => {
             <li><a href="#about" onClick={() => setIsMenuOpen(false)}>About</a></li>
             <li><a href="#classes" onClick={() => setIsMenuOpen(false)}>Classes</a></li>
             <li><a href="#schedule" onClick={() => setIsMenuOpen(false)}>Schedule</a></li>
+            <li><a href="#referral" className="nav-highlight" onClick={() => setIsMenuOpen(false)}>Refer &amp; Save</a></li>
             {campEnabled && <li><a href="#camp" onClick={() => setIsMenuOpen(false)}>Summer Camp</a></li>}
             <li><a href="#facilities" onClick={() => setIsMenuOpen(false)}>Facilities</a></li>
             <li><a href="#services" onClick={() => setIsMenuOpen(false)}>Services</a></li>
@@ -438,7 +526,9 @@ const LandingPage = ({ setIsRegisterOpen, campEnabled, onCampRegister }) => {
           <div className="hero-btns">
             <a href="#classes" className="btn-primary">View Classes</a>
             <button onClick={() => setIsRegisterOpen(true)} className="btn-outline">Join Now</button>
+            <a href="#referral" className="btn-referral">🎁 Get Referral Code</a>
           </div>
+          <p className="hero-referral-note">Already a student? Create your referral code — <b>10% off</b> for every friend who joins.</p>
         </div>
       </header>
 
@@ -572,12 +662,42 @@ const LandingPage = ({ setIsRegisterOpen, campEnabled, onCampRegister }) => {
             </div>
 
           </div>
+
+          <div className="text-center new-classes-head">
+            <h2 className="section-title">Karate, Zumba, Silambam <span className="highlight">&amp; Art</span></h2>
+            <p className="section-sub">Admission open — class days, timings and fees</p>
+          </div>
+          <div className="new-classes-grid">
+            {NEW_CLASS_TYPES.map((type) => {
+              const c = SPECIAL_CLASSES[type];
+              const st = NEW_CLASS_STYLE[type];
+              return (
+                <div key={type} className="new-class-card" style={{ '--card-accent': st.accent, '--card-accent-bg': st.bg }}>
+                  <div className="new-class-top">
+                    <div className="new-class-icon"><st.icon size={26} /></div>
+                    <span className="new-class-tag">{st.tag}</span>
+                  </div>
+                  <h3>{type.replace(' Class', '')} Class</h3>
+                  <p className="new-class-about">{c.about}</p>
+                  <div className="new-class-details">
+                    {c.details.map(([k, v]) => (
+                      <div key={k} className="new-class-row"><span>{k}</span><strong>{v}</strong></div>
+                    ))}
+                  </div>
+                  <button className="sc-cta" style={{ background: st.accent, boxShadow: `0 6px 20px ${st.accent}40` }} onClick={() => onRegister(type)}>
+                    Join This Class
+                  </button>
+                </div>
+              );
+            })}
+          </div>
         </div>
       </section>
 
 
 
-      <ScheduleSection onRegister={() => setIsRegisterOpen(true)} />
+      <ScheduleSection onRegister={(type) => onRegister(type)} />
+      <ReferralSection onRegister={onRegister} />
       {campEnabled && <CampSection onRegister={onCampRegister} />}
       <FacilitiesSection />
       <ServicesSection />
@@ -681,7 +801,18 @@ const LandingPage = ({ setIsRegisterOpen, campEnabled, onCampRegister }) => {
 function App() {
   const [isRegisterOpen, setIsRegisterOpen] = useState(false);
   const [registerMode, setRegisterMode] = useState('class'); // which tab the modal opens on
+  const [registerReferral, setRegisterReferral] = useState(''); // code from a shared ?ref=CODE link
+  const [registerClass, setRegisterClass] = useState(''); // class preselected by a "Join This Class" button
   const [campEnabled, setCampEnabled] = useState(false);
+
+  // A friend's shared link (/?ref=CODE) opens the registration form with the code filled in
+  useEffect(() => {
+    const ref = new URLSearchParams(window.location.search).get('ref');
+    if (ref) {
+      setRegisterReferral(ref.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 14));
+      setIsRegisterOpen(true);
+    }
+  }, []);
 
   // Admin's camp switch decides whether any camp UI is shown; fails closed if the API is down
   useEffect(() => {
@@ -695,15 +826,22 @@ function App() {
     setIsRegisterOpen(true);
   };
 
+  const openClassRegister = (classType) => {
+    setRegisterMode('class');
+    setRegisterClass(classType);
+    setIsRegisterOpen(true);
+  };
+
   const closeRegister = () => {
     setIsRegisterOpen(false);
+    setRegisterClass('');
     setRegisterMode('class'); // "Join Now" buttons always reopen on the class tab
   };
 
   return (
     <div className="app-root">
       <Routes>
-        <Route path="/" element={<LandingPage setIsRegisterOpen={setIsRegisterOpen} campEnabled={campEnabled} onCampRegister={openCampRegister} />} />
+        <Route path="/" element={<LandingPage setIsRegisterOpen={setIsRegisterOpen} campEnabled={campEnabled} onCampRegister={openCampRegister} onJoinClass={openClassRegister} />} />
         <Route path="/admin/*" element={<AdminRoot />} />
         
         {/* Redirect legacy paths for smoother transition */}
@@ -712,7 +850,7 @@ function App() {
         <Route path="/registrations" element={<Navigate to="/admin/registrations" replace />} />
         <Route path="/dashboard" element={<Navigate to="/admin" replace />} />
       </Routes>
-      <Register isOpen={isRegisterOpen} onClose={closeRegister} campEnabled={campEnabled} initialMode={registerMode} />
+      <Register isOpen={isRegisterOpen} onClose={closeRegister} campEnabled={campEnabled} initialMode={registerMode} initialClass={registerClass} initialReferral={registerReferral} />
     </div>
   );
 }

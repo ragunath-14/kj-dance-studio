@@ -17,11 +17,14 @@ axios.interceptors.request.use(
   (error) => Promise.reject(error)
 );
 
-// Response interceptor to handle 401 Unauthorized
+// Response interceptor to handle 401 Unauthorized (an expired or missing session).
+// The login request itself is excluded: a wrong password is a 401 too, and the login form must be
+// able to show its "Invalid Admin ID or Password" message instead of the page reloading.
 axios.interceptors.response.use(
   (response) => response,
   (error) => {
-    if (error.response && error.response.status === 401) {
+    const isLoginAttempt = String(error.config?.url || '').includes('/auth/login');
+    if (error.response && error.response.status === 401 && !isLoginAttempt) {
       localStorage.removeItem('adminToken');
       localStorage.removeItem('isAdminAuth');
       window.location.href = '/admin/login';
@@ -79,12 +82,19 @@ export const DataProvider = ({ children }) => {
     }
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Each list remembers its latest request; an older, slower response must never overwrite a newer one
+  const studentsReq = useRef(0);
+  const paymentsReq = useRef(0);
+  const unpaidReq   = useRef(0);
+
   const fetchStudents = useCallback(async (page = 1, limit = 50, search = '', classType = '', studentCategory = '', classSchedule = '') => {
     const params = { page, limit, search, classType, studentCategory, classSchedule };
     setStudentParams(params);
     studentParamsRef.current = params; // Keep ref in sync
+    const req = ++studentsReq.current;
     try {
       const res = await axios.get(`${API_URL}/students`, { params });
+      if (req !== studentsReq.current) return;
       setStudents(res.data);
     } catch (err) {
       console.error('Students fetch failed:', err);
@@ -95,8 +105,10 @@ export const DataProvider = ({ children }) => {
     const params = { page, limit, search, studentCategory, ...extraParams };
     setPaymentParams({ page, limit, search, studentCategory });
     paymentParamsRef.current = { page, limit, search, studentCategory }; // Keep ref in sync
+    const req = ++paymentsReq.current;
     try {
       const res = await axios.get(`${API_URL}/payments`, { params });
+      if (req !== paymentsReq.current) return;
       setPayments(res.data);
     } catch (err) {
       console.error('Payments fetch failed:', err);
@@ -107,8 +119,10 @@ export const DataProvider = ({ children }) => {
     const params = { page, limit, search, studentCategory };
     setUnpaidParams(params);
     unpaidParamsRef.current = params; // Keep ref in sync
+    const req = ++unpaidReq.current;
     try {
       const res = await axios.get(`${API_URL}/students/unpaid`, { params });
+      if (req !== unpaidReq.current) return;
       setUnpaidStudents(res.data);
     } catch (err) {
       console.error('Unpaid fetch failed:', err);
@@ -248,11 +262,12 @@ export const DataProvider = ({ children }) => {
 
   const refreshData = () => fetchAllData();
 
-  const approveRegistration = async (id) => {
+  // `offer` = { discountPercent, discountAmount } chosen by the admin when accepting
+  const approveRegistration = async (id, offer = {}) => {
     try {
-      await axios.post(`${API_URL}/registrations/${id}/approve`);
+      const res = await axios.post(`${API_URL}/registrations/${id}/approve`, offer);
       fetchAllData(true);
-      return { success: true };
+      return { success: true, referral: res.data?.referral || null };
     } catch (err) {
       // 409 = student already exists; backend still marks the reg as approved
       // Treat it as a soft-success so the list refreshes and the card disappears

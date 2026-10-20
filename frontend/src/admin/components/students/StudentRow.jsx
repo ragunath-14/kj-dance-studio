@@ -1,20 +1,15 @@
 import React, { useMemo, useState } from 'react';
-import { Edit2, Trash2, CheckCircle, AlertCircle, ToggleLeft, ToggleRight, History } from 'lucide-react';
+import { Edit2, Trash2, CheckCircle, AlertCircle, ToggleLeft, ToggleRight, History, Percent } from 'lucide-react';
 import Button from '../ui/Button';
+import { getNetFee, getBaseFee, getExpectedTotal, formatRupees } from '../../../classCatalog';
 
-const StudentRow = ({ student, payments, showFitnessCol, onEdit, onDelete, onToggleStatus, onViewHistory }) => {
+const StudentRow = ({ student, payments, showFitnessCol, onEdit, onDelete, onToggleStatus, onViewHistory, onOffer, showClass }) => {
   const [toggling, setToggling] = useState(false);
   const [toggleError, setToggleError] = useState('');
   const isActive = student.isActive !== false; // default true for existing students
 
   const isPaid = useMemo(() => {
     const today = new Date();
-    const getMonthlyFee = (student) => {
-      if (student?.classType === 'Fitness Class') return 2000;
-      if (student?.classType === 'Online Class')  return student?.studentCategory === 'Kids' ? 1600 : 2000;
-      return student?.studentCategory === 'Kids' ? 1000 : 1300;
-    };
-
     const rawJoinDate = student.createdAt || student.joinDate || new Date().toISOString();
     const joinDate = new Date(rawJoinDate);
 
@@ -24,8 +19,7 @@ const StudentRow = ({ student, payments, showFitnessCol, onEdit, onDelete, onTog
     if (totalCycles <= 0) return true;
 
     const totalPaid = student.totalPaid || 0;
-    const fee = getMonthlyFee(student);
-    const totalExpected = totalCycles * fee;
+    const totalExpected = getExpectedTotal(student, totalCycles); // includes any offer
 
     return totalPaid >= totalExpected;
   }, [student]);
@@ -61,6 +55,25 @@ const StudentRow = ({ student, payments, showFitnessCol, onEdit, onDelete, onTog
               )
             ) : (
               <span className="mini-badge inactive-badge">Inactive</span>
+            )}
+            {showClass && student.classType && (
+              <span className="mini-badge schedule-badge weekday">{student.classType.replace(' Class', '')}</span>
+            )}
+            {(student.extraClasses || []).map(e => (
+              <span key={e.classType} className="mini-badge schedule-badge weekday">+ {e.classType.replace(' Class', '')}</span>
+            ))}
+            {getNetFee(student) < getBaseFee(student) && (
+              <span className="mini-badge paid" title={`Fee ${formatRupees(getBaseFee(student))} → ${formatRupees(getNetFee(student))}`}>
+                Offer · {formatRupees(getNetFee(student))}
+              </span>
+            )}
+            {(student.referralRewards || []).length > 0 && (
+              <span className="mini-badge paid" title="Friends this student referred who were accepted">
+                Referrals · {student.referralRewards.length}
+              </span>
+            )}
+            {student.feePlan && (
+              <span className="mini-badge schedule-badge weekday">{student.feePlan}</span>
             )}
             {student.classSchedule && student.classSchedule !== 'NA' && (
               <span className={`mini-badge schedule-badge ${student.classSchedule === 'Weekday' ? 'weekday' : 'weekend'}`}>
@@ -121,6 +134,12 @@ const StudentRow = ({ student, payments, showFitnessCol, onEdit, onDelete, onTog
               onClick={() => onEdit(student)} 
               icon={Edit2} 
               title="Edit Student Info" 
+            />
+            <Button 
+              variant="icon" 
+              onClick={() => onOffer(student)} 
+              icon={Percent} 
+              title="Give Offer / Discount" 
             />
             <Button 
               variant="icon" 

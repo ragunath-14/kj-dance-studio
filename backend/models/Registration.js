@@ -1,5 +1,17 @@
 const mongoose = require('mongoose');
 
+
+// Extra classes a student takes alongside the primary one (classType / feePlan / batchTiming above)
+const ExtraClassSchema = new mongoose.Schema({
+  classType: {
+    type: String,
+    required: true,
+    enum: ['Regular Class', 'Fitness Class', 'Online Class', 'Karate Class', 'Zumba Class', 'Silambam Class', 'Art & Craft Class']
+  },
+  feePlan:     { type: String, enum: ['', '5 Class', '3 Class'], trim: true },
+  batchTiming: { type: String, trim: true }
+}, { _id: false });
+
 const RegistrationSchema = new mongoose.Schema({
   studentName: {
     type: String,
@@ -18,13 +30,21 @@ const RegistrationSchema = new mongoose.Schema({
   classType: {
     type: String,
     enum: {
-      values: ['Dance Class', 'Fitness Class', 'Regular Class', 'Online Class'],
+      values: ['Dance Class', 'Fitness Class', 'Regular Class', 'Online Class', 'Karate Class', 'Zumba Class', 'Silambam Class', 'Art & Craft Class'],
       message: '{VALUE} is not a valid class type'
     },
     default: 'Dance Class'
   },
   danceStyle:     { type: String, trim: true },
   danceForFitness: { type: String, trim: true },
+  feePlan: { type: String, enum: ['', '5 Class', '3 Class'], trim: true }, // Zumba plan
+  extraClasses: { type: [ExtraClassSchema], default: [] },
+
+  // Code of the existing student who referred this person (optional). The reward is granted when the admin accepts.
+  referralCode:   { type: String, trim: true, uppercase: true },
+  referrerStudentId: { type: mongoose.Schema.Types.ObjectId, ref: 'Student' },   // who owned the code when it was entered
+  referralResult: { type: String, enum: ['rewarded', 'skipped'] },
+  referralNote:   { type: String, trim: true },
   whatsappNumber: { type: String, trim: true },
   location:       { type: String, trim: true },
   address:        { type: String, trim: true },

@@ -1,14 +1,10 @@
 const Student   = require('./models/Student');
 const Payment   = require('./models/Payment');
 const whatsapp  = require('./services/whatsappService');
+const { getNetFee, getExpectedTotal, getPendingMonths } = require('./utils/fees');
 
 const ALERT_INTERVAL_DAYS = 5; // Re-alert every 5 days until paid
 
-const getMonthlyFee = (classType, studentCategory) => {
-  if (classType === 'Fitness Class') return 2000;
-  if (classType === 'Online Class')  return studentCategory === 'Kids' ? 1600 : 2000;
-  return studentCategory === 'Kids' ? 1000 : 1300;
-};
 
 /**
  * Core logic: find students with outstanding dues and fire WhatsApp reminders.
@@ -84,9 +80,9 @@ async function runPendingFeeAlerts() {
       if (today.getDate() < joinDay) totalCycles--;
       if (totalCycles <= 0) continue; // Joined this month or future date — no dues yet
 
-      const fee       = getMonthlyFee(student.classType, student.studentCategory);
+      const fee       = getNetFee(student);
       const totalPaid = paymentsByStudent.get(student._id.toString()) || 0;
-      const totalDue  = Math.max(0, (totalCycles * fee) - totalPaid);
+      const totalDue  = Math.max(0, getExpectedTotal(student, totalCycles) - totalPaid);
 
       if (totalDue <= 0) {
         // Fully paid — clear any stale lastAlertSent flag
@@ -97,7 +93,7 @@ async function runPendingFeeAlerts() {
         continue;
       }
 
-      const pendingMonths = Math.ceil(totalDue / fee);
+      const pendingMonths = getPendingMonths(student, totalCycles, totalPaid);
 
       // Send only on anniversary day — the 5-day repeat check handles all other cadence.
       if (!isAnniversary) {
@@ -200,9 +196,9 @@ async function runNewStudentPaymentCheck() {
       if (today.getDate() < joinDate.getDate()) totalCycles--;
       if (totalCycles <= 0) { skipped++; continue; }
 
-      const fee         = getMonthlyFee(student.classType, student.studentCategory);
+      const fee         = getNetFee(student);
       const totalPaid   = paidMap.get(student._id.toString()) || 0;
-      const totalDue    = Math.max(0, totalCycles * fee - totalPaid);
+      const totalDue    = Math.max(0, getExpectedTotal(student, totalCycles) - totalPaid);
 
       if (totalDue <= 0) {
         // Fully paid — clear stale flag
@@ -213,7 +209,7 @@ async function runNewStudentPaymentCheck() {
         continue;
       }
 
-      const pendingMonths = Math.ceil(totalDue / fee);
+      const pendingMonths = getPendingMonths(student, totalCycles, totalPaid);
       const whatsappNum   = student.whatsappNumber || student.phone;
       if (!whatsappNum) { skipped++; continue; }
 

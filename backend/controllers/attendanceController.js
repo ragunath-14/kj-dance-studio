@@ -1,4 +1,5 @@
 const Attendance = require('../models/Attendance');
+const { studentSearchClauses } = require('../utils/search');
 const Student    = require('../models/Student');
 
 // ─── Normalize any date input to local midnight (day granularity) ────────────
@@ -18,15 +19,10 @@ exports.getAttendanceByDate = async (req, res) => {
     nextDay.setDate(nextDay.getDate() + 1);
 
     const query = { isActive: { $ne: false } };
-    if (req.query.classType)       query.classType       = req.query.classType;
+    if (req.query.classType)       query.$and = [{ $or: [{ classType: req.query.classType }, { 'extraClasses.classType': req.query.classType }] }];
     if (req.query.studentCategory) query.studentCategory = req.query.studentCategory;
     if (req.query.classSchedule)   query.classSchedule   = req.query.classSchedule;
-    if (req.query.search) {
-      query.$or = [
-        { studentName: { $regex: req.query.search, $options: 'i' } },
-        { phone:       { $regex: req.query.search, $options: 'i' } }
-      ];
-    }
+    if (req.query.search && String(req.query.search).trim()) query.$or = studentSearchClauses(req.query.search);
 
     const [students, records] = await Promise.all([
       Student.find(query)
@@ -99,15 +95,10 @@ exports.getAttendanceRegister = async (req, res) => {
     const daysInMonth = new Date(year, month + 1, 0).getDate();
 
     const query = { isActive: { $ne: false } };
-    if (req.query.classType)       query.classType       = req.query.classType;
+    if (req.query.classType)       query.$and = [{ $or: [{ classType: req.query.classType }, { 'extraClasses.classType': req.query.classType }] }];
     if (req.query.studentCategory) query.studentCategory = req.query.studentCategory;
     if (req.query.classSchedule)   query.classSchedule   = req.query.classSchedule;
-    if (req.query.search) {
-      query.$or = [
-        { studentName: { $regex: req.query.search, $options: 'i' } },
-        { phone:       { $regex: req.query.search, $options: 'i' } }
-      ];
-    }
+    if (req.query.search && String(req.query.search).trim()) query.$or = studentSearchClauses(req.query.search);
 
     const [students, records] = await Promise.all([
       Student.find(query)

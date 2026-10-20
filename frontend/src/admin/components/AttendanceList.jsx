@@ -4,6 +4,7 @@ import { CalendarDays, Check, X, ListChecks, Search } from 'lucide-react';
 import API_URL from '../config';
 import SkeletonRow from './ui/SkeletonRow';
 import CategoryDropdown from './ui/CategoryDropdown';
+import { ALL_CLASS_TYPES } from '../../classCatalog';
 import './List.css';
 import './AttendanceList.css';
 
@@ -114,7 +115,7 @@ const AttendanceList = () => {
             </button>
           </div>
           <div className="tabs">
-            {['', 'Regular Class', 'Fitness Class', 'Online Class'].map(ct => (
+            {['', ...ALL_CLASS_TYPES].map(ct => (
               <button
                 key={ct || 'all'}
                 className={`tab-btn ${activeTab === ct ? 'active' : ''}`}

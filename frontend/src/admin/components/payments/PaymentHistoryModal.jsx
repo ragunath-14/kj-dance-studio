@@ -42,11 +42,11 @@ const PaymentHistoryModal = ({ student, onClose, onRecordPayment }) => {
   if (!student) return null;
 
   const { payments = [], monthHistory = [], student: meta = {} } = data || {};
-  const fee = meta?.fee || 0;
 
   // Summary totals
   const totalPaid     = payments.filter(p => p.purpose === 'Monthly Fee').reduce((s, p) => s + (p.amount || 0), 0);
-  const totalExpected = (monthHistory.length || 0) * fee;
+  // each month carries the fee (and offer) that applied to it
+  const totalExpected = monthHistory.reduce((sum, m) => sum + (m.fee || 0), 0);
   const totalDue      = Math.max(0, totalExpected - totalPaid);
 
   const joinDate = new Date(student.createdAt || student.joinDate || new Date());
@@ -82,7 +82,7 @@ const PaymentHistoryModal = ({ student, onClose, onRecordPayment }) => {
               <span>Months Billed</span>
               <div style={{ display: 'flex', alignItems: 'baseline', gap: '4px' }}>
                 <strong>{monthHistory.length}</strong>
-                <small style={{ fontSize: '10px', opacity: 0.8 }}>({monthHistory.length} × ₹{fee?.toLocaleString()})</small>
+                <small style={{ fontSize: '10px', opacity: 0.8 }}>(₹{totalExpected.toLocaleString()} billed)</small>
               </div>
             </div>
           </div>

@@ -42,7 +42,7 @@ const Dashboard = () => {
   const metrics = useMemo(() => {
     if (!stats || !stats.metrics) return {
       total: 0, revenue: 0, overdue: 0, pending: 0,
-      classTypes: { regular: 0, summer: 0, fitness: 0, online: 0 }
+      classTypes: { regular: 0, summer: 0, fitness: 0, online: 0, karate: 0, zumba: 0, silambam: 0, artCraft: 0 }
     };
     return stats.metrics;
   }, [stats]);
@@ -191,6 +191,15 @@ const Dashboard = () => {
                 </div>
                 <strong>{metrics.classTypes.online || 0}</strong>
               </div>
+              {[['Karate', 'karate'], ['Zumba', 'zumba'], ['Silambam', 'silambam'], ['Art & Craft', 'artCraft']].map(([label, key]) => (
+                <div className="pill regular" key={key}>
+                  <span>{label}</span>
+                  <div className="pill-bar-wrap">
+                    <div className="pill-bar" style={{ width: `${((metrics.classTypes[key] || 0) / (metrics.total || 1)) * 100}%` }}></div>
+                  </div>
+                  <strong>{metrics.classTypes[key] || 0}</strong>
+                </div>
+              ))}
             </div>
           </div>
         </div>

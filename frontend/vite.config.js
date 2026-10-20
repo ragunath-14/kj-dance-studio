@@ -2,6 +2,9 @@ import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 
 // https://vitejs.dev/config/
+// Where the dev server forwards /api and /socket.io (the e2e tests run their own backend on another port)
+const API_TARGET = process.env.VITE_PROXY_TARGET || 'http://localhost:5001'
+
 export default defineConfig({
   plugins: [react()],
 
@@ -30,7 +33,7 @@ export default defineConfig({
     proxy: {
       // REST API → Express
       '/api': {
-        target: 'http://localhost:5001',
+        target: API_TARGET,
         changeOrigin: true,
         // Suppress ECONNREFUSED/ECONNRESET noise when backend is not running
         configure: (proxy) => {
@@ -50,7 +53,7 @@ export default defineConfig({
 
       // Socket.IO WebSocket + polling → Express
       '/socket.io': {
-        target: 'http://localhost:5001',
+        target: API_TARGET,
         ws: true,
         changeOrigin: true,
         configure: (proxy) => {

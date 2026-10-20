@@ -10,6 +10,10 @@ router.post('/send-pending-alerts', paymentController.sendPendingAlerts);
 // Send WhatsApp reminder to a SINGLE specific student (admin manual trigger)
 router.post('/send-reminder/:studentId', paymentController.sendStudentReminder);
 
+router.get('/counts', paymentController.getPaymentCounts);
+
+// "Clear All": settle a student's whole outstanding balance, one payment per unpaid month
+router.post('/clear-dues/:studentId', paymentController.clearDues);
 router.get('/', paymentController.getAllPayments);
 router.get('/student/:studentId', paymentController.getStudentPayments);
 router.post('/', paymentController.createPayment);

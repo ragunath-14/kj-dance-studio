@@ -69,19 +69,35 @@ app.use(express.urlencoded({ extended: true, limit: '1mb' }));
 app.set('trust proxy', 1);
 
 // ── Rate Limiters ────────────────────────────────────────────────────────────
+// Automated tests make hundreds of calls in seconds; they set DISABLE_RATE_LIMIT=true.
+// The switch is ignored in production so it can never switch protection off on the live site.
+const skipRateLimit = () => process.env.DISABLE_RATE_LIMIT === 'true' && process.env.NODE_ENV !== 'production';
+
 const registrationLimiter = rateLimit({
   windowMs : 15 * 60 * 1000, // 15 minutes
   max      : 15,
   message  : { success: false, message: 'Too many registration attempts. Please try again after 15 minutes.' },
   standardHeaders: true,
-  legacyHeaders  : false
+  legacyHeaders  : false,
+  skip           : skipRateLimit
+});
+
+// Referral lookups take a phone number, so keep them slow to scrape
+const referralLimiter = rateLimit({
+  windowMs : 15 * 60 * 1000,
+  max      : 40,
+  message  : { success: false, valid: false, message: 'Too many attempts. Please try again after 15 minutes.' },
+  standardHeaders: true,
+  legacyHeaders  : false,
+  skip           : skipRateLimit
 });
 
 const apiLimiter = rateLimit({
   windowMs : 15 * 60 * 1000,
   max      : 200,
   standardHeaders: true,
-  legacyHeaders  : false
+  legacyHeaders  : false,
+  skip           : skipRateLimit
 });
 
 // ── Public Routes ────────────────────────────────────────────────────────────
@@ -104,6 +120,9 @@ app.post('/api/register', registrationLimiter, registrationController.createPend
 
 // Summer camp registration (public — rate limited, rejected while camp is switched off)
 app.post('/api/camp/register', registrationLimiter, campController.createCampRegistration);
+
+// Referral programme: look up a student by phone, create a code, check a code (public — rate limited)
+app.use('/api/referral', referralLimiter, require('./routes/referralRoutes'));
 
 // Public dues check (used by student payment portal, no auth needed)
 app.get('/api/students/:id/public-dues', studentController.getStudentDues);
@@ -165,6 +184,7 @@ app.use('/api/payments',     verifyAdminToken, paymentRoutes);
 app.use('/api/registrations',verifyAdminToken, registrationRoutes);
 app.use('/api/attendance',   verifyAdminToken, attendanceRoutes);
 app.use('/api/camp',         verifyAdminToken, campRoutes);
+app.use('/api/referrals',    verifyAdminToken, require('./routes/referralAdminRoutes'));
 
 // ── Admin Tools ──────────────────────────────────────────────────────────────
 // Manually trigger the fee-alert scheduler (useful for testing)

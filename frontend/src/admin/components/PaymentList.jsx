@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import axios from 'axios';
 import { Plus, Search, Check, Bell, History, X, CreditCard, Calendar, TrendingDown } from 'lucide-react';
 import API_URL from '../config';
@@ -34,6 +34,7 @@ const PaymentList = () => {
   const [isEditing, setIsEditing] = useState(false);
   const [editingId, setEditingId] = useState(null);
   const [confirmDelete, setConfirmDelete] = useState({ open: false, paymentId: null });
+  const [clearTarget, setClearTarget] = useState(null); // student whose whole balance is about to be cleared
   const [historyStudent, setHistoryStudent] = useState(null);
   const [submitting, setSubmitting] = useState(false);
   // For paid tab: filter by specific month (default = current month)
@@ -41,11 +42,21 @@ const PaymentList = () => {
   const [paidYearFilter,  setPaidYearFilter]  = useState(CUR_YEAR);
   const [showAllPaid,     setShowAllPaid]     = useState(false);
 
-  const getMonthlyFee = (student) => {
-    if (student?.classType === 'Fitness Class') return 2000;
-    if (student?.classType === 'Online Class')  return student?.studentCategory === 'Kids' ? 1600 : 2000;
-    return student?.studentCategory === 'Kids' ? 1000 : 1300;
-  };
+  // Tab button numbers, counted on the server with the same filters as the lists (search, Kids/Adults and, for
+  // Paid, the chosen month or all time) — so they never depend on which tab is open.
+  const [tabCounts, setTabCounts] = useState({});
+  useEffect(() => {
+    let cancelled = false;
+    const timer = setTimeout(() => {
+      const params = { search: searchTerm, studentCategory: categoryFilter };
+      if (!showAllPaid) { params.filterMonth = paidMonthFilter; params.filterYear = paidYearFilter; }
+      axios.get(`${API_URL}/payments/counts`, { params })
+        .then(res => { if (!cancelled) setTabCounts(res.data); })
+        .catch(() => { /* keep the previous numbers */ });
+    }, 250);
+    return () => { cancelled = true; clearTimeout(timer); };
+  }, [searchTerm, categoryFilter, paidMonthFilter, paidYearFilter, showAllPaid, payments, serverUnpaid]); // payments / serverUnpaid change on every refresh
+  const countOf = (key) => (tabCounts[key] === undefined ? '…' : tabCounts[key]);
 
   const onPageChange = (page) => {
     if (activeTab === 'paid') {
@@ -98,47 +109,40 @@ const PaymentList = () => {
     }
   };
 
+  // "Pay": pre-fills the form for the oldest month that still owes money, and how much of it is owed
   const handlePay = (student) => {
+    const next = student.oldestPending;
     setCurrentDebt(student.totalDue);
     setFormData({
-      studentId: student._id, amount: student.currentMonthDue || student.totalDue,
+      studentId: student._id,
+      amount: next ? next.due : (student.currentMonthDue || student.totalDue),
       method: 'Cash', purpose: 'Monthly Fee',
       date: new Date().toISOString().split('T')[0],
       remainingFees: 0,
-      forMonth: CUR_MONTH,
-      forYear:  CUR_YEAR
+      forMonth: next ? next.month : CUR_MONTH,
+      forYear:  next ? next.year  : CUR_YEAR
     });
     setIsEditing(false);
     setShowModal(true);
   };
 
-  const handleQuickPay = async (student) => {
+  // "Clear All": asks first, then settles the student's WHOLE outstanding balance (every unpaid month)
+  const handleQuickPay = (student) => {
     if (submitting) return;
-    
-    // Pay the current month's due (or full outstanding if no per-month data)
-    const payAmount = student.currentMonthDue || student.totalDue || getMonthlyFee(student);
-    const monthLabel = `${MONTH_NAMES[CUR_MONTH]} ${CUR_YEAR}`;
-    const confirmed = window.confirm(
-      `Confirm payment for:\n\nStudent: ${student.studentName}\nPhone: ${student.phone}\nMonth: ${monthLabel}\nAmount: ₹${payAmount}\n\nProceed?`
-    );
-    if (!confirmed) return;
+    setClearTarget(student);
+  };
 
+  const executeClearAll = async () => {
+    const student = clearTarget;
+    setClearTarget(null);
+    if (!student || submitting) return;
     setSubmitting(true);
     try {
-      await axios.post(`${API_URL}/payments`, {
-        studentId:    student._id,
-        amount:       payAmount,
-        method:       'Cash',
-        purpose:      'Monthly Fee',
-        remainingFees: Math.max(0, student.totalDue - payAmount),
-        date:         new Date().toISOString(),
-        forMonth:     CUR_MONTH,
-        forYear:      CUR_YEAR
-      });
+      await axios.post(`${API_URL}/payments/clear-dues/${student._id}`, { method: 'Cash', date: new Date().toISOString() });
       await refreshData();
       setActiveTab('paid');
     } catch (err) {
-      alert(err.response?.data?.message || 'Failed to record quick payment.');
+      alert(err.response?.data?.message || 'Failed to clear the dues.');
     } finally {
       setSubmitting(false);
     }
@@ -194,13 +198,13 @@ const PaymentList = () => {
               className={`tab-btn ${activeTab === 'unpaid' ? 'active' : ''}`}
               onClick={() => setActiveTab('unpaid')}
             >
-              Unpaid ({serverUnpaid.total ?? stats?.metrics?.overdue ?? 0})
+              Unpaid ({countOf('unpaid')})
             </button>
             <button
               className={`tab-btn ${activeTab === 'paid' ? 'active' : ''}`}
               onClick={() => setActiveTab('paid')}
             >
-              Paid ({payments.total || 0})
+              Paid ({countOf('paid')})
             </button>
           </div>
           <CategoryDropdown
@@ -398,6 +402,17 @@ const PaymentList = () => {
           onCancel={closeModals} 
         />
       </Modal>
+
+      <ConfirmDialog
+        isOpen={!!clearTarget}
+        title="Clear All Dues"
+        message={clearTarget
+          ? `Record the full balance of ₹${clearTarget.totalDue} (${clearTarget.pendingMonths} unpaid month${clearTarget.pendingMonths > 1 ? 's' : ''}) for ${clearTarget.studentName} as paid?`
+          : ''}
+        confirmText="Yes, Clear All"
+        onConfirm={executeClearAll}
+        onCancel={() => setClearTarget(null)}
+      />
 
       <ConfirmDialog
         isOpen={confirmDelete.open}

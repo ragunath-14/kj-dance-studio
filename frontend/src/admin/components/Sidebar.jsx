@@ -1,6 +1,6 @@
 import React from 'react';
 import { NavLink } from 'react-router-dom';
-import { LayoutDashboard, Users, CreditCard, UserPlus, ClipboardCheck, Tent, Menu, ChevronRight } from 'lucide-react';
+import { LayoutDashboard, Users, CreditCard, UserPlus, ClipboardCheck, Tent, Gift, Menu, ChevronRight } from 'lucide-react';
 import { useData } from '../context/DataContext';
 import logo from '../../assets/logo.png';
 import './Sidebar.css';
@@ -16,6 +16,7 @@ const Sidebar = ({ isOpen, onClose, isExpanded, onToggleExpand }) => {
     { to: '/admin/students', icon: Users, label: 'Students' },
     { to: '/admin/attendance', icon: ClipboardCheck, label: 'Attendance' },
     { to: '/admin/payments', icon: CreditCard, label: 'Payments' },
+    { to: '/admin/referrals', icon: Gift, label: 'Referrals' },
   ];
 
   return (
