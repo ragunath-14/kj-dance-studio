@@ -1,5 +1,5 @@
 const axios = require('axios');
-const { withGroupLinks } = require('../utils/groupLinks');
+const { welcomeClassTexts } = require('../utils/groupLinks');
 
 // ── Global Message Queue ─────────────────────────────────────────────────────
 // Ensures all notifications are sent in an orderly sequence with a small
@@ -137,32 +137,38 @@ const sendMessage = async (whatsappNumber, fallbackText, options = {}) => {
  * Sent when a student is enrolled or a registration is approved.
  * Template body: "Your enrollment at KJ Dance Studio is confirmed, {{1}}.
  *                 You have been registered for {{2}}. Contact us for any queries."
- * Params: {{1}} = name, {{2}} = class names, each followed by its WhatsApp group invite link, e.g.
+ * Params: {{1}} = name, {{2}} = ONE class followed by its WhatsApp group invite link, e.g.
  *         "Karate Class (join your class WhatsApp group: https://chat.whatsapp.com/...)".
  *         The link rides inside {{2}}, so the approved template does not change.
  */
 exports.sendWelcomeMessage = async (whatsappNumber, studentName, classType, batchTiming) => {
   const name   = studentName || 'Student';
-  const cls    = withGroupLinks(classType || 'Dance');
   const timing = batchTiming || 'TBA'; // kept for callers; not in template
 
-  const fallback =
-    `Your enrollment at KJ Dance Studio is confirmed, ${name}. ` +
-    `You have been registered for ${cls}. ` +
-    (timing !== 'TBA' ? `Batch timing: ${timing}. ` : '') +
-    `Contact us for any queries. 💃`;
+  // A student with 2+ classes gets one welcome message per class, each with that class's group link.
+  // They go through the queue one after another, in the order the classes were chosen.
+  // Fees are NOT repeated here: billing stays in the single fee message (total of all classes).
+  const results = [];
+  for (const cls of welcomeClassTexts(classType || 'Dance')) {
+    const fallback =
+      `Your enrollment at KJ Dance Studio is confirmed, ${name}. ` +
+      `You have been registered for ${cls}. ` +
+      (timing !== 'TBA' ? `Batch timing: ${timing}. ` : '') +
+      `Contact us for any queries. 💃`;
 
-  return sendMessage(whatsappNumber, fallback, {
-    templateName: 'kj_welcome',
-    languageCode: 'en',
-    components  : [{
-      type      : 'body',
-      parameters: [
-        { type: 'text', text: name },
-        { type: 'text', text: cls  }
-      ]
-    }]
-  });
+    results.push(await sendMessage(whatsappNumber, fallback, {
+      templateName: 'kj_welcome',
+      languageCode: 'en',
+      components  : [{
+        type      : 'body',
+        parameters: [
+          { type: 'text', text: name },
+          { type: 'text', text: cls  }
+        ]
+      }]
+    }));
+  }
+  return results.length === 1 ? results[0] : { success: results.every(r => r && r.success), results };
 };
 
 /**

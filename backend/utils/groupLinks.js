@@ -22,4 +22,21 @@ const withGroupLinks = (classNames) =>
     return link ? `${name} (join your class WhatsApp group: ${link})` : name;
   }).join(' + ');
 
-module.exports = { LINKS, groupLinkFor, withGroupLinks };
+/**
+ * The class text for each welcome message to send to ONE student:
+ *  - one message per class that has a group, each with its own link, in the order the classes were chosen
+ *  - classes without a group (Regular, Fitness, Online) ride along in the first message
+ *  - no class with a group -> a single message listing the classes
+ * "Karate Class + Zumba Class" -> ["Karate Class (join ...: link)", "Zumba Class (join ...: link)"]
+ */
+const welcomeClassTexts = (classNames) => {
+  const names = String(classNames || '').split(/\s*\+\s*/).filter(Boolean);
+  const linked = names.filter(groupLinkFor);
+  if (linked.length === 0) return [names.join(' + ') || 'Dance'];
+  const unlinked = names.filter(n => !groupLinkFor(n));
+  const texts = linked.map(withGroupLinks);
+  if (unlinked.length) texts[0] = `${unlinked.join(' + ')} + ${texts[0]}`;
+  return texts;
+};
+
+module.exports = { LINKS, groupLinkFor, withGroupLinks, welcomeClassTexts };

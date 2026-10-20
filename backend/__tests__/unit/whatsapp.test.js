@@ -32,26 +32,62 @@ test.after(() => { axios.post = realPost; });
 const params = (call) => call.payload.template.components[0].parameters.map(p => p.text);
 
 test.describe('templates', () => {
-  test('welcome: kj_welcome with name and class names', async () => {
-    const r = await whatsapp.sendWelcomeMessage('9876543210', 'Asha', 'Karate Class + Zumba Class', 'Mon 5 PM');
+  const LINK = {
+    karate:   'https://chat.whatsapp.com/Bcpoq6CxodK8blwdQ9FS3o',
+    zumba:    'https://chat.whatsapp.com/KrSaMAfrTOT8ulC4zM4zKq',
+    silambam: 'https://chat.whatsapp.com/JXcZmiSn7cC2RqNNNBGs4h',
+    art:      'https://chat.whatsapp.com/KVBcH5NPqv7L5VT7GKNiro'
+  };
+  const group = (cls, link) => `${cls} (join your class WhatsApp group: ${link})`;
+
+  test('welcome, one class: one kj_welcome message with that class\'s group link', async () => {
+    const r = await whatsapp.sendWelcomeMessage('9876543210', 'Asha', 'Karate Class', 'Mon 5 PM');
     assert.equal(r.success, true);
     assert.equal(sent.length, 1);
     assert.equal(sent[0].payload.template.name, 'kj_welcome');
-    assert.deepEqual(params(sent[0]), ['Asha', 'Karate Class (join your class WhatsApp group: https://chat.whatsapp.com/Bcpoq6CxodK8blwdQ9FS3o) + Zumba Class (join your class WhatsApp group: https://chat.whatsapp.com/KrSaMAfrTOT8ulC4zM4zKq)']);
+    assert.deepEqual(params(sent[0]), ['Asha', group('Karate Class', LINK.karate)]);
   });
-  test('welcome: each class gets its own group link, classes without a group stay as they are', async () => {
-    await whatsapp.sendWelcomeMessage('9876543210', 'Asha', 'Silambam Class + Art & Craft Class + Regular Class');
-    const cls = params(sent[0])[1];
-    assert.ok(cls.includes('Silambam Class (join your class WhatsApp group: https://chat.whatsapp.com/JXcZmiSn7cC2RqNNNBGs4h)'));
-    assert.ok(cls.includes('Art & Craft Class (join your class WhatsApp group: https://chat.whatsapp.com/KVBcH5NPqv7L5VT7GKNiro)'));
-    assert.ok(cls.endsWith(' + Regular Class'));
-    assert.equal(sent[0].payload.template.name, 'kj_welcome');          // still the same approved template
-    assert.equal(sent[0].payload.template.components[0].parameters.length, 2);
+  test('welcome, two or more classes: ONE message PER class, each with its own link, in order', async () => {
+    const r = await whatsapp.sendWelcomeMessage('9876543210', 'Asha', 'Karate Class + Zumba Class + Silambam Class + Art & Craft Class');
+    assert.equal(r.success, true);
+    assert.equal(sent.length, 4);
+    assert.deepEqual(sent.map(s => s.payload.template.name), Array(4).fill('kj_welcome'));   // same approved template every time
+    assert.deepEqual(sent.map(params), [
+      ['Asha', group('Karate Class', LINK.karate)],
+      ['Asha', group('Zumba Class', LINK.zumba)],
+      ['Asha', group('Silambam Class', LINK.silambam)],
+      ['Asha', group('Art & Craft Class', LINK.art)]
+    ]);
+    for (const s of sent) assert.equal(s.payload.template.components[0].parameters.length, 2);
+  });
+  test('welcome: a class without a group rides in the first message; no extra message for it', async () => {
+    await whatsapp.sendWelcomeMessage('9876543210', 'Asha', 'Regular Class + Karate Class + Zumba Class');
+    assert.equal(sent.length, 2);
+    assert.deepEqual(params(sent[0]), ['Asha', `Regular Class + ${group('Karate Class', LINK.karate)}`]);
+    assert.deepEqual(params(sent[1]), ['Asha', group('Zumba Class', LINK.zumba)]);
+  });
+  test('welcome: only classes without a group -> a single plain message', async () => {
+    await whatsapp.sendWelcomeMessage('9876543210', 'Asha', 'Regular Class + Fitness Class');
+    assert.equal(sent.length, 1);
+    assert.deepEqual(params(sent[0]), ['Asha', 'Regular Class + Fitness Class']);
+  });
+  test('welcome messages never mention fees (billing stays in the single fee message)', async () => {
+    await whatsapp.sendWelcomeMessage('9876543210', 'Asha', 'Karate Class + Zumba Class');
+    for (const s of sent) assert.ok(!/Rs\.|₹|fee/i.test(params(s).join(' ')));
   });
   test('welcome text is one line (WhatsApp rejects line breaks inside a template variable)', async () => {
     await whatsapp.sendWelcomeMessage('9876543210', 'Asha', 'Karate Class + Zumba Class + Silambam Class + Art & Craft Class');
-    assert.ok(!params(sent[0])[1].includes(String.fromCharCode(10)) && !params(sent[0])[1].includes(String.fromCharCode(9)));
-    assert.ok(!/ {4,}/.test(params(sent[0])[1]));
+    for (const s of sent) {
+      const text = params(s)[1];
+      assert.ok(!text.includes(String.fromCharCode(10)) && !text.includes(String.fromCharCode(9)));
+      assert.ok(!/ {4,}/.test(text));
+    }
+  });
+  test('the group links are exactly the ones the studio provided', () => {
+    const { LINKS } = require('../../utils/groupLinks');
+    assert.deepEqual(LINKS, {
+      'Karate Class': LINK.karate, 'Zumba Class': LINK.zumba, 'Silambam Class': LINK.silambam, 'Art & Craft Class': LINK.art
+    });
   });
   test('welcome falls back to sensible defaults', async () => {
     await whatsapp.sendWelcomeMessage('9876543210');
