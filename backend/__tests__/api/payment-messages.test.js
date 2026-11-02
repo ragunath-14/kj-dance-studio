@@ -138,6 +138,37 @@ test.describe('the Pay button sends WhatsApp', () => {
   });
 });
 
+test.describe('Clear All', () => {
+  // Calls clearDues like Express would
+  const clearAll = async (student) => {
+    const out = {};
+    const req = { params: { studentId: String(student._id) }, body: {}, app: { get: () => null } };
+    const res = { status(c) { out.status = c; return this; }, json(b) { out.body = b; return this; } };
+    await payments.clearDues(req, res);
+    await settle();
+    return out;
+  };
+
+  test('sends one receipt for the whole amount and NO pending-fee reminder', async () => {
+    const s = await make('clearall');                              // owes 3 x 1300
+    const r = await clearAll(s);
+    assert.equal(r.status, 201);
+    assert.deepEqual(mine(s).map(c => c.kind), ['receipt']);
+    assert.equal(mine(s)[0].amount, 3900);
+  });
+
+  test('after Clear All the daily scheduler sends nothing and clears the reminder mark', async () => {
+    const s = await make('clearsched', { lastAlertSent: new Date(Date.now() - 6 * 86400000) });
+    await clearAll(s);
+    calls.length = 0;
+    const scheduler = require('../../scheduler');
+    const log = console.log; console.log = () => {};
+    try { await scheduler.runPendingFeeAlerts(); await scheduler.runNewStudentPaymentCheck(); } finally { console.log = log; }
+    assert.equal(mine(s).length, 0);
+    assert.ok(!(await Student.findById(s._id).lean()).lastAlertSent);
+  });
+});
+
 test.describe('a WhatsApp problem never breaks the payment', () => {
   test('the receipt fails: the payment is still saved, and the reminder is still tried', async () => {
     const s = await make('rfail');
