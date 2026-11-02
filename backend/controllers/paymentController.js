@@ -231,9 +231,14 @@ exports.createPayment = async (req, res) => {
 // ─── PUT /api/payments/:id ───────────────────────────────────────────────────
 exports.updatePayment = async (req, res) => {
   try {
+    // Only the fields the edit form can change (never _id, __v or anything else sent along)
+    const changes = {};
+    for (const field of ['studentId', 'amount', 'date', 'method', 'purpose', 'remainingFees', 'forMonth', 'forYear'])
+      if (req.body[field] !== undefined) changes[field] = req.body[field];
+
     const updated = await Payment.findByIdAndUpdate(
       req.params.id,
-      req.body,
+      changes,
       { new: true, runValidators: true }
     ).populate('studentId', 'studentName');
 
@@ -270,7 +275,7 @@ exports.deletePayment = async (req, res) => {
     console.error('deletePayment error:', err);
     if (err.name === 'CastError')
       return res.status(400).json({ message: 'Invalid payment ID format.' });
-    res.status(500).json({ message: err.message });
+    res.status(500).json({ message: 'Something went wrong on the server. Please try again.' });
   }
 };
 
@@ -360,7 +365,7 @@ exports.sendPendingAlerts = async (req, res) => {
     });
   } catch (err) {
     console.error('sendPendingAlerts error:', err);
-    res.status(500).json({ success: false, message: err.message });
+    res.status(500).json({ success: false, message: 'Something went wrong on the server. Please try again.' });
   }
 };
 
@@ -419,7 +424,7 @@ exports.sendStudentReminder = async (req, res) => {
     });
   } catch (err) {
     console.error('sendStudentReminder error:', err);
-    res.status(500).json({ success: false, message: err.message });
+    res.status(500).json({ success: false, message: 'Something went wrong on the server. Please try again.' });
   }
 };
 

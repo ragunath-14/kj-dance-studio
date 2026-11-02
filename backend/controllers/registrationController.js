@@ -179,7 +179,7 @@ exports.getPendingRegistrations = async (req, res) => {
     res.json(await attachReferrals(registrations.map(withFees)));
   } catch (err) {
     console.error('getPendingRegistrations error:', err);
-    res.status(500).json({ message: err.message });
+    res.status(500).json({ message: 'Something went wrong on the server. Please try again.' });
   }
 };
 
@@ -275,7 +275,7 @@ exports.approveRegistration = async (req, res) => {
       return res.status(400).json({ message: messages.join('. ') });
     }
     console.error('approveRegistration error:', err);
-    res.status(500).json({ message: err.message });
+    res.status(500).json({ message: 'Something went wrong on the server. Please try again.' });
   }
 };
 
@@ -293,6 +293,6 @@ exports.rejectRegistration = async (req, res) => {
     if (err.name === 'CastError')
       return res.status(400).json({ message: 'Invalid registration ID format.' });
     console.error('rejectRegistration error:', err);
-    res.status(500).json({ message: err.message });
+    res.status(500).json({ message: 'Something went wrong on the server. Please try again.' });
   }
 };

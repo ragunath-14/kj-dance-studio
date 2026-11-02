@@ -30,7 +30,9 @@ const PaymentForm = ({ formData, setFormData, students, payments = [], currentDe
 
   const fetchDues = async (studentId, addBackAmount = 0) => {
     try {
-      const res = await fetch(`${API_URL}/students/${studentId}/public-dues`).then(r => r.json());
+      const res = await fetch(`${API_URL}/students/${studentId}/public-dues`, {
+        headers: { Authorization: `Bearer ${localStorage.getItem('adminToken') || ''}` }
+      }).then(r => r.json());
       if (res && res.totalDue !== undefined) {
         setLocalDebt(res.totalDue + addBackAmount);
       }

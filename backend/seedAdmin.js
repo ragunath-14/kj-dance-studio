@@ -1,25 +1,32 @@
+// Creates (or replaces) the admin login.
+//
+//   ADMIN_SEED_USERNAME=youname ADMIN_SEED_PASSWORD='a-long-password' node seedAdmin.js
+//
+// The password is never kept in the code: it is read from the environment and stored hashed.
 const mongoose = require('mongoose');
 require('dotenv').config();
 const User = require('./models/User');
 
 const seedAdmin = async () => {
+  const username = (process.env.ADMIN_SEED_USERNAME || 'rishii').trim();
+  const password = process.env.ADMIN_SEED_PASSWORD;
+
+  if (!password || password.length < 10) {
+    console.error('❌ Set ADMIN_SEED_PASSWORD (at least 10 characters) before running this script.');
+    process.exit(1);
+  }
+
   try {
     await mongoose.connect(process.env.MONGODB_URI);
     console.log('✅ Connected to MongoDB for seeding');
 
-    // Remove existing admin if any
-    await User.deleteMany({ username: 'rishii' });
-    await User.deleteMany({ username: 'admin' });
+    // Replace the existing login with the same name, plus the old default "admin" account if it is still there
+    await User.deleteMany({ username: { $in: [username, 'admin'] } });
 
-    const admin = new User({
-      username: 'rishii',
-      password: 'kj@123', // Storing as plain text as requested for simplicity, or we can add hashing later
-      role: 'admin'
-    });
-
+    const admin = new User({ username, password, role: 'admin' });   // hashed by the model on save
     await admin.save();
-    console.log('🚀 Admin user "rishii" created successfully!');
-    
+    console.log(`🚀 Admin user "${username}" created successfully!`);
+
     process.exit(0);
   } catch (err) {
     console.error('❌ Seeding error:', err.message);

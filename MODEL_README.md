@@ -126,13 +126,12 @@ GET  /health
 POST /api/register
 POST /api/camp/register          (403 while camp registration is switched off)
 GET  /api/settings/public        ({ campEnabled } — landing page reads this)
-GET  /api/students/:id/public-dues
 ```
 
 Admin auth:
 
 ```txt
-POST /api/admin/login
+POST /api/auth/login        (rate limited: 10 wrong tries / 15 min)
 ```
 
 Protected admin APIs:
@@ -234,8 +233,8 @@ Backend important env vars:
 ```txt
 PORT
 MONGODB_URI
-ADMIN_PASSWORD
-JWT_SECRET
+JWT_SECRET            (required; 32+ random characters in production)
+WEBHOOK_VERIFY_TOKEN  (required for the Meta webhook; no default)
 NODE_ENV
 ALLOWED_ORIGINS
 STUDIO_URL

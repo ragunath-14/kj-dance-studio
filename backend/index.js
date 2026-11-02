@@ -21,7 +21,7 @@ const http       = require('http');
 const helmet     = require('helmet');
 const rateLimit  = require('express-rate-limit');
 const path       = require('path');
-const jwt        = require('jsonwebtoken');
+const crypto     = require('crypto');
 const { Server } = require('socket.io');
 require('dotenv').config();
 
@@ -37,35 +37,72 @@ const studentController      = require('./controllers/studentController');
 const campController         = require('./controllers/campController');
 const settingsController     = require('./controllers/settingsController');
 const Student                = require('./models/Student');
-const { verifyAdminToken }   = require('./middleware/auth');
+const { verifyAdminToken, verifySocketToken } = require('./middleware/auth');
+const { sanitizeRequest }    = require('./middleware/sanitize');
 const { startScheduler, runPendingFeeAlerts } = require('./scheduler');
 const whatsapp               = require('./services/whatsappService');
+
+// ── Refuse to start without a usable signing secret ──────────────────────────
+// Every admin login token is signed with JWT_SECRET; a missing or guessable one would let anyone forge a login.
+if (!process.env.JWT_SECRET) {
+  console.error('❌ JWT_SECRET is not set. Add a long random string to the environment and restart.');
+  process.exit(1);
+}
+if (process.env.NODE_ENV === 'production' && process.env.JWT_SECRET.length < 32) {
+  console.error('❌ JWT_SECRET is too short for production (use at least 32 random characters).');
+  process.exit(1);
+}
 
 // ── App & Server Setup ───────────────────────────────────────────────────────
 const app    = express();
 const server = http.createServer(app);
 const PORT   = process.env.PORT || 5001;
 
-// ── CORS — Open to all origins ───────────────────────────────────────────────
-// Allows any frontend (localhost dev, production domain, mobile apps) to connect.
-// Restrict this post-launch by setting ALLOWED_ORIGINS in .env if needed.
+// ── CORS ─────────────────────────────────────────────────────────────────────
+// ALLOWED_ORIGINS="https://a.com,https://b.com" -> only those sites may call the API from a browser.
+// ALLOWED_ORIGINS="*"                           -> any site (development / tests only).
+// Not set: open in development, but in production only this server's own pages (same origin) are allowed.
+const allowedOrigins = (process.env.ALLOWED_ORIGINS || '').split(',').map(o => o.trim()).filter(o => o && o !== '*');
 const corsOptions = {
-  origin: process.env.ALLOWED_ORIGINS === '*' || !process.env.ALLOWED_ORIGINS
+  origin: process.env.ALLOWED_ORIGINS === '*'
     ? '*'
-    : process.env.ALLOWED_ORIGINS.split(',').map(o => o.trim()),
+    : allowedOrigins.length
+      ? allowedOrigins
+      : process.env.NODE_ENV === 'production' ? false : '*',
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization']
 };
 
 // ── Socket.io ────────────────────────────────────────────────────────────────
 const io = new Server(server, { cors: corsOptions });
+io.use(verifySocketToken);   // only a logged-in admin may listen to live updates
 app.set('socketio', io);
 
 // ── Core Middleware ──────────────────────────────────────────────────────────
-app.use(helmet({ contentSecurityPolicy: false }));
+// Content-Security-Policy: the page may only load its own scripts, Google Fonts and https images, and may
+// not be shown inside another site's frame. This limits what injected script could do.
+app.use(helmet({
+  contentSecurityPolicy: {
+    useDefaults: false,
+    directives: {
+      defaultSrc    : ["'self'"],
+      scriptSrc     : ["'self'"],
+      styleSrc      : ["'self'", "'unsafe-inline'", 'https://fonts.googleapis.com'],
+      fontSrc       : ["'self'", 'https://fonts.gstatic.com', 'data:'],
+      imgSrc        : ["'self'", 'data:', 'blob:', 'https:'],
+      connectSrc    : ["'self'", 'ws:', 'wss:', ...allowedOrigins],
+      objectSrc     : ["'none'"],
+      baseUri       : ["'self'"],
+      formAction    : ["'self'"],
+      frameAncestors: ["'none'"]
+    }
+  }
+}));
 app.use(cors(corsOptions));
-app.use(express.json({ limit: '1mb' }));
+// rawBody is kept only so the WhatsApp webhook signature can be checked
+app.use(express.json({ limit: '1mb', verify: (req, res, buf) => { req.rawBody = buf; } }));
 app.use(express.urlencoded({ extended: true, limit: '1mb' }));
+app.use(sanitizeRequest);   // removes MongoDB operators ($ne, $gt ...) from body, query and params
 app.set('trust proxy', 1);
 
 // ── Rate Limiters ────────────────────────────────────────────────────────────
@@ -100,6 +137,28 @@ const apiLimiter = rateLimit({
   skip           : skipRateLimit
 });
 
+// Login: 10 wrong guesses per 15 minutes per IP (successful logins are not counted)
+const loginLimiter = rateLimit({
+  windowMs : 15 * 60 * 1000,
+  max      : 10,
+  skipSuccessfulRequests: true,
+  message  : { success: false, message: 'Too many login attempts. Please try again after 15 minutes.' },
+  standardHeaders: true,
+  legacyHeaders  : false,
+  skip           : skipRateLimit
+});
+
+// Creating / replacing a referral code only needs a phone number, so it is limited much harder:
+// 10 tries an hour per IP stops someone cycling other students' codes.
+const referralWriteLimiter = rateLimit({
+  windowMs : 60 * 60 * 1000,
+  max      : 10,
+  message  : { success: false, message: 'Too many attempts. Please try again later.' },
+  standardHeaders: true,
+  legacyHeaders  : false,
+  skip           : skipRateLimit
+});
+
 // ── Public Routes ────────────────────────────────────────────────────────────
 
 // Health check (used by deployment platforms / uptime monitors)
@@ -122,12 +181,11 @@ app.post('/api/register', registrationLimiter, registrationController.createPend
 app.post('/api/camp/register', registrationLimiter, campController.createCampRegistration);
 
 // Referral programme: look up a student by phone, create a code, check a code (public — rate limited)
+app.use(['/api/referral/generate', '/api/referral/regenerate'], referralWriteLimiter);
 app.use('/api/referral', referralLimiter, require('./routes/referralRoutes'));
 
-// Public dues check (used by student payment portal, no auth needed)
-app.get('/api/students/:id/public-dues', studentController.getStudentDues);
-
 // ── Auth Routes ──────────────────────────────────────────────────────────────
+app.use('/api/auth/login', loginLimiter);
 app.use('/api/auth', authRoutes);
 
 // ── WhatsApp Template Test (admin only) ──────────────────────────────────────
@@ -154,21 +212,9 @@ app.post('/api/test-whatsapp', verifyAdminToken, async (req, res) => {
     }
     res.json({ success: result.success, usedFallback: result.usedFallback || false, detail: result });
   } catch (err) {
-    res.status(500).json({ success: false, message: err.message });
+    console.error('test-whatsapp error:', err);
+    res.status(500).json({ success: false, message: 'Could not send the test message.' });
   }
-});
-
-// ── Admin Authentication (legacy) ────────────────────────────────────────────
-app.post('/api/admin/login', (req, res) => {
-  const { password } = req.body;
-  if (!password) {
-    return res.status(400).json({ success: false, message: 'Password is required.' });
-  }
-  if (password !== process.env.ADMIN_PASSWORD) {
-    return res.status(401).json({ success: false, message: 'Invalid credentials.' });
-  }
-  const token = jwt.sign({ role: 'admin' }, process.env.JWT_SECRET, { expiresIn: '24h' });
-  res.json({ success: true, token });
 });
 
 // ── Protected API Routes ─────────────────────────────────────────────────────
@@ -195,35 +241,46 @@ app.post('/api/admin/trigger-fee-alerts', verifyAdminToken, async (req, res) => 
     res.json({ success: true, message: 'Fee alert job executed. Check server logs.' });
   } catch (err) {
     console.error('Fee alert trigger error:', err);
-    res.status(500).json({ success: false, message: err.message });
+    res.status(500).json({ success: false, message: 'Could not run the fee alert job.' });
   }
 });
 
 // ── WhatsApp Webhook (Meta Cloud API) ────────────────────────────────────────
 // GET — Meta calls this to verify the webhook endpoint during setup
 app.get('/api/webhook', (req, res) => {
-  const verifyToken = process.env.WEBHOOK_VERIFY_TOKEN || 'dance_studio_123';
+  // No built-in fallback token: if WEBHOOK_VERIFY_TOKEN is not set, verification is refused
+  const verifyToken = process.env.WEBHOOK_VERIFY_TOKEN;
   const mode        = req.query['hub.mode'];
   const token       = req.query['hub.verify_token'];
   const challenge   = req.query['hub.challenge'];
 
-  if (mode === 'subscribe' && token === verifyToken) {
+  if (verifyToken && mode === 'subscribe' && typeof token === 'string' && token === verifyToken) {
     console.log('✅ Meta Webhook verified.');
-    return res.status(200).send(challenge);
+    return res.status(200).type('text/plain').send(String(challenge ?? ''));   // plain text: the challenge can never be rendered as HTML
   }
   res.sendStatus(403);
 });
 
 // POST — Meta sends delivery status updates here
 app.post('/api/webhook', (req, res) => {
+  // When WHATSAPP_APP_SECRET is set, only requests signed by Meta (X-Hub-Signature-256) are accepted
+  const appSecret = process.env.WHATSAPP_APP_SECRET;
+  if (appSecret) {
+    const expected = 'sha256=' + crypto.createHmac('sha256', appSecret).update(req.rawBody || '').digest('hex');
+    const given    = String(req.headers['x-hub-signature-256'] || '');
+    const ok = given.length === expected.length && crypto.timingSafeEqual(Buffer.from(given), Buffer.from(expected));
+    if (!ok) return res.sendStatus(403);
+  }
   const body = req.body;
   if (!body?.object) return res.sendStatus(404);
 
   const statuses = body.entry?.[0]?.changes?.[0]?.value?.statuses;
   if (statuses?.length) {
     const s = statuses[0];
-    console.log(`\n📬 WhatsApp delivery update — ID: ${s.id} | Status: ${s.status} | To: ${s.recipient_id}`);
-    if (s.errors) console.error('   Meta error:', JSON.stringify(s.errors));
+    // Anyone can POST here, so keep only short plain text in the log (no line breaks = no forged log lines)
+    const safe = (v) => String(v ?? '').replace(/[^\w.:@=-]/g, '').slice(0, 80);
+    console.log(`\n📬 WhatsApp delivery update — ID: ${safe(s.id)} | Status: ${safe(s.status)} | To: ${safe(s.recipient_id)}`);
+    if (s.errors) console.error('   Meta error:', JSON.stringify(s.errors).slice(0, 500));
   }
   res.sendStatus(200);
 });

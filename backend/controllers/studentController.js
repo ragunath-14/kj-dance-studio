@@ -456,8 +456,9 @@ exports.updateStudent = async (req, res) => {
   try {
     const { id } = req.params;
 
-    // Offers only go through PUT /:id/discount
-    delete req.body.discounts; delete req.body.referralCode; delete req.body.referralRewards;
+    // Offers only go through PUT /:id/discount; codes, rewards and reminder bookkeeping are never set from a form
+    for (const field of ['discounts', 'referralCode', 'referralRewards', 'referralCodeHistory', 'referralCodeCreatedAt', 'lastAlertSent', '_id', '__v'])
+      delete req.body[field];
 
     // Class selection rules (e.g. Zumba needs a plan) apply to the merged result
     if (req.body.classType !== undefined || req.body.feePlan !== undefined || req.body.extraClasses !== undefined) {
@@ -551,7 +552,7 @@ exports.toggleStatus = async (req, res) => {
     });
   } catch (err) {
     console.error('toggleStatus error:', err);
-    res.status(500).json({ message: err.message });
+    res.status(500).json({ message: 'Something went wrong on the server. Please try again.' });
   }
 };
 
@@ -576,7 +577,7 @@ exports.deleteStudent = async (req, res) => {
     console.error('deleteStudent error:', err);
     if (err.name === 'CastError')
       return res.status(400).json({ message: 'Invalid student ID format.' });
-    res.status(500).json({ message: err.message });
+    res.status(500).json({ message: 'Something went wrong on the server. Please try again.' });
   }
 };
 
@@ -645,7 +646,7 @@ exports.getOfferTiming = async (req, res) => {
     res.json({ appliesFrom: getDiscountTiming(student, payments).appliesFrom });
   } catch (err) {
     if (err.name === 'CastError') return res.status(400).json({ message: 'Invalid student ID format.' });
-    res.status(500).json({ message: err.message });
+    res.status(500).json({ message: 'Something went wrong on the server. Please try again.' });
   }
 };
 
@@ -681,7 +682,7 @@ exports.setStudentDiscount = async (req, res) => {
   } catch (err) {
     if (err.name === 'CastError') return res.status(400).json({ message: 'Invalid student ID format.' });
     console.error('setStudentDiscount error:', err);
-    res.status(500).json({ message: err.message });
+    res.status(500).json({ message: 'Something went wrong on the server. Please try again.' });
   }
 };
 

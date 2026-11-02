@@ -198,6 +198,8 @@ export const DataProvider = ({ children }) => {
     const socketUrl = window.location.origin;
 
     const socket = io(socketUrl, {
+      // The server only talks to a logged-in admin: send the login token (read again on every reconnect)
+      auth: (cb) => cb({ token: localStorage.getItem('adminToken') }),
       // Don't block page load — connect in background
       autoConnect: true,
       // Polling first, then upgrade to WebSocket (more reliable behind proxies)
